@@ -1,0 +1,25 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main  # Se ejecutará cada vez que subas cambios a la rama main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout del código
+      uses: actions/checkout@v4
+
+    - name: Ejecutar comandos en el servidor vía SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: 2222 # Puerto común en Neubox, si usa el normal cámbialo a 22
+        script: |
+          cd /home/cncmedum/sistema.cncm.edu.mx
+          git pull origin main
