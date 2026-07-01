@@ -1,4 +1,4 @@
-name: Deploy to Server via SFTP
+name: Deploy to Server via FTP
 
 on:
   push:
@@ -6,19 +6,18 @@ on:
       - main
 
 jobs:
-  deploy:
+  web-deploy:
+    name: Deploy Website
     runs-on: ubuntu-latest
-
+    
     steps:
-    - name: Checkout del código
+    - name: Get latest code
       uses: actions/checkout@v4
-
-    - name: Copiar archivos al servidor mediante SFTP
-      uses: appleboy/scp-action@v0.1.7
+      
+    - name: Sync files via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
-        host: ${{ secrets.SSH_HOST }}
+        server: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        port: 22 # Puerto común de Neubox. Si no conecta, cámbialo a 22.
-        source: "./*"
-        target: "/home/cncmedum/sistema.cncm.edu.mx"
+        password: ${{ secrets.SSH_KEY }} # Aquí pasará tu contraseña de cPanel
+        server-dir: sistema.cncm.edu.mx/ # La ruta de la carpeta de tu subdominio en Neubox
