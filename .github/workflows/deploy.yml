@@ -19,5 +19,4 @@ jobs:
       with:
         server: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
-        password: ${{ secrets.SSH_KEY }} # Aquí pasará tu contraseña de cPanel
-        server-dir: sistema.cncm.edu.mx/ # La ruta de la carpeta de tu subdominio en Neubox
+        password: ${{ secrets.SSH_KEY }}
