@@ -19,6 +19,6 @@ jobs:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        port: 2222 # Puerto común de Neubox. Si no conecta, cámbialo a 22.
+        port: 22 # Puerto común de Neubox. Si no conecta, cámbialo a 22.
         source: "./*"
         target: "/home/cncmedum/sistema.cncm.edu.mx"
