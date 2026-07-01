@@ -177,7 +177,7 @@ $plantelNombre = $_SESSION['plantel_nombre'] ?? 'CNCM';
       </tr>
     </table>
     <p class="ec-nota" style="margin-top:12px;">
-      Documento generado el <?php echo date('d/m/Y H:i'); ?> — <?php echo htmlspecialchars(function_exists('app_display_name') ? app_display_name() : 'Sistema CNCM', ENT_QUOTES, 'UTF-8'); ?>.
+      Documento generado el <?php echo date('d/m/Y H:i'); ?> — <?php echo htmlspecialchars(function_exists('app_display_name') ? app_display_name() : 'Portal CNCM', ENT_QUOTES, 'UTF-8'); ?>.
     </p>
   </div>
 </div>

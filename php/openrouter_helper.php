@@ -53,7 +53,7 @@ function hay_openrouter_site_name(): string
     if (defined('OPENROUTER_SITE_NAME') && OPENROUTER_SITE_NAME !== '') {
         return (string) OPENROUTER_SITE_NAME;
     }
-    return function_exists('app_display_name') ? app_display_name() : 'Sistema CNCM';
+    return function_exists('app_display_name') ? app_display_name() : 'Portal CNCM';
 }
 
 /**

@@ -4,7 +4,7 @@
  * Los identificadores internos HAY_* en código no cambian.
  */
 if (!defined('APP_DISPLAY_NAME')) {
-    define('APP_DISPLAY_NAME', 'Sistema CNCM');
+    define('APP_DISPLAY_NAME', 'Portal CNCM');
 }
 if (!defined('APP_INSTITUTION')) {
     define('APP_INSTITUTION', 'Grupo Educativo CNCM');
@@ -13,7 +13,7 @@ if (!defined('APP_INSTITUTION')) {
 if (!function_exists('app_display_name')) {
     function app_display_name(): string
     {
-        return defined('APP_DISPLAY_NAME') ? (string) APP_DISPLAY_NAME : 'Sistema CNCM';
+        return defined('APP_DISPLAY_NAME') ? (string) APP_DISPLAY_NAME : 'Portal CNCM';
     }
 }
 

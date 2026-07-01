@@ -51,7 +51,7 @@ define('HAY_DB_PASS', 'PONER_AQUI_LA_CLAVE_DE_CPANEL');
 // define('OPENROUTER_API_KEY', 'sk-or-v1-...');
 // define('OPENROUTER_MODEL', 'openai/gpt-4o');
 // define('OPENROUTER_SITE_URL', 'https://sistema.cncm.edu.mx');
-// define('OPENROUTER_SITE_NAME', 'Sistema CNCM');
+// define('OPENROUTER_SITE_NAME', 'Portal CNCM');
 
 /** Google Gemini (alternativa) */
 // define('GEMINI_API_KEY', 'su-clave-de-google-ai-studio');
