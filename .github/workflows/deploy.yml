@@ -1,9 +1,9 @@
-name: Deploy to Server
+name: Deploy to Server via SFTP
 
 on:
   push:
     branches:
-      - main  # Se ejecutará cada vez que subas cambios a la rama main
+      - main
 
 jobs:
   deploy:
@@ -13,13 +13,12 @@ jobs:
     - name: Checkout del código
       uses: actions/checkout@v4
 
-    - name: Ejecutar comandos en el servidor vía SSH
-      uses: appleboy/ssh-action@v1.0.3
+    - name: Copiar archivos al servidor mediante SFTP
+      uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        port: 2222 # Puerto común en Neubox, si usa el normal cámbialo a 22
-        script: |
-          cd /home/cncmedum/sistema.cncm.edu.mx
-          git pull origin main
+        port: 2222 # Puerto común de Neubox. Si no conecta, cámbialo a 22.
+        source: "./*"
+        target: "/home/cncmedum/sistema.cncm.edu.mx"
