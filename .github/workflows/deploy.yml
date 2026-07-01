@@ -20,3 +20,5 @@ jobs:
         server: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         password: ${{ secrets.SSH_KEY }}
+        port: 21 # Forzamos el puerto FTP estándar
+        secure: false # Desactivamos FTPS estricto por si el certificado de Neubox causa conflicto
