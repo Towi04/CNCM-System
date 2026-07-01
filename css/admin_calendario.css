@@ -1,0 +1,237 @@
+.cal-grid-wrap {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+}
+
+.cal-grid-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #666;
+    text-align: center;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.cal-day {
+    min-height: 52px;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    padding: 4px;
+    cursor: pointer;
+    background: #fafafa;
+    transition: transform 0.1s, box-shadow 0.1s;
+    position: relative;
+}
+
+.cal-day:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cal-day.is-empty {
+    background: transparent;
+    border-color: transparent;
+    cursor: default;
+}
+
+.cal-day.is-empty:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.cal-day.is-today {
+    outline: 2px solid #11458b;
+}
+
+.cal-day__num {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.cal-day__tag {
+    font-size: 0.65rem;
+    line-height: 1.2;
+    margin-top: 2px;
+    opacity: 0.95;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cal-day--lectivo { background: #fff; }
+.cal-day--cierre_plantel { background: #37474f; color: #fff; }
+.cal-day--sin_clase_abierto { background: #fff8e1; color: #5d4037; }
+.cal-day--asueto { background: #f3e5f5; color: #4a148c; }
+.cal-day--vacacion_sabado { background: #e3f2fd; color: #0d47a1; }
+
+.cal-consulta-aviso {
+    background: #e3f2fd;
+    color: #0d47a1;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin: 0 0 12px;
+    font-size: 0.9rem;
+}
+
+.cal-capas-filtro {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin: 12px 0 16px;
+    padding: 12px;
+    background: #f5f5f5;
+    border-radius: 10px;
+}
+
+.cal-capa-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.cal-capa-badge {
+    display: inline-block;
+    min-width: 2rem;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #fff;
+}
+
+.cal-capa-badge--regular { background: #1565c0; }
+.cal-capa-badge--prepa_escolarizada { background: #00695c; }
+.cal-capa-badge--prepa_abierta { background: #4527a0; }
+.cal-capa-badge--administrativo { background: #5d4037; }
+
+.cal-grid--consulta .cal-day {
+    min-height: 72px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.cal-grid--consulta .cal-day:disabled {
+    opacity: 0.85;
+}
+
+.cal-day__tag--capa {
+    border-radius: 3px;
+    padding: 1px 3px;
+    margin-top: 2px;
+    white-space: normal;
+    line-height: 1.15;
+}
+
+.cal-consulta-detalle {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+}
+
+.cal-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.cal-tab {
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.cal-tab.is-active {
+  background: #b71c1c;
+  color: #fff;
+  border-color: #b71c1c;
+}
+
+.cal-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.cal-ev-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: #fafafa;
+}
+
+.cal-ev-pub { color: #2e7d32; font-size: 0.75rem; font-weight: 600; }
+.cal-ev-draft { color: #f57c00; font-size: 0.75rem; font-weight: 600; }
+
+.cal-aud-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 12px 0 16px;
+    font-size: 0.82rem;
+}
+
+.cal-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cal-legend i {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.cal-editor {
+    background: #f5f7fa;
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 16px;
+    border: 1px solid #e0e0e0;
+}
+
+.cal-editor h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+}
+
+.cal-rango-box {
+    margin-top: 16px;
+    padding: 14px;
+    background: #eceff1;
+    border-radius: 10px;
+}
+
+@media (max-width: 640px) {
+    .cal-day { min-height: 44px; font-size: 0.8rem; }
+}

@@ -1,0 +1,65 @@
+/**
+ * Botones minimalistas solo icono (lápiz, basura, etc.)
+ */
+.btn-icon-only {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fff;
+    color: #546e7a;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    vertical-align: middle;
+}
+
+.btn-icon-only:hover {
+    background: #f5f5f5;
+    border-color: #bdbdbd;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.btn-icon-only--edit {
+    color: #1a237e;
+    border-color: #c5cae9;
+}
+
+.btn-icon-only--edit:hover {
+    background: #e8eaf6;
+}
+
+.btn-icon-only--danger {
+    color: #c62828;
+    border-color: #ffcdd2;
+}
+
+.btn-icon-only--danger:hover {
+    background: #ffebee;
+}
+
+.btn-icon-only--ok {
+    color: #2e7d32;
+    border-color: #c8e6c9;
+}
+
+.btn-icon-only--ok:hover {
+    background: #e8f5e9;
+}
+
+.btn-icon-only--muted {
+    color: #78909c;
+}
+
+.catalog-actions--icons,
+.fase-acciones {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
+}

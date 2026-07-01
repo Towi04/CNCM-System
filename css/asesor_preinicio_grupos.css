@@ -1,0 +1,43 @@
+.apg-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+@media (max-width: 900px) {
+  .apg-layout { grid-template-columns: 1fr; }
+}
+.apg-card-list { display: flex; flex-direction: column; gap: 8px; }
+.apg-grupo-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: #fff;
+}
+.apg-grupo-card:hover, .apg-grupo-card.is-active {
+  border-color: #1976d2;
+  background: #f5f9ff;
+}
+.apg-grupo-card h4 { margin: 0 0 4px; font-size: 0.95rem; }
+.apg-grupo-card p { margin: 0; color: #666; font-size: 0.85rem; }
+.apg-alumno-row {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+.apg-alumno-row.is-done { border-left: 4px solid #2e7d32; }
+.apg-alumno-meta { color: #666; font-size: 0.85rem; margin-bottom: 8px; }
+.apg-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+.apg-form-grid label { display: block; font-size: 0.8rem; color: #555; }
+.apg-form-grid input, .apg-form-grid select, .apg-form-grid textarea {
+  width: 100%;
+  box-sizing: border-box;
+}

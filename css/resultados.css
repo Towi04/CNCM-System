@@ -1,0 +1,195 @@
+.result-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    max-width: 1000px;
+    margin: 20px auto;
+}
+
+.result-header {
+    text-align: center;
+    border-bottom: 2px solid #f0f0f0;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+}
+
+.result-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    align-items: stretch;
+}
+
+.chart-wrapper {
+    background: #fdfdfd;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.result-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.factor-box {
+    padding: 15px;
+    border-radius: 8px;
+    color: white;
+}
+
+.factor-box h3 { margin: 0 0 5px 0; font-size: 1.1em; }
+.factor-box p { font-size: 1.4em; margin: 0; }
+
+/* Colores DISC */
+.factor-box.d { background: #e74c3c; } /* Rojo */
+.factor-box.i { background: #f1c40f; color: #333; } /* Amarillo */
+.factor-box.s { background: #2ecc71; } /* Verde */
+.factor-box.c { background: #3498db; } /* Azul */
+
+@media (max-width: 768px) {
+    .result-content { grid-template-columns: 1fr; }
+}
+
+/* ===== Gráficas tipo DISC (1–7) ===== */
+.disc-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+}
+
+.disc-panel {
+    background: #f7f7f7;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.disc-panel h3 {
+    margin: 0;
+    font-size: 1.05em;
+    text-align: center;
+}
+
+.disc-panel .subtitle {
+    margin: 6px 0 10px 0;
+    text-align: center;
+    color: #666;
+    font-weight: 600;
+}
+
+.disc-bars {
+    height: 280px;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 8px;
+    background: #ececec;
+    border-radius: 10px;
+    border: 1px solid #e3e3e3;
+    overflow: hidden;
+}
+
+.disc-bar-wrap {
+    flex: 1;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 1fr 24px; /* área de barra + área de etiqueta */
+    align-items: end;
+    justify-items: center;
+    gap: 6px;
+}
+
+.disc-bar-space {
+    width: 100%;
+    display: flex;
+    align-items: flex-end; /* barra pegada abajo */
+    justify-content: center;
+    min-height: 0;
+}
+
+.disc-bar {
+    width: 100%;
+    border-radius: 8px 8px 4px 4px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+    min-height: 10px;
+}
+
+.disc-bar .num {
+    margin-top: 6px;
+    font-weight: 800;
+    font-size: 0.95em;
+    color: #111;
+    background: rgba(255,255,255,0.65);
+    padding: 2px 6px;
+    border-radius: 8px;
+}
+
+.disc-label {
+    font-weight: 800;
+    color: #444;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+}
+
+.disc-bar.d { background: #e74c3c; }
+.disc-bar.i { background: #f1c40f; }
+.disc-bar.s { background: #2ecc71; }
+.disc-bar.c { background: #3498db; }
+
+.patron-desc {
+    margin-top: 14px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.patron-desc h4 { margin: 0 0 8px 0; }
+.patron-desc p { margin: 0; color: #333; line-height: 1.45; white-space: pre-line; }
+
+.hist-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hist-line {
+    display: block;
+    padding: 6px 10px;
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
+    background: #fafafa;
+    font-weight: 700;
+    font-size: 0.92em;
+    color: #333;
+    text-decoration: none;
+    line-height: 1.2;
+}
+
+.hist-line:hover {
+    background: #f0f6ff;
+    border-color: #cfe1ff;
+}
+
+.disc-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+    .disc-panels { grid-template-columns: 1fr; }
+}

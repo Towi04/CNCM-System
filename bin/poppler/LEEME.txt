@@ -1,0 +1,7 @@
+Coloque aquí los binarios LINUX de Poppler (no .exe de Windows):
+
+  pdftotext   (permiso 755)
+  pdfinfo     (permiso 755)
+  lib/        (carpeta con .so si el paquete las requiere)
+
+Documentación completa: docs/POPPLER_HOSTING.md

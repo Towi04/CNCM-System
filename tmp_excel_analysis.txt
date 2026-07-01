@@ -1,0 +1,118 @@
+﻿python : 
+C:\Users\CNCM\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\openpyxl\packaging\relationship.py:118: 
+UserWarning: xl/pivotCache/_rels/pivotCacheDefinition1.xml.rels contains invalid dependency definitions
+En C:\Users\CNCM\AppData\Local\Temp\ps-script-1c671f0f-e0a0-407c-8b4d-bf617731c345.ps1: 78 Carácter: 1
++ python -c "
++ ~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\CNCM\A...ncy definitions:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  warn(msg)
+C:\Users\CNCM\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\openpyxl\packaging\relationship.py:118: 
+UserWarning: xl/pivotCache/_rels/pivotCacheDefinition2.xml.rels contains invalid dependency definitions
+  warn(msg)
+C:\Users\CNCM\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\openpyxl\packaging\relationship.py:118: 
+UserWarning: xl/pivotCache/_rels/pivotCacheDefinition3.xml.rels contains invalid dependency definitions
+  warn(msg)
+
+=== CATALOGO (max_row=54, max_col=22) ===
+R1: C1='NOMINA ADMINISTRATIVA' | C2='NOMINA PREPA' | C3='NOMINA COMPUTACION ' | C4='NOMINA INGLES' | C5='NOMINA VENTAS' | C6='COMISIONES' | C7='SOBRECOMISION ' | C8='AGUINALDO 2025' | C9='VIATICOS' | C10='MANTENIMIENTO' | C11='PUBLICIDAD'
+R2: C1='DIANA LAURA MARCIAL' | C2='DALIA LUZ DIAZ RODRIGUEZ' | C3='BERNARDO DE JESUS CORONA MAGAÐA' | C4='ANDREA JAQUELINE SORIANO ZARATE' | C5='ALEJANDRO PACHECO POPO' | C6='ALEJANDRO PACHECO POPO' | C7=' GUADALUPE SARAHI VILLAFAÐA GASCA' | C9='COMIDA DIRECTOR (S┴BADOS)' | C10='PLOMERIA ' | C11='VOLANTES'
+R3: C1='GABRIEL GONGORA MORALES' | C2='XIMENA GUADALUPE CORNEJO' | C3='ANA SARA MARTINEZ JIMENEZ' | C4='ARIANNA PROCEL MORALES' | C5='GUADALUPE MEJIA' | C6='GUADALUPE MEJIA' | C9='SALAMANCA - CELAYA (IDA)' | C10='ELECTRICIDAD ' | C11='MARKETING'
+R4: C1='LUIS FERNANDO MARCIAL BAUTISTA' | C2='SARA SOTO AGUILERA' | C3='JESSICA VILLANUEVA GONZALEZ' | C4='HAILTON SANTIAGO SARABIA FLORES' | C5='LUCIA ZAVALA' | C6='LUCIA ZAVALA' | C9='SALAMANCA - IRAPUATO (IDA)' | C10='PINTURA' | C11='LONAS'
+R5: C1='EDGAR CERESO' | C2='FRANCISCO SANCHEZ' | C3='JORGE ARTURO MIRANDA HERNANDEZ' | C4='ANDRE PROCEL MORALES' | C5='RICARDO BAUTISTA' | C6='RICARDO BAUTISTA' | C9='CELAYA - IRAPUATO (IDA)' | C10='FUMIGACIËN '
+R6: C1='JAIME PONCE FRAUSTRO' | C2='STEPHANIA FLORES SANCHEZ' | C3='JOSE ENRIQUE MEDINA OJEDA' | C4='IGNACIO VARELA MARTINEZ' | C5='KEVIN SANCHEZ BUSO' | C6='KEVIN SANCHEZ BUSO' | C9='SALAMANCA - CELAYA (IDA Y VUELTA)'
+R7: C1='JANETTE SANCHEZ RAMIREZ' | C2='YHARELY ARANZAZU MORENO CASTILLO' | C3='JOSE LUIS ARROYO RAMIREZ' | C4='IVAN RAFAEL ESPINOZA GODINEZ' | C5='ADOLFO RUIZ' | C6='ADOLFO RUIZ' | C9='SALAMANCA - IRAPUATO (IDA Y VUELTA)'
+R8: C1='JESSICA VILLANUEVA GONZALEZ' | C2='DALIA LUZ DIAZ RODRIGUEZ' | C3='LUIS VIDAL DELGADO MURILLO' | C4='J. ANTONIO PRIETO RODRIGUEZ' | C5='LEOBARDO FERNANDEZ' | C6='LEOBARDO FERNANDEZ' | C9='CELAYA - IRAPUATO (IDA Y VUELTA)'
+R9: C1='JORGE ARTURO MIRANDA' | C3='PALOMA MERCEDES GONZALEZ SERRANO' | C4='JOSE MARTIN RODRIGUEZ MEDINA' | C5='MIRIAM CRISTAL RODRIGUEZ OJEDA' | C6='MIRIAM CRISTAL RODRIGUEZ OJEDA' | C9='JUNTA GERENCIAL Y DIRECTIVA'
+R10: C1='LUIS ENRIQUE TOVAR RODRIGUEZ' | C3='PEDRO FABIAN GONZALEZ SARABIA' | C4='LAURA ANGELICA OSORNIO MENDOZA' | C5='CRISTINA  ARIAS' | C6='CRISTINA  ARIAS' | C9='JUNTA CORPORATIVA'
+R11: C1='LUZ MARIA OJEDA' | C4='ROXANA ESPINDOLA SANCHEZ' | C9='COMIDA DIRECTIVOS Y CORPORATIVO'
+R12: C1='MARIA ANGELICA GUERRERO' | C4='DANIELA SANTOYO' | C9='JUNTA DE PLANTEL'
+R13: C1='MARIA ELENA MURILLO' | C4='EUNICE GOMEZ GASCA'
+R14: C1='PATRICIA RAZO GRANADOS' | C4='DIANA LAURA '
+R15: C1='WENDY MARISSA CUARENTA ALMAGUER'
+R16: C1='ZOTICO EMMANUEL MARCIAL'
+R17: C1='LAURA ANGELICA OSORNIO MENDOZA'
+R18: C1='ZOTICO MARCIAL SILVA'
+R19: C1='PATRICIA RAZO GRANADOS'
+R20: C1='DEYSI MARCIAL BAUTISTA'
+R21: C1='JUAN CARLOS SILVA'
+R38: C5='BANAMEX'
+R39: C5='BBVA'
+R40: C5='HSBC'
+R41: C5='BANCOPPEL '
+R42: C5='ENTREGA DE EFECTIVO'
+R43: C5='PRESTAMO '
+R44: C5='AHORRO FIN DE AÐO'
+
+=== SEM26 (max_row=991, max_col=22) ===
+R1: C2='PERIODO'
+R2: C2=datetime.datetime(2026, 6, 21, 0, 0) | C3='AL' | C4=datetime.datetime(2026, 6, 27, 0, 0)
+R3: C4='PLANTEL'
+R4: C1='FECHA' | C2='SEMANA '
+R5: C1=datetime.datetime(2026, 6, 27, 0, 0) | C2=26 | C4='SALAMANCA'
+R6: C4='RESUTADOS/COBRANZA'
+R27: C1='TOTAL EGRESOS' | C2=6530
+R28: C1='TOTAL INGRESOS' | C2=0
+R29: C1='SALDO' | C2=-6530
+
+=== SEM25  (max_row=34, max_col=10) ===
+R1: C2='PERIODO'
+R2: C2=datetime.datetime(2026, 6, 14, 0, 0) | C3='AL' | C4=datetime.datetime(2026, 6, 20, 0, 0)
+R3: C4='PLANTEL'
+R4: C1='FECHA' | C2='SEMANA '
+R5: C1=datetime.datetime(2026, 6, 20, 0, 0) | C2=25 | C4='SALAMANCA'
+R6: C4='RESUTADOS/COBRANZA'
+R29: C1='TOTAL EGRESOS' | C2=26980
+R30: C1='TOTAL INGRESOS' | C2=27410
+R31: C1='SALDO' | C2=430
+
+=== RESUMEN (max_row=42, max_col=54) ===
+R36: C2=0 | C3=109510 | C4=191655 | C5=47640 | C6=31660 | C7=56950 | C8=216180 | C9=40330 | C10=23650 | C11=63910
+R42: C2=109510 | C3=82145 | C4=-145815 | C5=-15980 | C6=25290 | C7=159230 | C8=-175850 | C9=-16680 | C10=40260 | C11=132090
+
+=== COBRANZA (max_row=1000, max_col=15) ===
+R1: C1='SEMANA' | C2='FECHA' | C3='CAJA' | C4='PRODUCTOS' | C5='MES' | C9='mes'
+R2: C1=1 | C2=datetime.datetime(2026, 1, 2, 0, 0) | C3=6730.0 | C4=300.0 | C5=1 | C9=108910
+R3: C1=1 | C2=datetime.datetime(2026, 1, 3, 0, 0) | C3=102780.0 | C4=0.0 | C5=1
+R4: C1=2 | C2=datetime.datetime(2026, 1, 4, 0, 0) | C3=28550.0 | C4=904.0 | C5=1
+R5: C1=2 | C2=datetime.datetime(2026, 1, 5, 0, 0) | C3=70350.0 | C4=600.0 | C5=1 | C9=95053
+R6: C1=2 | C2=datetime.datetime(2026, 1, 6, 0, 0) | C3=38770.0 | C4=350.0 | C5=1
+R7: C1=2 | C2=datetime.datetime(2026, 1, 7, 0, 0) | C3=5430.0 | C4=2500.0 | C5=1
+R8: C1=2 | C2=datetime.datetime(2026, 1, 8, 0, 0) | C3=5560.0 | C4=0.0 | C5=1
+R9: C1=2 | C2=datetime.datetime(2026, 1, 9, 0, 0) | C3=12140.0 | C4=250.0 | C5=1 | C9=123876
+R10: C1=2 | C2=datetime.datetime(2026, 1, 10, 0, 0) | C3=30855.0 | C4=5200.0 | C5=1
+R11: C1=3 | C2=datetime.datetime(2026, 1, 11, 0, 0) | C3=10020.0 | C4=0.0 | C5=1
+R12: C1=3 | C2=datetime.datetime(2026, 1, 12, 0, 0) | C3=11430.0 | C4=2300.0 | C5=1
+R13: C1=3 | C2=datetime.datetime(2026, 1, 13, 0, 0) | C3=1600.0 | C4=0.0 | C5=1 | C9=32595.45
+R14: C1=3 | C2=datetime.datetime(2026, 1, 14, 0, 0) | C3=0.0 | C4=100.0 | C5=1
+R15: C1=3 | C2=datetime.datetime(2026, 1, 15, 0, 0) | C3=5150.0 | C4=300.0 | C5=1
+R16: C1=3 | C2=datetime.datetime(2026, 1, 16, 0, 0) | C3=3680.0 | C4=0.0 | C5=1
+R17: C1=3 | C2=datetime.datetime(2026, 1, 17, 0, 0) | C3=13960.0 | C4=300.0 | C5=1 | C9=178061.52
+R18: C1=4 | C2=datetime.datetime(2026, 1, 18, 0, 0) | C3=4360.0 | C4=900.0 | C5=1
+R19: C1=4 | C2=datetime.datetime(2026, 1, 19, 0, 0) | C3=4400.0 | C4=400.0 | C5=1
+R20: C1=4 | C2=datetime.datetime(2026, 1, 20, 0, 0) | C3=1400.0 | C4=500.0 | C5=1
+R21: C1=4 | C2=datetime.datetime(2026, 1, 21, 0, 0) | C3=1500.0 | C4=0.0 | C5=1
+R22: C1=4 | C2=datetime.datetime(2026, 1, 22, 0, 0) | C3=4700.0 | C4=0.0 | C5=1 | C9=67135
+R23: C1=4 | C2=datetime.datetime(2026, 1, 23, 0, 0) | C3=5000.0 | C4=0.0 | C5=1
+R24: C1=4 | C2=datetime.datetime(2026, 1, 24, 0, 0) | C3=10300.0 | C4=0.0 | C5=1
+R25: C1=5 | C2=datetime.datetime(2026, 1, 25, 0, 0) | C3=3290.0 | C4=300.0 | C5=1
+R26: C1=5 | C2=datetime.datetime(2026, 1, 26, 0, 0) | C3=1300.0 | C4=0.0 | C5=1 | C9=28550
+R27: C1=5 | C2=datetime.datetime(2026, 1, 27, 0, 0) | C3=1700.0 | C4=300.0 | C5=1
+R28: C1=5 | C2=datetime.datetime(2026, 1, 28, 0, 0) | C3=8680.0 | C4=350.0 | C5=1
+R29: C1=5 | C2=datetime.datetime(2026, 1, 29, 0, 0) | C3=4300.0 | C4=0.0 | C5=1
+R30: C1=5 | C2=datetime.datetime(2026, 1, 30, 0, 0) | C3=3580.0 | C4=0.0 | C5=1 | C9=0
+R31: C1=5 | C2=datetime.datetime(2026, 1, 31, 0, 0) | C3=34100.0 | C4=600.0 | C5=1
+R32: C1=6 | C2=datetime.datetime(2026, 2, 1, 0, 0) | C3=28270.0 | C4=300.0 | C5=2
+R33: C1=6 | C2=datetime.datetime(2026, 2, 2, 0, 0) | C3=0.0 | C4=0.0 | C5=2
+R34: C1=6 | C2=datetime.datetime(2026, 2, 3, 0, 0) | C3=34650.0 | C4=600.0 | C5=2 | C9=0
+R35: C1=6 | C2=datetime.datetime(2026, 2, 4, 0, 0) | C3=29130.0 | C4=0.0 | C5=2
+R36: C1=6 | C2=datetime.datetime(2026, 2, 5, 0, 0) | C3=32550.0 | C4=0.0 | C5=2
+R37: C1=6 | C2=datetime.datetime(2026, 2, 6, 0, 0) | C3=48320.0 | C4=300.0 | C5=2
+R38: C1=6 | C2=datetime.datetime(2026, 2, 7, 0, 0) | C3=43260.0 | C4=4800.0 | C5=2 | C9=0
+R39: C1=7 | C2=datetime.datetime(2026, 2, 8, 0, 0) | C3=11120.0 | C4=1500.0 | C5=2
+R40: C1=7 | C2=datetime.datetime(2026, 2, 9, 0, 0) | C3=4300.0 | C4=0.0 | C5=2
+R41: C1=7 | C2=datetime.datetime(2026, 2, 10, 0, 0) | C3=1300.0 | C4=0.0 | C5=2
+R42: C1=7 | C2=datetime.datetime(2026, 2, 11, 0, 0) | C3=4680.0 | C4=300.0 | C5=2 | C9=634180.97
+R43: C1=7 | C2=datetime.datetime(2026, 2, 12, 0, 0) | C3=1320.0 | C4=300.0 | C5=2
+R44: C1=7 | C2=datetime.datetime(2026, 2, 13, 0, 0) | C3=5210.0 | C4=300.0 | C5=2

@@ -1,0 +1,47 @@
+.rep-sem-wrap { max-width: 1200px; }
+.rep-sem-sub { color: #666; margin: 0; font-size: 0.9rem; }
+.rep-sem-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 12px; }
+.rep-sem-toolbar label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
+.rep-sem-toolbar input, .rep-sem-toolbar select { padding: 8px 10px; border-radius: 8px; border: 1px solid #ddd; min-width: 90px; }
+.rep-sem-periodo { font-weight: 600; color: #1a237e; margin: 0 0 16px; }
+.rep-sem-loading { padding: 24px; text-align: center; color: #666; }
+
+.rep-sem-totales {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.rep-sem-total-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.rep-sem-total-card--destacado { border-color: #1a237e; background: #e8eaf6; }
+.rep-sem-total-card__val { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
+.rep-sem-total-card__lbl { font-size: 0.72rem; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.rep-sem-esp { margin-bottom: 24px; }
+.rep-sem-esp h3 { margin: 0 0 8px; font-size: 1rem; color: #333; }
+.rep-sem-esp-meta { font-size: 0.85rem; color: #666; margin-bottom: 10px; }
+
+.rep-sem-tabla { width: 100%; border-collapse: collapse; font-size: 0.82rem; background: #fff; }
+.rep-sem-tabla th, .rep-sem-tabla td { border: 1px solid #e8e8e8; padding: 8px 6px; text-align: center; }
+.rep-sem-tabla th { background: #f5f5f5; font-weight: 700; font-size: 0.75rem; }
+.rep-sem-tabla td.rep-sem-clave { text-align: left; font-weight: 600; white-space: nowrap; }
+.rep-sem-tabla td.rep-sem-prof { text-align: left; max-width: 140px; }
+.rep-sem-tabla td.rep-sem-hor { text-align: left; font-size: 0.78rem; max-width: 160px; }
+
+.rep-sem-semana-block {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #eee;
+}
+.rep-sem-semana-block h3 { margin: 0 0 12px; color: #1a237e; }
+
+.rep-sem-leyenda {
+  font-size: 0.78rem; color: #777; margin-bottom: 16px; line-height: 1.5;
+  background: #fafafa; padding: 10px 12px; border-radius: 8px;
+}

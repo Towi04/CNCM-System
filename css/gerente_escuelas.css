@@ -1,0 +1,29 @@
+.ge-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+@media (max-width: 960px) {
+  .ge-layout { grid-template-columns: 1fr; }
+}
+.ge-panel {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff;
+}
+.ge-list { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.ge-item {
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.ge-item:hover, .ge-item.is-active { border-color: #1976d2; background: #f5f9ff; }
+.ge-item small { color: #666; display: block; }
+.ge-form .field { margin-bottom: 10px; }
+.ge-form label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 4px; }
+.ge-form input, .ge-form select, .ge-form textarea { width: 100%; box-sizing: border-box; }
+.ge-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 600px) { .ge-grid-2 { grid-template-columns: 1fr; } }

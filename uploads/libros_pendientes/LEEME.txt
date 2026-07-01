@@ -1,0 +1,25 @@
+Libro de ING — Student Book + Workbook (un solo PDF)
+
+1. Copie aquí su PDF completo del alumno (el mismo archivo físico que incluye
+   Student Book y, a partir de cierta página, el Workbook).
+
+   Nombre sugerido: ING_libro_alumno.pdf
+
+2. En el servidor (con MySQL y PHP), desde la carpeta hay_system:
+
+   php scripts/subir_libro_ing.php
+
+   El script:
+   - Registra el libro en especialidad ING
+   - Detecta automáticamente la página donde empieza "Workbook"
+   - Activa la versión para alumnos (Mis libros) y Tutor IA
+   - Indexa cada página + embeddings (si tiene pdftotext / Poppler)
+
+3. Si la detección del Workbook falla, indique la página manualmente:
+
+   php scripts/subir_libro_ing.php uploads/libros_pendientes/ING_libro_alumno.pdf 2025.1 87
+
+   (87 = número de página donde empieza el Workbook)
+
+Requisito servidor para indexación: Poppler (pdftotext, pdfinfo).
+Sin Poppler los alumnos igual pueden leer el PDF en línea.

@@ -1,0 +1,9 @@
+/vendor/
+/uploads/examenes/*.pdf
+/uploads/examenes/*.csv
+.env.local
+config.local.php
+config.mail.php
+google_key.json
+/downloads/**/*.exe
+/downloads/**/*.msi

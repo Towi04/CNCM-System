@@ -1,0 +1,191 @@
+/* Modal de revisión de planeaciones */
+.plan-rev-modal.catalog-modal__panel {
+    width: min(920px, 96vw);
+    max-width: 920px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+}
+
+.plan-rev-modal__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px 14px;
+    border-bottom: 1px solid #e8e8e8;
+    flex-shrink: 0;
+    background: #fff;
+}
+
+.plan-rev-modal__header h3 {
+    margin: 0 0 6px;
+    font-size: 1.25rem;
+    line-height: 1.3;
+    color: #1a1a1a;
+}
+
+.plan-rev-modal__meta {
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.plan-rev-modal__close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+    color: #555;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.plan-rev-modal__close:hover {
+    background: #f0f0f0;
+    color: #222;
+}
+
+.plan-rev-modal__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px 24px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.plan-rev-modal__hilo {
+    margin-bottom: 16px;
+}
+
+.plan-rev-modal__contenido {
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: #f8f9fb;
+    border: 1px solid #e2e6ea;
+    padding: 18px 20px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #1f2933;
+    margin-bottom: 16px;
+}
+
+.plan-rev-modal__contenido strong {
+    font-weight: 700;
+    color: #111;
+}
+
+.plan-rev-modal__revisar {
+    padding: 16px;
+    background: #f3f8ff;
+    border: 1px solid #bbdefb;
+    border-radius: 10px;
+    margin-bottom: 4px;
+}
+
+.plan-rev-modal__revisar label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.plan-rev-modal__revisar textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-top: 6px;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    resize: vertical;
+    min-height: 72px;
+}
+
+.plan-rev-modal__acciones {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.plan-rev-modal__footer {
+    flex-shrink: 0;
+    padding: 16px 24px 20px;
+    border-top: 1px solid #e8e8e8;
+    background: #fafbfc;
+}
+
+.plan-rev-modal__footer label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+    display: block;
+}
+
+.plan-rev-modal__footer textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-top: 6px;
+    font-size: 0.92rem;
+    resize: vertical;
+}
+
+.plan-rev-modal__footer-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.plan-rev-hilo-item {
+    margin: 8px 0;
+    padding: 10px 12px;
+    border-left: 3px solid #e65100;
+    background: #fafafa;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.88rem;
+}
+
+.plan-rev-hilo-item--prof {
+    border-left-color: #1565c0;
+}
+
+.plan-rev-hilo-item__meta {
+    color: #666;
+    font-size: 0.82rem;
+    margin-bottom: 4px;
+}
+
+.plan-rev-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+    margin: 16px 0;
+}
+
+.plan-rev-filtros .field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.plan-rev-filtros select {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    min-width: 180px;
+}

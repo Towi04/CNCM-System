@@ -1,0 +1,15 @@
+{
+    "name": "cncm/hay-system",
+    "description": "Sistema HAY - generación de exámenes",
+    "require": {
+        "php": ">=7.4",
+        "dompdf/dompdf": "^2.0",
+        "endroid/qr-code": "^4.8",
+        "google/apiclient": "^1.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "HayExam\\": "php/exam/"
+        }
+    }
+}

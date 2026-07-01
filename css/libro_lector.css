@@ -1,0 +1,76 @@
+.libro-lector-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 70vh;
+  background: #2b2b2b;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.libro-lector-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.libro-lector-title {
+  flex: 1;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.libro-lector-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.libro-lector-canvas-wrap {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#libro-canvas {
+  max-width: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.45);
+  background: #fff;
+}
+
+.libro-lector-watermark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(1.2rem, 4vw, 2.2rem);
+  color: rgba(0,0,0,0.06);
+  transform: rotate(-25deg);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.libro-lector-aviso {
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  color: #aaa;
+  background: #1a1a1a;
+  text-align: center;
+}
+
+@media print {
+  body * { visibility: hidden !important; }
+  .libro-lector-wrap { display: none !important; }
+}

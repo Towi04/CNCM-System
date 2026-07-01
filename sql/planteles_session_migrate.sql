@@ -1,0 +1,2 @@
+-- Obsoleto: usar sql/planteles_schema_migrate.sql
+-- La migración y el seed de planteles también se aplican al cargar config.php (plantel_ensure_schema).

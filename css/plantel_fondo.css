@@ -1,0 +1,43 @@
+/* Fondo por plantel: cubre el área, sin repetir, con desenfoque suave */
+.content-viewport.plantel-fondo {
+    --plantel-fondo-url: none;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: var(--gris-fondo);
+}
+
+.content-viewport.plantel-fondo::before {
+    content: '';
+    position: absolute;
+    inset: -24px;
+    background-image: var(--plantel-fondo-url);
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    filter: blur(7px);
+    transform: scale(1.06);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.content-viewport.plantel-fondo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(240, 242, 245, 0.60);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.content-viewport.plantel-fondo > * {
+    position: relative;
+    z-index: 1;
+}
+
+@media (max-width: 768px) {
+    .content-viewport.plantel-fondo::before {
+        filter: blur(6px);
+        inset: -16px;
+    }
+}

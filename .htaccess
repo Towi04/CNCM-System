@@ -1,0 +1,8 @@
+AddDefaultCharset UTF-8
+
+# En algunos hostings php_value en .htaccess provoca error 500 en TODAS las páginas (incluso login).
+# Si el sitio no carga, suba solo index.php y comente este bloque en el servidor.
+<IfModule mod_php.c>
+    php_value default_charset "UTF-8"
+    php_value session.gc_maxlifetime 1440
+</IfModule>

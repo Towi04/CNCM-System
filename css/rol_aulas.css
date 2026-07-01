@@ -1,0 +1,91 @@
+.rol-wrap .rol-toolbar { flex-wrap: wrap; gap: 12px; }
+.rol-estado {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: #e8f5e9;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+.rol-estado--warn { background: #fff3e0; }
+.rol-estado--error { background: #ffebee; color: #b71c1c; }
+.rol-conflictos {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: #ffebee;
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+.rol-conflictos ul { margin: 6px 0 0 18px; padding: 0; }
+.rol-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .rol-layout { grid-template-columns: 1fr; }
+}
+.rol-panel {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fafafa;
+}
+.rol-panel h3 { margin: 0 0 8px; font-size: 1rem; }
+.rol-hint { font-size: 0.82rem; color: #666; margin: 0 0 10px; }
+.rol-lista { display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow-y: auto; }
+.rol-grupo-card {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: grab;
+  font-size: 0.88rem;
+}
+.rol-grupo-card:active { cursor: grabbing; }
+.rol-grupo-card strong { display: block; }
+.rol-grupo-card span { color: #666; font-size: 0.8rem; }
+.rol-aulas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.rol-aula-card {
+  background: #fff;
+  border: 2px dashed #bdbdbd;
+  border-radius: 10px;
+  padding: 10px;
+  min-height: 100px;
+}
+.rol-aula-card.rol-aula--over { border-color: #1976d2; background: #e3f2fd; }
+.rol-aula-card h4 { margin: 0 0 4px; font-size: 0.95rem; }
+.rol-aula-meta { font-size: 0.78rem; color: #666; margin-bottom: 8px; }
+.rol-dropzone {
+  min-height: 48px;
+  padding: 6px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px dashed #e57373;
+}
+.rol-dropzone.rol-aula--over { background: #ffebee; }
+.rol-asignado {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+.rol-asignado button {
+  border: none;
+  background: transparent;
+  color: #1565c0;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+.rol-manual { border-left: 3px solid #ff9800; }

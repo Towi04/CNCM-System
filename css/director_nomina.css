@@ -1,0 +1,308 @@
+.nomina-wrap .nomina-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.nomina-wrap .nomina-tabs button {
+  border: 1px solid #cfd8dc;
+  background: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.nomina-wrap .nomina-tabs button.active {
+  background: #11458B;
+  color: #fff;
+  border-color: #11458B;
+}
+
+.nomina-toolbar {
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.nomina-rango {
+  align-self: flex-end;
+  font-weight: 600;
+  color: #11458B;
+  min-width: 200px;
+}
+
+.nomina-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .nomina-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nomina-historial {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.nomina-historial h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.nomina-liq-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.nomina-liq-list li {
+  margin-bottom: 6px;
+}
+
+.nomina-liq-list button {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #e0e0e0;
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.nomina-liq-list button.active {
+  border-color: #11458B;
+  background: #eef4fb;
+}
+
+.nomina-liq-list small {
+  display: block;
+  color: #666;
+}
+
+.nomina-detalle {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  min-height: 200px;
+}
+
+.nomina-placeholder {
+  color: #888;
+}
+
+.nomina-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.nomina-resumen .reporte-cartera-card {
+  min-width: 140px;
+}
+
+.nomina-acciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.nomina-wrap .linkish {
+  background: none;
+  border: none;
+  color: #11458B;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+
+.nomina-config-row input,
+.nomina-config-row select {
+  max-width: 140px;
+}
+
+.nomina-config-row input[type="text"] {
+  max-width: 180px;
+}
+
+.badge-estado {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.badge-borrador { background: #fff3e0; color: #e65100; }
+.badge-cerrada { background: #e8f5e9; color: #2e7d32; }
+
+.nom-badge-manual {
+  display: inline-block;
+  font-size: 0.68rem;
+  background: #e3f2fd;
+  color: #1565c0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.nom-seccion-titulo {
+  margin: 16px 0 8px;
+  font-size: 1rem;
+}
+
+.nom-ajuste-hint {
+  font-size: 0.88rem;
+  color: #555;
+  background: #f5f5f5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.nom-bitacora {
+  margin-top: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #fafafa;
+}
+
+.nom-bitacora summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #11458B;
+}
+
+.nom-bitacora summary small {
+  font-weight: normal;
+  color: #666;
+}
+
+.nom-obs-cell {
+  max-width: 280px;
+  font-size: 0.88rem;
+  color: #444;
+}
+
+.nom-ajustes-empty {
+  color: #888;
+  margin: 8px 0 0;
+}
+
+.nom-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nom-modal[hidden] {
+  display: none !important;
+}
+
+.nom-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.nom-modal-card {
+  position: relative;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  width: min(480px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nom-modal-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.88rem;
+}
+
+.nom-modal-card input,
+.nom-modal-card select,
+.nom-modal-card textarea {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.nom-modal-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.nom-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.nom-modal-card .req {
+  color: #c62828;
+}
+
+#nomina-panel-suplencias .catalog-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+#nomina-panel-suplencias input,
+#nomina-panel-suplencias select {
+  min-width: 140px;
+}
+
+#nomina-panel-suplencias .sup-notas-wrap {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+
+#nomina-panel-suplencias .sup-notas-wrap textarea {
+  width: 100%;
+  min-width: 280px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
+  resize: vertical;
+}
+
+.nom-linea-auto {
+  color: #bbb;
+}
+
+.nom-sup-notas {
+  max-width: 220px;
+  font-size: 0.85rem;
+  color: #555;
+}

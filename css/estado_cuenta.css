@@ -1,0 +1,137 @@
+.ec-wrap {
+    max-width: 900px;
+    margin: 16px auto;
+}
+
+.ec-consulta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+    background: #fff;
+    padding: 16px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-bottom: 16px;
+}
+
+.ec-resumen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.ec-resumen-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ec-resumen-card--adeudo {
+    border: 2px solid #c62828;
+    background: #fff5f5;
+}
+
+.ec-resumen-card__monto {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1a237e;
+}
+
+.ec-resumen-card--adeudo .ec-resumen-card__monto {
+    color: #c62828;
+    font-size: 1.8rem;
+}
+
+.ec-resumen-card__label {
+    font-size: 0.82rem;
+    color: #666;
+    font-weight: 600;
+}
+
+.ec-print-area {
+    background: #fff;
+    padding: 24px;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.ec-print-header {
+    text-align: center;
+    border-bottom: 2px solid #1a237e;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+}
+
+.ec-print-header h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #1a237e;
+}
+
+.ec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin-bottom: 16px;
+}
+
+.ec-table th,
+.ec-table td {
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    text-align: left;
+}
+
+.ec-table th {
+    background: #f5f5f5;
+}
+
+.ec-table .monto {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.ec-section-title {
+    font-size: 1rem;
+    color: #1a237e;
+    margin: 20px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #eee;
+}
+
+.ec-nota {
+    font-size: 0.85rem;
+    color: #666;
+    margin: 8px 0;
+}
+
+.ec-productos {
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .ec-print-area,
+    .ec-print-area * {
+        visibility: visible;
+    }
+    .ec-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        box-shadow: none;
+        padding: 0;
+    }
+    .no-print {
+        display: none !important;
+    }
+}

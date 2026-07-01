@@ -1,0 +1,339 @@
+.catalog-wrap {
+    max-width: 1200px;
+    margin: 20px auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    padding: 24px;
+}
+
+.catalog-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+}
+
+.catalog-header h2 {
+    margin: 0;
+    font-size: 1.35rem;
+}
+
+.catalog-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+}
+
+.catalog-toolbar label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.catalog-toolbar .field {
+    min-width: 140px;
+}
+
+.catalog-toolbar input,
+.catalog-toolbar select {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 100%;
+}
+
+.catalog-table-wrap {
+    overflow-x: auto;
+}
+
+.catalog-table-wrap.hay-dt-panel .hay-dt-fallback-scroll,
+.catalog-table-wrap.hay-dt-panel .dataTables_scrollBody {
+    max-height: min(70vh, 560px);
+}
+
+.catalog-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.catalog-table th,
+.catalog-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+    vertical-align: top;
+}
+
+.catalog-table th {
+    background: #fafafa;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.catalog-table tr:hover td {
+    background: #fcfcfc;
+}
+
+.catalog-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.catalog-badge--ok {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.catalog-badge--warn {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.catalog-badge--muted {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.catalog-badge--danger {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.catalog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.catalog-estado-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.catalog-estado-actions .btn-icon {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+    color: #444;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.catalog-estado-actions .btn-icon:hover {
+    background: #eef2ff;
+    border-color: #90caf9;
+    color: #1565c0;
+}
+
+.catalog-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.catalog-modal.is-open {
+    display: flex;
+}
+
+.vc-tabulador-panel {
+    border: 1px solid #e0e0e0;
+}
+
+.catalog-modal__panel,
+.catalog-modal__dialog {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    width: min(560px, 100%);
+    max-height: 90vh;
+    overflow: auto;
+}
+
+
+.catalog-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.catalog-form-grid .full {
+    grid-column: 1 / -1;
+}
+
+.catalog-form-grid label {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.catalog-form-grid input,
+.catalog-form-grid textarea,
+.catalog-form-grid select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-top: 4px;
+}
+
+.catalog-alert {
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.catalog-alert--ok {
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+
+.catalog-alert--error {
+    background: #ffebee;
+    color: #b71c1c;
+}
+
+.catalog-alert--warn {
+    background: #fff8e1;
+    color: #f57f17;
+}
+
+.combo-tarifas-head {
+    margin: 16px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.combo-tarifas-head h4 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    color: #333;
+}
+
+.combo-tarifas-head span {
+    font-size: 0.82rem;
+    color: #777;
+}
+
+.combo-tarifa-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+}
+
+.combo-tarifa-card__title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #1a237e;
+    margin-bottom: 12px;
+}
+
+.combo-tarifa-card__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px 12px;
+}
+
+@media (max-width: 560px) {
+    .combo-tarifa-card__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.combo-tarifa-field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.combo-tarifa-field input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #cfd8dc;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.combo-tarifa-field input:focus {
+    outline: none;
+    border-color: #1565c0;
+    box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.15);
+}
+
+.catalog-pendientes {
+    margin-bottom: 20px;
+    padding: 14px;
+    background: #fff8e1;
+    border-radius: 10px;
+    border: 1px solid #ffe082;
+}
+
+.catalog-pendientes h3 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+}
+
+.grupo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.grupo-badge--fusion {
+    background: #e8eaf6;
+    color: #3949ab;
+}
+
+.grupo-badge--adelanto {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.grupo-badge--atraso {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+@media (max-width: 700px) {
+    .catalog-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

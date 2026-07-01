@@ -1,0 +1,152 @@
+.bandeja-wrap {
+  max-width: 960px;
+}
+
+.bandeja-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0 20px;
+}
+
+.bandeja-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  background: #fafafa;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.bandeja-chip:hover {
+  background: #f0f4ff;
+  border-color: #b8c9f0;
+}
+
+.bandeja-chip.active {
+  background: #e8eefc;
+  border-color: #5c7cfa;
+  font-weight: 600;
+}
+
+.bandeja-chip .n {
+  display: inline-flex;
+  min-width: 1.4em;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #5c7cfa;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.bandeja-chip.active .n {
+  background: #364fc7;
+}
+
+.bandeja-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bandeja-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.bandeja-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.bandeja-item__tipo {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #eef2ff;
+  color: #364fc7;
+}
+
+.bandeja-item__tipo--permiso_profesor {
+  background: #fff4e6;
+  color: #e67700;
+}
+
+.bandeja-item__tipo--inscripcion {
+  background: #e6fcf5;
+  color: #087f5b;
+}
+
+.bandeja-item__tipo--grupo_apertura {
+  background: #f3f0ff;
+  color: #5f3dc4;
+}
+
+.bandeja-item__fecha {
+  font-size: 0.82rem;
+  color: #868e96;
+}
+
+.bandeja-item__titulo {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.bandeja-item__sub {
+  margin: 0 0 6px;
+  color: #495057;
+  font-size: 0.92rem;
+}
+
+.bandeja-item__det {
+  margin: 0 0 12px;
+  color: #868e96;
+  font-size: 0.85rem;
+}
+
+.bandeja-item__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.bandeja-item__comentario {
+  flex: 1 1 180px;
+  min-width: 140px;
+  padding: 8px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+.bandeja-vacio {
+  padding: 32px 16px;
+  text-align: center;
+  color: #868e96;
+  border: 1px dashed #dee2e6;
+  border-radius: 12px;
+}
+
+.bandeja-loading {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+}

@@ -1,0 +1,12 @@
+-- Nomenclatura de fases de Inglés adulto (actualización automática vía PHP)
+-- Ejecutar en hosting O cargar cualquier página del sistema (hay_bootstrap_schema).
+--
+-- ING (especialidad 104 sem): 6 niveles × 4 parciales + Proyecto final × 2
+--   Ej.: A1 - Parcial 1 … B1+ - Parcial 4, Proyecto final - Parcial 1/2
+--
+-- ING-EXT (extensivo): B2, B2+, C1, C1+ × 4 parciales c/u
+--
+-- Código admin (clave_fase): A1-1, A1-2, A1+3, B1+4, PF-1 …
+-- Nombre alumno (nombre_fase): A1 - Parcial 1, A1+ - Parcial 3, Proyecto final - Parcial 1
+--
+-- El banco de exámenes (exam_*) puede seguir nombres antiguos hasta alinearlo al nuevo plan.

@@ -1,0 +1,411 @@
+﻿SHEET: InglÚs
+SHEET: Registros
+SHEET: Opciones a evaluar 
+strings: 282
+  [0] Know-how
+  [1] Accountability
+  [2] Problem Solving
+  [3] Enviroment
+  [4] Nivel en el MCERL
+  [5] Plataformas para videollamadas
+  [6] Conocimiento de apps y Paginas web 
+  [7] Manejo de plataforma Moodle
+  [8] Manejo de Fusiones 
+  [9] Desarrollo de Planes de Estudios
+  [10] Disponibilidad de Viaje
+  [11] Apoyo (cubrir faltas)
+  [12] Proyecto final 
+  [13] Asistencia
+  [14] Supervisi¾n
+  [15] Carga horaria
+  [16] Licenciatura
+  [17] Area
+  [18] INGL╔S
+  [19] C2
+  [20] C1
+  [21] B2
+  [22] B1
+  [23] C1+
+  [24] C1-
+  [25] B2+
+  [26] B2-
+  [27] B1+
+  [28] Preparatoria
+  [29] Maestria en Pedagogia o afÝn Terminada
+  [30] Maestria no relacionada con pedagogÝa Terminada
+  [31] Licenciatura en pedagogÝa o afÝn Terminada
+  [32] Cualquier maestria en curso
+  [33] Licenciatura no relacionada con pedagogÝa Terminada
+  [34] Licenciatura en PedagogÝa o afÝn en curso
+  [35] Licenciatura no relacionada en curso 
+  [36] Cualquier Licenciatura Trunca
+  [37] Prescolar
+  [38] Secundaria 
+  [39] Universidad
+  [40] 2.3.1
+  [41] 2.3.2
+  [42] 2.3.3
+  [43] Module 1
+  [44] Module 2
+  [45] Module 3
+  [46] No lo tiene 
+  [47] Windows
+  [48] Word
+  [49] Power Point
+  [50] Excel
+  [51] MCE certification
+  [52] Leer QR
+  [53] Uso de la PC
+  [54] Adjuntar archivos 
+  [55] Enviar Correo 
+  [56] Guardar Archivo 
+  [57] Encabezado 
+  [58] Uso de imßgenes
+  [59] Uso de Tablas 
+  [60] Graficas
+  [61] Imprimir
+  [62] Funciones bßsicas 
+  [63] Formato condicional 
+  [64] Formato de celda ($, %, #)
+  [65] 6 meses
+  [66] 1 a±o
+  [67] 0 a 5 meses
+  [68] 2 a±os
+  [69] 3 a±os
+  [70] 4 a±os
+  [71] 5 a±os
+  [72] 6 a±os
+  [73] 7 o mßs
+  [74] Curso de preparaci¾n
+  [75] Examen Interno B3 o B4
+  [76] Examen Interno B2
+  [77] Certificaci¾n IC3
+  [78] Formato de Fuente
+  [79] Certificaci¾n
+  [80] Curso 30 hrs o mßs
+  [81] Crear Videollamada
+  [82] Compartir enlace
+  [83] Compartir pantalla 
+  [84] Grabar pantalla
+  [85] Compartir grabaci¾n
+  [86] Manejo de apps (Gsuit)
+  [87] Manejo de apps de idiomas
+  [88] Uso de IA
+  [89] Nunca la ha usado 
+  [90] La conoce como alumno 
+  [91] La conoce como profesor 
+  [92] La conoce como editor 
+  [93] Ha creado contenido H5P
+  [94] Uso de contenido H5P
+  [95] Ha creado un curso
+  [96] Ha creado mas de un curso
+  [97] 1 hr por grupo 
+  [98] 2 hrs por grupo 
+  [99] 3 hrs por grupo
+  [100] 4 hrs o mas por grupo 
+  [101] Nunca ha desarrollado un plan de estudios 
+  [102] Desarrollo un plan de un mes (fusion)
+  [103] Desarrollo un plan para un personalizado (10 hrs)
+  [104] Participo en el desarrollo de un plan para fusion
+  [105] Participo en la mejora continua del plan de estudios 
+  [106] Desarrollo un nuevo plan de al menos 4 meses
+  [107] Numeraci¾n 
+  [108] Pro
+  [109] Aceptable
+  [110] Deficiente
+  [111] Bueno
+  [112] A±os de Experiencia en docencia
+  [113] Banda 4
+  [114] Banda 3
+  [115] Banda 2
+  [116] Uso de la TecnologÝa
+  [117] Profesor:
+  [118] Manejo de Moodle
+  [119] Juntas
+  [120] Entrega de planeaciones
+  [121] Entrega de calificaciones
+  [122] Puntualidad
+  [123] Disponibilidad para Personalizados
+  [124] Participo en el desarrollo de un plan personalizado 
+  [125] Pßgs. interactivas (Kahoot/ Quizizz/ Mentimeter)
+  [126] Pßgs. con material didßctico/ worksheets
+  [127] Pßgs. para habilidades especificas
+  [128] M2 Planificaci¾n de lecciones y uso de recursos para la ense±anza de idiomas
+  [129] M1 Conocimientos generales del aprendizaje y la ense±anza de idiomas
+  [130] M3 Gesti¾n del proceso de ense±anza y aprendizaje
+  [131] Uso de videollamadas
+  [132] Apps y pßgs. web 
+  [133] Asistencia a Juntas
+  [134] Supervisi¾n y Capacitaci¾n
+  [135] 20 hrs o mßs
+  [136] 16 hrs
+  [137] 12 hrs
+  [138] 8 hrs
+  [139] 4 hrs
+  [140] 3 profesores
+  [141] 2 profesores
+  [142] 1 profesor
+  [143] Ninguno
+  [144] 1 falta
+  [145] 2 faltas
+  [146] 3 faltas
+  [147] Ninguna
+  [148] 10 min antes
+  [149] A la hora
+  [150] 5 min tarde
+  [151] A tiempo 
+  [152] Fuera de tiempo
+  [153] Hasta que se le solicito
+  [154] Antes de la fecha
+  [155] Mßs de 5 min tarde 
+  [156] Siempre
+  [157] 80% de asistencia
+  [158] 50% de asistencia
+  [159] 20% de asistencia
+  [160] Nunca
+  [161] Mßs de 3 faltas
+  [162] Prescolar y Primaria
+  [163] Secundaria
+  [164] Disponibilidad para AsesorÝas
+  [165] Certificado CENNI
+  [166] Certificacion
+  [167] ITEP
+  [168] Linguaskill 
+  [169] Diploma CENNI
+  [170] Constancia CENNI
+  [171] TOEFL IBT
+  [172] TOEFL ITP
+  [173] OTCC
+  [174] Interna CNCM
+  [175] InglÚs
+  [176] Disponibilidad para asesorias
+  [177] Inteligencia Emocional
+  [178] 2.2.1
+  [179] 2.2.2
+  [180] 2.2.3
+  [181] 2.2.4
+  [182] Mantuvo menos del 50% de alumnos
+  [183] A
+  [184] NIVEL
+  [185] CERTIFICACION
+  [186] LICENCIATURA
+  [187] EXP PRESCOLAR
+  [188] EXP SECU
+  [189] EXP PREPA
+  [190] EXP UNI
+  [191] M1
+  [192] M2
+  [193] M3
+  [194] WINDOWS
+  [195] WORD
+  [196] POWERPOINT
+  [197] EXCEL
+  [198] VIDEOLLAM
+  [199] APPS
+  [200] MOODLE
+  [201] ASESORIAS
+  [202] PERSONALIZADOS
+  [203] PLANES
+  [204] FUSIONES
+  [205] VIAJE
+  [206] APOYO
+  [207] PROYECTO
+  [208] PLANEACIONES
+  [209] CALIF
+  [210] ASISTENCIA
+  [211] PUNTUALIDAD
+  [212] JUNTAS
+  [213] SUPERVISION
+  [214] HORARIO
+  [215] TOTAL
+  [216] B
+  [217] C
+  [218] D
+  [219] E
+  [220] Faltas
+  [221] Puntuaci¾n total:
+  [222] Nivel:
+  [223] Nivel
+  [224] Colaborador
+  [225] Fecha
+  [226] TKT o afÝn 
+  [227] Transiciones
+  [228] Animaciones
+  [229] Imßgenes
+  [230] Fondo
+  [231] 4TO MES
+  [232] RETENCION
+  [233] Evaluaci¾n 4to mes
+  [234] Evaluaci¾n de clase
+  [235] Retenci¾n
+  [236] PsicomÚtrico (Inteligencia Emocional)
+  [237] Evaluacion de clase
+  [238] No puede apoyar en ningun otro plantel
+  [239] Ha apoyado en 2 planteles
+  [240] Ha apoyado en 1 plantel mßs
+  [241] Ha apoyado en 3 planteles
+  [242] Siempre disponible 
+  [243] A veces tiene dispocisi¾n
+  [244] Rara vez puede
+  [245] Nunca puede
+  [246] Seguido apoya 
+  [247] Excepcional
+  [248] Lo justo 
+  [249] Muy bueno 
+  [250] Pobre
+  [251] Se puede mejorar
+  [252] El 50% aprob¾
+  [253] Entre el 60% y el 80% aprob¾
+  [254] Mßs del 80% aprob¾
+  [255] Mßs del 25% aprob¾
+  [256] Nadie aprob¾
+  [257] >=90%
+  [258] >=80%
+  [259] >=60%
+  [260] >=70%
+  [261] <60%
+  [262] PPH:
+  [263] ** A (1001 - 2000), B (2001 - 3000), C (3001 - 4000), D (4001 - 5000), E (5001 - 6000)
+  [264] PsicomÚtrico
+  [265] emily
+  [266] Nunca ha tenido fusiones
+  [267] Mantuvo mßs del 90% de alumnos
+  [268] Mantuvo mßs del 80% de alumnos
+  [269] Mantuvo mßs del 60% de alumnos
+  [270] Consejero I+S
+  [271] Profesional I+S+C
+  [272] Alentador D+I+S
+  [273] Evaluador D+I+C
+  [274] Promotor I
+  [275] Persuasivo I+C
+  [276] Mßs del 95%
+  [277] Entre el 85% y el 95%
+  [278] Entre 75% y 84%
+  [279] Entre el 70% y el 74%
+  [280] Menos del 70%
+  [281] Desencadenadores
+
+=== sheet 1 ===
+R3: D=Profesor: | K=InglÚs
+R5: D=Know-how
+R7: D=1 | E=Nivel en el MCERL | I=1.1000000000000001 | J=Certificaci¾n
+R9: D=2.1 | E=Licenciatura
+R11: D=2.2000000000000002 | E=A±os de Experiencia en docencia
+R13: D=2.2.1 | E=Prescolar y Primaria | I=2.2.3 | J=Preparatoria
+R15: D=2.2.2 | E=Secundaria | I=2.2.4 | J=Universidad
+R17: D=2.2999999999999998 | E=TKT o afÝn 
+R19: D=2.3.1 | E=M1 Conocimientos generales del aprendizaje y la ense±anza de idiomas
+R21: D=2.3.2 | E=M2 Planificaci¾n de lecciones y uso de recursos para la ense±anza de idiomas
+R23: D=2.3.3 | E=M3 Gesti¾n del proceso de ense±anza y aprendizaje
+R25: D=3 | E=Uso de la TecnologÝa
+R27: C=0 | D=3.1 | E=Windows | F=Deficiente | H=0 | I=3.2 | J=Word | K=Deficiente
+R28: C=250 | D=0 | E=Certificaci¾n IC3 | H=250 | I=0 | J=MCE certification
+R29: C=140 | D=0 | E=Curso 30 hrs o mßs | H=140 | I=0 | J=Curso 30 hrs o mßs
+R30: C=20 | D=0 | E=Enviar Correo  | H=20 | I=0 | J=Encabezado 
+R31: C=20 | D=0 | E=Leer QR | H=20 | I=0 | J=Numeraci¾n 
+R32: C=20 | D=0 | E=Adjuntar archivos  | H=20 | I=0 | J=Uso de imßgenes
+R33: C=20 | D=0 | E=Guardar Archivo  | H=20 | I=0 | J=Uso de Tablas 
+R34: C=20 | D=0 | E=Uso de la PC | H=20 | I=0 | J=Formato de Fuente
+R36: C=0 | D=3.3 | E=Power Point | F=Deficiente | H=0 | I=3.4 | J=Excel | K=Deficiente
+R37: C=250 | D=0 | E=MCE certification | H=250 | I=0 | J=MCE certification
+R38: C=140 | D=0 | E=Curso 30 hrs o mßs | H=140 | I=0 | J=Curso 30 hrs o mßs
+R39: C=20 | D=0 | E=Desencadenadores | H=20 | I=0 | J=Graficas
+R40: C=20 | D=0 | E=Transiciones | H=20 | I=0 | J=Imprimir
+R41: C=20 | D=0 | E=Animaciones | H=20 | I=0 | J=Formato condicional 
+R42: C=20 | D=0 | E=Imßgenes | H=20 | I=0 | J=Formato de celda ($, %, #)
+R43: C=20 | D=0 | E=Fondo | H=20 | I=0 | J=Funciones bßsicas 
+R45: C=0 | D=3.5 | E=Uso de videollamadas | F=Deficiente | H=0 | I=3.6 | J=Apps y pßgs. web  | K=Deficiente
+R46: C=250 | D=0 | E=Certificaci¾n | H=50 | I=0 | J=Uso de IA
+R47: C=140 | D=0 | E=Curso 30 hrs o mßs | H=50 | I=0 | J=Uso de contenido H5P
+R48: C=20 | D=0 | E=Compartir grabaci¾n | H=40 | I=0 | J=Pßgs. interactivas (Kahoot/ Quizizz/ Mentimeter)
+R49: C=20 | D=0 | E=Grabar pantalla | H=40 | I=0 | J=Pßgs. con material didßctico/ worksheets
+R50: C=20 | D=0 | E=Compartir pantalla  | H=30 | I=0 | J=Pßgs. para habilidades especificas
+R51: C=20 | D=0 | E=Compartir enlace | H=30 | I=0 | J=Manejo de apps de idiomas
+R52: C=20 | D=0 | E=Crear Videollamada | H=20 | I=0 | J=Manejo de apps (Gsuit)
+R54: D=3.7 | E=Manejo de Moodle
+R57: D=Problem Solving
+R59: D=4.0999999999999996 | E=Disponibilidad para AsesorÝas
+R61: D=4.2 | E=Disponibilidad para Personalizados
+R63: D=5 | E=Desarrollo de Planes de Estudios
+R65: D=6 | E=Manejo de Fusiones 
+R67: D=7 | E=Disponibilidad de Viaje
+R69: D=8 | E=Apoyo (cubrir faltas)
+R71: D=9 | E=Proyecto final 
+R73: D=Accountability
+R75: D=10.1 | E=Entrega de planeaciones
+R77: D=10.199999999999999 | E=Entrega de calificaciones
+R79: D=11.1 | E=Faltas
+R81: D=11.2 | E=Puntualidad
+R83: D=12 | E=Asistencia a Juntas
+R85: D=13.1 | E=PsicomÚtrico (Inteligencia Emocional) | G=Evaluador D+I+C
+R87: D=13.2 | E=Supervisi¾n y Capacitaci¾n
+R89: D=14.1 | E=Evaluaci¾n 4to mes
+R91: D=14.2 | E=Evaluaci¾n de clase
+R93: D=14.3 | E=Retenci¾n
+R95: D=Enviroment
+R97: D=15 | E=Carga horaria
+R101: D=Puntuaci¾n total: | F=80 | J=PPH: | K=0
+R102: F=Nivel:
+R111: D=** A (1001 - 2000), B (2001 - 3000), C (3001 - 4000), D (4001 - 5000), E (5001 - 6000)
+R113: C=20
+R114: C=20
+R115: E=Colaborador | F=0
+R116: E=Area | F=INGL╔S
+R117: E=Fecha | F=46039
+R118: E=NIVEL | F=0
+R119: E=CERTIFICACION | F=0
+R120: E=LICENCIATURA | F=0
+R121: E=EXP PRESCOLAR | F=0
+R122: E=EXP SECU | F=0
+R123: E=EXP PREPA | F=0
+R124: E=EXP UNI | F=0
+R125: E=M1 | F=0
+R126: E=M2 | F=0
+R127: E=M3 | F=0
+R128: E=WINDOWS | F=0
+R129: E=WORD | F=0
+R130: E=POWERPOINT | F=0
+R131: E=EXCEL | F=0
+R132: E=VIDEOLLAM | F=0
+R133: E=APPS | F=0
+R134: E=MOODLE | F=0
+R135: E=ASESORIAS | F=0
+R136: E=PERSONALIZADOS | F=0
+R137: E=PLANES | F=0
+R138: E=FUSIONES | F=0
+R139: E=VIAJE | F=0
+R140: E=APOYO | F=0
+R141: E=PROYECTO | F=0
+R142: E=PLANEACIONES | F=0
+R143: E=CALIF | F=0
+R144: E=ASISTENCIA | F=0
+R145: E=PUNTUALIDAD | F=0
+R146: E=JUNTAS | F=0
+R147: E=PsicomÚtrico (Inteligencia Emocional) | F=80
+R148: E=SUPERVISION | F=0
+R149: E=Evaluaci¾n 4to mes | F=0
+R150: E=Evaluaci¾n de clase | F=0
+R151: E=Retenci¾n | F=0
+R152: E=HORARIO | F=0
+R153: E=Know-how | F=0 | I=A | J=1001 | K=2000
+R154: E=Problem Solving | F=0 | I=B | J=2001 | K=3000
+R155: E=Accountability | F=80 | I=C | J=3001 | K=4000
+R156: E=Enviroment | F=0 | I=D | J=4001 | K=5000
+R157: E=TOTAL | F=80 | I=E | J=5001 | K=6000
+R158: E=Nivel
+
+=== sheet 2 ===
+R1: A=Colaborador | B=Area | C=Fecha | D=NIVEL | E=CERTIFICACION | F=LICENCIATURA | G=EXP PRESCOLAR | H=EXP SECU | I=EXP PREPA | J=EXP UNI | K=M1 | L=M2 | M=M3 | N=WINDOWS | O=WORD | P=POWERPOINT | Q=EXCEL | R=VIDEOLLAM | S=APPS | T=MOODLE | U=ASESORIAS | V=PERSONALIZADOS | W=PLANES | X=FUSIONES | Y=VIAJE | Z=APOYO | AA=PROYECTO | AB=PLANEACIONES | AC=CALIF | AD=ASISTENCIA | AE=PUNTUALIDAD | AF=JUNTAS | AG=PsicomÚtrico | AH=SUPERVISION | AI=Evaluaci¾n 4to mes | AJ=Evaluaci¾n de clase | AK=Retenci¾n | AL=HORARIO | AM=Know-how | AN=Problem Solving | AO=Accountability | AP=Enviroment | AQ=TOTAL | AR=Nivel
+R2: A=emily | B=INGL╔S | C=45884 | D=150 | E=200 | F=250 | G=60 | H=60 | I=60 | J=60 | K=250 | L=260 | M=220 | N=250 | O=250 | P=150 | Q=100 | R=250 | S=150 | T=200 | U=150 | V=100 | W=180 | X=120 | Y=100 | Z=100 | AA=120 | AB=90 | AC=100 | AD=40 | AE=80 | AF=60 | AG=80 | AH=80 | AI=50 | AJ=120 | AK=20 | AL=80 | AM=2920 | AN=870 | AO=720 | AP=80 | AQ=4590 | AR=D
+
+=== sheet 3 ===
+R2: B=Nivel en el MCERL | D=Certificacion | F=Prescolar | H=Secundaria  | J=Preparatoria | L=Universidad | N=Licenciatura | P=Module 1 | R=Module 2 | T=Module 3 | V=Windows | X=Word | Z=Power Point | AB=Excel | AD=Plataformas para videollamadas | AF=Conocimiento de apps y Paginas web  | AH=Manejo de plataforma Moodle | AJ=Disponibilidad para asesorias | AL=Disponibilidad para Personalizados | AN=Desarrollo de Planes de Estudios | AP=Manejo de Fusiones  | AR=Disponibilidad de Viaje | AT=Apoyo (cubrir faltas) | AV=Proyecto final  | AX=Entrega de planeaciones | AZ=Entrega de calificaciones | BB=Asistencia | BD=Puntualidad | BF=Juntas | BH=Inteligencia Emocional | BJ=Supervisi¾n | BL=4TO MES | BN=Evaluacion de clase | BP=RETENCION | BR=Carga horaria
+R3: B=C2 | C=250 | D=Diploma CENNI | E=250 | F=7 o mßs | G=80 | H=7 o mßs | I=80 | J=7 o mßs | K=80 | L=7 o mßs | M=80 | N=Maestria en Pedagogia o afÝn Terminada | O=300 | P=Banda 4 | Q=260 | R=Banda 4 | S=260 | T=Banda 4 | U=260 | V=Pro | W=250 | X=Pro | Y=250 | Z=Pro | AA=250 | AB=Pro | AC=250 | AD=Pro | AE=250 | AF=Pro | AG=250 | AH=Ha creado mas de un curso | AI=250 | AJ=4 hrs o mas por grupo  | AK=200 | AL=4 hrs o mas por grupo  | AM=200 | AN=Desarrollo un nuevo plan de al menos 4 meses | AO=200 | AP=Mantuvo mßs del 90% de alumnos | AQ=150 | AR=Ha apoyado en 3 planteles | AS=150 | AT=Siempre disponible  | AU=150 | AV=Excepcional | AW=150 | AX=Antes de la fecha | AY=100 | AZ=Antes de la fecha | BA=150 | BB=Ninguna | BC=80 | BD=10 min antes | BE=80 | BF=Siempre | BG=80 | BH=Consejero I+S | BI=80 | BJ=3 profesores | BK=120 | BL=Mßs del 80% aprob¾ | BM=150 | BN=>=90% | BO=150 | BP=Mßs del 95% | BQ=100 | BR=20 hrs o mßs | BS=120
+R4: B=C1+ | C=200 | D=Certificado CENNI | E=200 | F=6 a±os | G=70 | H=6 a±os | I=70 | J=6 a±os | K=70 | L=6 a±os | M=70 | N=Maestria no relacionada con pedagogÝa Terminada | O=280 | P=Banda 3 | Q=250 | R=Banda 3 | S=250 | T=Banda 3 | U=250 | V=Aceptable | W=150 | X=Aceptable | Y=150 | Z=Aceptable | AA=150 | AB=Aceptable | AC=150 | AD=Aceptable | AE=150 | AF=Aceptable | AG=150 | AH=Ha creado un curso | AI=200 | AJ=3 hrs por grupo | AK=150 | AL=3 hrs por grupo | AM=150 | AN=Participo en la mejora continua del plan de estudios  | AO=180 | AP=Mantuvo mßs del 80% de alumnos | AQ=120 | AR=Ha apoyado en 2 planteles | AS=100 | AT=Seguido apoya  | AU=120 | AV=Muy bueno  | AW=120 | AX=A tiempo  | AY=90 | AZ=A tiempo  | BA=100 | BB=1 falta | BC=60 | BD=A la hora | BE=70 | BF=80% de asistencia | BG=60 | BH=Profesional I+S+C | BI=80 | BJ=2 profesores | BK=80 | BL=Entre el 60% y el 80% aprob¾ | BM=120 | BN=>=80% | BO=120 | BP=Entre el 85% y el 95% | BQ=80 | BR=16 hrs | BS=80
+R5: B=C1 | C=150 | D=TOEFL IBT | E=200 | F=5 a±os | G=60 | H=5 a±os | I=60 | J=5 a±os | K=60 | L=5 a±os | M=60 | N=Cualquier maestria en curso | O=270 | P=Examen Interno B3 o B4 | Q=220 | R=Examen Interno B3 o B4 | S=220 | T=Examen Interno B3 o B4 | U=220 | V=Bueno | W=100 | X=Bueno | Y=100 | Z=Bueno | AA=100 | AB=Bueno | AC=100 | AD=Bueno | AE=100 | AF=Bueno | AG=100 | AH=Ha creado contenido H5P | AI=150 | AJ=2 hrs por grupo  | AK=100 | AL=2 hrs por grupo  | AM=100 | AN=Desarrollo un plan de un mes (fusion) | AO=150 | AP=Mantuvo mßs del 60% de alumnos | AQ=100 | AR=Ha apoyado en 1 plantel mßs | AS=50 | AT=A veces tiene dispocisi¾n | AU=100 | AV=Lo justo  | AW=100 | AX=Fuera de tiempo | AY=50 | AZ=Fuera de tiempo | BA=20 | BB=2 faltas | BC=40 | BD=5 min tarde | BE=50 | BF=50% de asistencia | BG=40 | BH=Alentador D+I+S | BI=80 | BJ=1 profesor | BK=20 | BL=El 50% aprob¾ | BM=80 | BN=>=70% | BO=80 | BP=Entre 75% y 84% | BQ=50 | BR=12 hrs | BS=20
+R6: B=C1- | C=120 | D=Linguaskill  | E=200 | F=4 a±os | G=50 | H=4 a±os | I=50 | J=4 a±os | K=50 | L=4 a±os | M=50 | N=Licenciatura en pedagogÝa o afÝn Terminada | O=250 | P=Banda 2 | Q=200 | R=Banda 2 | S=200 | T=Banda 2 | U=200 | V=Deficiente | W=0 | X=Deficiente | Y=0 | Z=Deficiente | AA=0 | AB=Deficiente | AC=0 | AD=Deficiente | AE=0 | AF=Deficiente | AG=0 | AH=La conoce como editor  | AI=120 | AJ=1 hr por grupo  | AK=50 | AL=1 hr por grupo  | AM=50 | AN=Participo en el desarrollo de un plan para fusion | AO=120 | AP=Mantuvo menos del 50% de alumnos | AQ=50 | AR=No puede apoyar en ningun otro plantel | AS=10 | AT=Rara vez puede | AU=50 | AV=Se puede mejorar | AW=50 | AX=Hasta que se le solicito | AY=0 | AZ=Hasta que se le solicito | BA=0 | BB=3 faltas | BC=10 | BD=Mßs de 5 min tarde  | BE=0 | BF=20% de asistencia | BG=10 | BH=Evaluador D+I+C | BI=80 | BJ=Ninguno | BK=0 | BL=Mßs del 25% aprob¾ | BM=50 | BN=>=60% | BO=50 | BP=Entre el 70% y el 74% | BQ=20 | BR=8 hrs | BS=0
+R7: B=B2+ | C=100 | D=ITEP | E=200 | F=3 a±os | G=40 | H=3 a±os | I=40 | J=3 a±os | K=40 | L=3 a±os | M=40 | N=Licenciatura no relacionada con pedagogÝa Terminada | O=200 | P=Examen Interno B2 | Q=150 | R=Examen Interno B2 | S=150 | T=Examen Interno B2 | U=150 | AH=La conoce como profesor  | AI=100 | AJ=Ninguna | AK=0 | AL=Ninguna | AM=0 | AN=Desarrollo un plan para un personalizado (10 hrs) | AO=100 | AP=Nunca ha tenido fusiones | AQ=50 | AS=0 | AT=Nunca puede | AU=0 | AV=Pobre | AW=0 | BB=Mßs de 3 faltas | BC=0 | BF=Nunca | BG=0 | BH=Promotor I | BI=50 | BL=Nadie aprob¾ | BM=0 | BN=<60% | BO=0 | BP=Nadie aprob¾ | BQ=Menos del 70% | BR=4 hrs
+R8: B=B2 | C=50 | D=OTCC | E=200 | F=2 a±os | G=30 | H=2 a±os | I=30 | J=2 a±os | K=30 | L=2 a±os | M=30 | N=Licenciatura en PedagogÝa o afÝn en curso | O=200 | P=Curso de preparaci¾n | Q=100 | R=Curso de preparaci¾n | S=100 | T=Curso de preparaci¾n | U=100 | AH=La conoce como alumno  | AI=50 | AN=Participo en el desarrollo de un plan personalizado  | AO=50 | BH=Persuasivo I+C | BI=40
+R9: B=B2- | C=40 | D=TOEFL ITP | E=100 | F=1 a±o | G=20 | H=1 a±o | I=20 | J=1 a±o | K=20 | L=1 a±o | M=20 | N=Licenciatura no relacionada en curso  | O=180 | P=No lo tiene  | Q=0 | R=No lo tiene  | S=0 | T=No lo tiene  | U=0 | AH=Nunca la ha usado  | AI=0 | AN=Nunca ha desarrollado un plan de estudios  | AO=0
+R10: B=B1+ | C=20 | D=Constancia CENNI | E=100 | F=6 meses | G=10 | H=6 meses | I=10 | J=6 meses | K=10 | L=6 meses | M=10 | N=Cualquier Licenciatura Trunca | O=150
+R11: B=B1 | C=10 | D=Interna CNCM | E=100 | F=0 a 5 meses | G=0 | H=0 a 5 meses | I=0 | J=0 a 5 meses | K=0 | L=0 a 5 meses | M=0 | N=Preparatoria | O=100

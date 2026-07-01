@@ -1,0 +1,97 @@
+.acuerdo-supervisor-intro {
+
+  color: #666;
+
+  margin: 8px 0 0;
+
+  max-width: 720px;
+
+}
+
+
+
+.acuerdo-activo-card {
+
+  padding: 16px 20px;
+
+  margin-top: 12px;
+
+}
+
+
+
+.acuerdo-meta {
+
+  color: #777;
+
+  font-size: 0.9rem;
+
+  margin: 4px 0 12px;
+
+}
+
+
+
+.acuerdo-preview,
+
+.acuerdo-contenido-alumno {
+
+  white-space: pre-wrap;
+
+  font-family: inherit;
+
+  font-size: 0.95rem;
+
+  line-height: 1.55;
+
+  background: #f8f9fa;
+
+  border: 1px solid #e8e8e8;
+
+  border-radius: 10px;
+
+  padding: 16px;
+
+  margin: 0;
+
+  max-height: 420px;
+
+  overflow: auto;
+
+}
+
+
+
+.acuerdo-alumno-texto {
+
+  padding: 16px 20px;
+
+}
+
+
+
+.acuerdo-version-tag {
+
+  font-weight: 600;
+
+  color: #1565c0;
+
+  margin: 0 0 10px;
+
+}
+
+
+
+body.hay-debe-aceptar-acuerdo #sidebar,
+
+body.hay-debe-aceptar-acuerdo .top-nav__user,
+
+body.hay-debe-aceptar-acuerdo #toggle-sidebar {
+
+  pointer-events: none;
+
+  opacity: 0.55;
+
+}
+
+

@@ -1,0 +1,168 @@
+/* Ticket térmico 80 mm (área útil ~72 mm) */
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body.ticket-termico-page {
+  margin: 0;
+  padding: 4mm 0;
+  background: #eee;
+  color: #000;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  line-height: 1.35;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.ticket-termico {
+  width: 72mm;
+  max-width: 72mm;
+  margin: 0 auto;
+  padding: 2mm 3mm 4mm;
+  background: #fff;
+}
+
+.ticket-termico__logo {
+  display: block;
+  width: 46mm;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 3mm;
+}
+
+.ticket-termico__head {
+  text-align: center;
+  font-size: 10px;
+}
+
+.ticket-termico__head p {
+  margin: 0 0 2px;
+}
+
+.ticket-termico__head .ticket-termico__razon {
+  font-weight: 700;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.ticket-termico__meta {
+  text-align: center;
+  margin: 4mm 0;
+  font-size: 10.5px;
+}
+
+.ticket-termico__meta p {
+  margin: 0 0 2px;
+}
+
+.ticket-termico__meta .ticket-termico__alumno {
+  font-weight: 700;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.ticket-termico__total-banner {
+  text-align: center;
+  font-weight: 700;
+  font-size: 11px;
+  margin: 3mm 0 2mm;
+}
+
+.ticket-termico__section-title {
+  text-align: center;
+  font-weight: 700;
+  text-decoration: underline;
+  margin: 2mm 0 2mm;
+  font-size: 10.5px;
+}
+
+.ticket-termico__lineas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticket-termico__lineas li {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+  margin: 0 0 2px;
+  font-size: 10px;
+  align-items: flex-start;
+}
+
+.ticket-termico__lineas .desc {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.ticket-termico__lineas .amt {
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ticket-termico__sep {
+  border: none;
+  border-top: 1px solid #000;
+  margin: 2mm 0;
+}
+
+.ticket-termico__total-row {
+  display: flex;
+  justify-content: flex-end;
+  font-weight: 700;
+  font-size: 11px;
+  margin: 1mm 0 3mm;
+}
+
+.ticket-termico__pie {
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.ticket-termico__pie p {
+  margin: 0 0 3px;
+}
+
+.ticket-termico-no-print {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.ticket-termico-no-print button {
+  margin: 0 4px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+@media print {
+  body.ticket-termico-page {
+    padding: 0;
+    background: #fff;
+  }
+
+  .ticket-termico-no-print {
+    display: none !important;
+  }
+
+  .ticket-termico {
+    width: 72mm;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .ticket-termico {
+    width: 100%;
+    max-width: 320px;
+  }
+}

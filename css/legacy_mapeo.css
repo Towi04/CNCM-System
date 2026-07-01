@@ -1,0 +1,67 @@
+.legacy-mapeo-wrap .legacy-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+}
+
+.legacy-mapeo-wrap .legacy-tab {
+    padding: 10px 16px;
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.legacy-mapeo-wrap .legacy-tab.is-active {
+    background: #11458b;
+    color: #fff;
+    border-color: #11458b;
+}
+
+.legacy-mapeo-wrap .legacy-mapeo-table select {
+    min-width: 200px;
+    max-width: 280px;
+    padding: 6px 8px;
+}
+
+.legacy-mapeo-wrap .legacy-stats {
+    background: #f0f7ff;
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 14px;
+}
+
+.legacy-mapeo-wrap .catalog-table-wrap,
+.legacy-mapeo-wrap .legacy-panel {
+    overflow-x: auto;
+}
+
+.legacy-grupos-wrap .legacy-grupos-table {
+    font-size: 13px;
+}
+
+.legacy-grupos-wrap .legacy-grp-muestras {
+    margin: 0;
+    padding-left: 16px;
+    max-width: 220px;
+}
+
+.legacy-grupos-wrap .legacy-grp-muestras li {
+    margin: 2px 0;
+}
+
+.legacy-grupos-wrap .legacy-prev-ok {
+    color: #2e7d32;
+    font-weight: 600;
+}
+
+.legacy-grupos-wrap .legacy-prev-cell {
+    min-width: 140px;
+}
+
+.legacy-grupos-wrap .legacy-sel-hay {
+    min-width: 220px;
+}

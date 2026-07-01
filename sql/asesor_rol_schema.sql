@@ -1,0 +1,2 @@
+-- Rol asesor: entrevistas, campos certificación (catálogo Excel), vínculo con pre-registro
+-- Se aplica automáticamente con asesor_ensure_schema() y certificacion_campos_ensure_schema()

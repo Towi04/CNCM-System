@@ -1,0 +1,142 @@
+.piso-wrap {
+  max-width: 1020px;
+}
+
+.piso-atajos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+
+.piso-atajo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.piso-atajo:hover {
+  border-color: #5c7cfa;
+  box-shadow: 0 2px 8px rgba(92, 124, 250, 0.12);
+}
+
+.piso-atajo--alta {
+  border-color: #ffc9c9;
+  background: #fff5f5;
+}
+
+.piso-atajo__val {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.piso-atajo__lbl {
+  font-size: 0.82rem;
+  color: #555;
+}
+
+.piso-atajo__icon {
+  color: #5c7cfa;
+  margin-bottom: 4px;
+}
+
+.piso-atajo--alta .piso-atajo__icon {
+  color: #c92a2a;
+}
+
+.piso-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.piso-chip {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  background: #fafafa;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.piso-chip.active {
+  background: #e8eefc;
+  border-color: #5c7cfa;
+  font-weight: 600;
+}
+
+.piso-buscar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  align-items: flex-end;
+}
+
+.piso-buscar input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+}
+
+.piso-entrega-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.piso-entrega-item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.piso-entrega-item--diploma {
+  border-left: 4px solid #7048e8;
+}
+
+.piso-entrega-item--constancia {
+  border-left: 4px solid #1971c2;
+}
+
+.piso-entrega-tipo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666;
+}
+
+.piso-vacio {
+  padding: 28px;
+  text-align: center;
+  color: #868e96;
+  border: 1px dashed #dee2e6;
+  border-radius: 12px;
+}
+
+.piso-acciones-rapidas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  align-items: center;
+}

@@ -1,0 +1,1 @@
+-- Tipos de suspensión de usuario (columnas vía usuario_suspension_ensure_schema en PHP)

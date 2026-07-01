@@ -1,0 +1,10 @@
+{
+  "intelephense.environment.includePaths": [
+    "php/stubs"
+  ],
+  "intelephense.environment.phpVersion": "8.2.0",
+  "intelephense.files.exclude": [
+    "**/.cursor/**",
+    "**/.cursor/extensions/**"
+  ]
+}

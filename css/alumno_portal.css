@@ -1,0 +1,125 @@
+.ap-portal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.ap-card-btn {
+    padding: 16px;
+    text-align: left;
+    cursor: pointer;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: #fff;
+    transition: box-shadow 0.15s;
+}
+
+.ap-card-btn:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.ap-notif-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.ap-notif-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid #eee;
+}
+
+.ap-notif-item--alta {
+    border-left: 4px solid #c62828;
+}
+
+.ap-notif-item--media {
+    border-left: 4px solid #1565c0;
+}
+
+.ap-chat-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 16px;
+    min-height: 420px;
+}
+
+@media (max-width: 768px) {
+    .ap-chat-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ap-chat-salas {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.ap-chat-sala-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    border: none;
+    border-bottom: 1px solid #eee;
+    background: #fafafa;
+    cursor: pointer;
+}
+
+.ap-chat-sala-btn.active {
+    background: #e3f2fd;
+    font-weight: 600;
+}
+
+.ap-chat-panel {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+}
+
+.ap-chat-msgs {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    background: #f9f9f9;
+}
+
+.ap-chat-msg {
+    margin-bottom: 10px;
+    max-width: 85%;
+}
+
+.ap-chat-msg.mine {
+    margin-left: auto;
+    text-align: right;
+}
+
+.ap-chat-msg-bubble {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    text-align: left;
+}
+
+.ap-chat-msg.mine .ap-chat-msg-bubble {
+    background: #e3f2fd;
+}
+
+.ap-chat-form {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    border-top: 1px solid #eee;
+}
+
+.ap-chat-form input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}

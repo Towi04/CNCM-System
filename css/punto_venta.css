@@ -1,0 +1,239 @@
+/* Punto de venta — layout estilo sistema anterior */
+.pv-legacy {
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: inherit;
+}
+
+.pv-top-selectors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .pv-top-selectors {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pv-selector-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pv-label-required {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.pv-label {
+  font-size: 0.88rem;
+  color: #444;
+  margin: 12px 0 6px;
+  display: block;
+}
+
+.pv-select,
+.pv-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.pv-main {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .pv-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pv-left {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.pv-tabs {
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 16px;
+}
+
+.pv-tab {
+  display: inline-block;
+  padding: 12px 4px;
+  margin-right: 16px;
+  font-size: 0.9rem;
+  color: #666;
+  border-bottom: 2px solid transparent;
+}
+
+.pv-tab--active {
+  color: #333;
+  font-weight: 600;
+  border-bottom-color: #1a2b45;
+}
+
+.pv-left-body {
+  padding: 16px 20px 20px;
+}
+
+.pv-total-pendiente {
+  margin: 12px 0 16px;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.pv-total-pendiente strong {
+  font-size: 1.05rem;
+}
+
+.pv-table-wrap {
+  overflow-x: auto;
+}
+
+.pv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.pv-table thead th {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 2px solid #e0e0e0;
+  color: #555;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.pv-table tbody td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.pv-empty {
+  text-align: center;
+  color: #888;
+  padding: 24px !important;
+}
+
+.pv-status-pend {
+  color: #e65100;
+  font-weight: 500;
+}
+
+.pv-pager {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.pv-pager-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ddd;
+  background: #fafafa;
+  border-radius: 4px;
+  cursor: default;
+  color: #999;
+}
+
+.pv-right {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.pv-right-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.pv-right-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.pv-check-manual {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #555;
+  cursor: pointer;
+}
+
+.pv-abono-form label {
+  display: block;
+  font-size: 0.88rem;
+  color: #444;
+  margin: 10px 0 4px;
+}
+
+.pv-abono-form label:first-of-type {
+  margin-top: 0;
+}
+
+.pv-cambio {
+  margin: 14px 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.pv-btn-recibir {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #2e7d32;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pv-btn-recibir:hover:not(:disabled) {
+  background: #1b5e20;
+}
+
+.pv-btn-recibir:disabled {
+  background: #a5d6a7;
+  cursor: not-allowed;
+}
+
+.pv-btn-apartado {
+  font-size: 0.9rem;
+}
+
+.pv-row-cert:hover {
+  background: #e3f2fd;
+}
+
+.pv-row-selected {
+  background: #bbdefb !important;
+  outline: 2px solid #1565c0;
+}

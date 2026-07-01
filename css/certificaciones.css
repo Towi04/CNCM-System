@@ -1,0 +1,183 @@
+.cert-wrap { max-width: 1100px; }
+
+.cert-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.cert-tab {
+  border: 1px solid #ccc;
+  background: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cert-tab.active {
+  background: #1a237e;
+  color: #fff;
+  border-color: #1a237e;
+}
+
+#cert-btn-nueva { margin-left: auto; }
+
+.cert-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.cert-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+
+.cert-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cert-card h4 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.cert-card-org {
+  color: #666;
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+
+.cert-card-precio {
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.cert-card-meta {
+  font-size: 0.8rem;
+  color: #888;
+  margin: 0 0 10px;
+}
+
+.cert-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  padding: 16px;
+}
+
+.cert-modal[hidden] { display: none; }
+
+.cert-modal-box {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 24px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  position: relative;
+}
+
+.cert-modal-box--wide { max-width: 720px; }
+
+.cert-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+}
+
+.cert-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.cert-form-grid .full { grid-column: 1 / -1; }
+
+.cert-form-grid label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.cert-form-grid input,
+.cert-form-grid select,
+.cert-form-grid textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.cert-pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.9rem;
+  background: #f7f7f7;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 0;
+}
+
+.cert-block {
+  margin: 14px 0;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.cert-block--info { background: #f0f7ff; padding: 10px; border-radius: 6px; border: none; }
+.cert-block--warn { background: #fff8e6; padding: 10px; border-radius: 6px; border: 1px solid #ffe082; }
+.cert-block--ok { background: #e8f5e9; padding: 10px; border-radius: 6px; border: 1px solid #a5d6a7; }
+
+.cert-docs-checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.cert-doc-row {
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.cert-upload-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.cert-upload-form input[type=file] {
+  max-width: 160px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .cert-form-grid { grid-template-columns: 1fr; }
+  .cert-docs-checks { grid-template-columns: 1fr; }
+}

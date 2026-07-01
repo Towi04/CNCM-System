@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>HayFingerprintMatcher</RootNamespace>
+    <AssemblyName>HayFingerprintMatcher</AssemblyName>
+  </PropertyGroup>
+  <!--
+    Tras instalar el U.are.U SDK de HID, descomente y ajuste la ruta:
+    <ItemGroup>
+      <Reference Include="DPUruNet">
+        <HintPath>C:\Program Files\DigitalPersona\U.are.U SDK\Windows\Lib\DotNET\DPUruNet.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+    Y defina FINGERJET_SDK en Propiedades del proyecto.
+  -->
+</Project>

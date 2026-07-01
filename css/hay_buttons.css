@@ -1,0 +1,291 @@
+/**
+ * Sistema de botones HAY — gradiente, sombra y bordes redondeados.
+ * Referencia visual: botón verde de consulta de adeudo / estado de cuenta.
+ */
+:root {
+    --hay-btn-radius: 10px;
+    --hay-btn-py: 10px;
+    --hay-btn-px: 18px;
+    --hay-btn-fw: 600;
+    --hay-btn-fs: 0.95rem;
+
+    --hay-green-top: #43a047;
+    --hay-green-bot: #2e7d32;
+    --hay-green-border: #1b5e20;
+    --hay-green-shadow: rgba(46, 125, 50, 0.35);
+    --hay-green-hover-top: #4caf50;
+    --hay-green-hover-bot: #388e3c;
+
+    --hay-blue-top: #1565c0;
+    --hay-blue-bot: #11458b;
+    --hay-blue-border: #0d3a6e;
+    --hay-blue-shadow: rgba(17, 69, 139, 0.35);
+    --hay-blue-hover-top: #1976d2;
+    --hay-blue-hover-bot: #1565c0;
+
+    --hay-red-top: #e53935;
+    --hay-red-bot: #c62828;
+    --hay-red-border: #b71c1c;
+    --hay-red-shadow: rgba(198, 40, 40, 0.35);
+    --hay-red-hover-top: #ef5350;
+    --hay-red-hover-bot: #d32f2f;
+
+    --hay-orange-top: #fb8c00;
+    --hay-orange-bot: #ef6c00;
+    --hay-orange-border: #e65100;
+    --hay-orange-shadow: rgba(239, 108, 0, 0.35);
+    --hay-orange-hover-top: #ffa726;
+    --hay-orange-hover-bot: #f57c00;
+
+    --hay-gray-bg: #fff;
+    --hay-gray-text: #37474f;
+    --hay-gray-border: #b0bec5;
+    --hay-gray-shadow: rgba(55, 71, 79, 0.12);
+}
+
+/* Excluir tabs, iconos, toggles y controles especiales */
+#main-content button:not(
+    [class*="-tab"],
+    [class*="modal-close"],
+    [class*="btn-icon"],
+    [class*="btn-toggle"],
+    [class*="paginate"],
+    [class*="tutor-conv-item"],
+    [class*="tutor-tutor-item"],
+    [class*="tutor-btn-icon"],
+    [class*="tutor-send"],
+    [class*="tutor-mobile-toggle"],
+    .dt-button,
+    .ap-card-btn,
+    .hay-portal-card,
+    button.hay-portal-card,
+    button.welcome-card,
+    .welcome-card button,
+    .btn-prereg-agregar,
+    .btn-enviar,
+    .btn-nav,
+    .hay-tour-skip,
+    .hay-tour-prev,
+    .calif-filter-btn
+) {
+    font-family: inherit;
+    font-size: var(--hay-btn-fs);
+    font-weight: var(--hay-btn-fw);
+    line-height: 1.25;
+    border-radius: var(--hay-btn-radius);
+    padding: var(--hay-btn-py) var(--hay-btn-px);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    vertical-align: middle;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s, border-color 0.2s, color 0.2s;
+}
+
+#main-content button:not([class]):not(
+    [class*="-tab"],
+    [class*="modal-close"],
+    [class*="btn-icon"],
+    [class*="btn-toggle"],
+    .ap-card-btn,
+    .hay-portal-card,
+    .welcome-card,
+    .calif-filter-btn
+),
+#main-content .catalog-actions button:not(.primary):not(.secondary):not(.danger):not(.info):not(.warning),
+#main-content .catalog-header button:not(.primary):not(.secondary):not(.danger):not(.info):not(.warning) {
+    background: linear-gradient(180deg, var(--hay-blue-top) 0%, var(--hay-blue-bot) 100%);
+    color: #fff !important;
+    border: 1px solid var(--hay-blue-border) !important;
+    box-shadow: 0 3px 10px var(--hay-blue-shadow);
+}
+
+#main-content button:not([class]):hover:not(:disabled),
+#main-content .catalog-actions button:not(.primary):not(.secondary):not(.danger):not(.info):not(.warning):hover:not(:disabled),
+#main-content .catalog-header button:not(.primary):not(.secondary):not(.danger):not(.info):not(.warning):hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--hay-blue-hover-top) 0%, var(--hay-blue-hover-bot) 100%);
+    box-shadow: 0 5px 14px var(--hay-blue-shadow);
+    transform: translateY(-1px);
+}
+
+/* Variante verde — acción principal / guardar / consultar */
+#main-content button.primary,
+#main-content a.primary,
+#main-content .btn-guardar,
+#main-content .btn-hay-primary,
+#main-content .btn-prereg-guardar,
+#main-content .catalog-header .primary,
+#main-content .catalog-actions button.primary,
+#main-content .prereg-header .primary,
+#main-content .pv-wrap .primary,
+#main-content .alumnos-toolbar .primary,
+#main-content input[type="submit"].primary,
+#main-content input[type="button"].primary {
+    background: linear-gradient(180deg, var(--hay-green-top) 0%, var(--hay-green-bot) 100%) !important;
+    color: #fff !important;
+    border: 1px solid var(--hay-green-border) !important;
+    border-radius: var(--hay-btn-radius) !important;
+    padding: var(--hay-btn-py) var(--hay-btn-px) !important;
+    font-weight: var(--hay-btn-fw);
+    cursor: pointer;
+    box-shadow: 0 3px 10px var(--hay-green-shadow);
+}
+
+#main-content button.primary:hover:not(:disabled),
+#main-content a.primary:hover,
+#main-content .btn-guardar:hover:not(:disabled),
+#main-content .btn-hay-primary:hover:not(:disabled),
+#main-content .btn-prereg-guardar:hover:not(:disabled),
+#main-content .catalog-header .primary:hover,
+#main-content .catalog-actions button.primary:hover:not(:disabled),
+#main-content .prereg-header .primary:hover,
+#main-content .pv-wrap .primary:hover,
+#main-content .alumnos-toolbar .primary:hover {
+    background: linear-gradient(180deg, var(--hay-green-hover-top) 0%, var(--hay-green-hover-bot) 100%) !important;
+    box-shadow: 0 5px 14px var(--hay-green-shadow);
+    transform: translateY(-1px);
+}
+
+/* Variante azul — navegación / ver / buscar secundario */
+#main-content button.info,
+#main-content a.info,
+#main-content .btn-hay-info {
+    background: linear-gradient(180deg, var(--hay-blue-top) 0%, var(--hay-blue-bot) 100%) !important;
+    color: #fff !important;
+    border: 1px solid var(--hay-blue-border) !important;
+    box-shadow: 0 3px 10px var(--hay-blue-shadow);
+}
+
+#main-content button.info:hover:not(:disabled),
+#main-content a.info:hover,
+#main-content .btn-hay-info:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--hay-blue-hover-top) 0%, var(--hay-blue-hover-bot) 100%) !important;
+    box-shadow: 0 5px 14px var(--hay-blue-shadow);
+    transform: translateY(-1px);
+}
+
+/* Variante gris — cancelar / volver */
+#main-content button.secondary,
+#main-content a.secondary,
+#main-content .btn-hay-secondary,
+#main-content .prereg-volver {
+    background: var(--hay-gray-bg) !important;
+    color: var(--hay-gray-text) !important;
+    border: 1px solid var(--hay-gray-border) !important;
+    box-shadow: 0 2px 8px var(--hay-gray-shadow);
+}
+
+#main-content button.secondary:hover:not(:disabled),
+#main-content a.secondary:hover,
+#main-content .btn-hay-secondary:hover:not(:disabled),
+#main-content .prereg-volver:hover:not(:disabled) {
+    background: #eceff1 !important;
+    border-color: #78909c !important;
+    transform: translateY(-1px);
+}
+
+/* Variante roja — eliminar / rechazar / desactivar */
+#main-content button.danger,
+#main-content a.danger,
+#main-content .btn-hay-danger,
+#main-content .catalog-actions button.danger,
+#main-content button.primary.danger {
+    background: linear-gradient(180deg, var(--hay-red-top) 0%, var(--hay-red-bot) 100%) !important;
+    color: #fff !important;
+    border: 1px solid var(--hay-red-border) !important;
+    box-shadow: 0 3px 10px var(--hay-red-shadow);
+}
+
+#main-content button.danger:hover:not(:disabled),
+#main-content a.danger:hover,
+#main-content .btn-hay-danger:hover:not(:disabled),
+#main-content .catalog-actions button.danger:hover:not(:disabled),
+#main-content button.primary.danger:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--hay-red-hover-top) 0%, var(--hay-red-hover-bot) 100%) !important;
+    box-shadow: 0 5px 14px var(--hay-red-shadow);
+    transform: translateY(-1px);
+}
+
+/* Variante naranja — advertencia / acción especial */
+#main-content button.warning,
+#main-content a.warning,
+#main-content .btn-hay-warning {
+    background: linear-gradient(180deg, var(--hay-orange-top) 0%, var(--hay-orange-bot) 100%) !important;
+    color: #fff !important;
+    border: 1px solid var(--hay-orange-border) !important;
+    box-shadow: 0 3px 10px var(--hay-orange-shadow);
+}
+
+#main-content button.warning:hover:not(:disabled),
+#main-content a.warning:hover,
+#main-content .btn-hay-warning:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--hay-orange-hover-top) 0%, var(--hay-orange-hover-bot) 100%) !important;
+    box-shadow: 0 5px 14px var(--hay-orange-shadow);
+    transform: translateY(-1px);
+}
+
+/* Cancelar / cerrar — estilo secundario aunque no tengan clase */
+#main-content button[id*="cerrar"],
+#main-content button[id*="cancelar"],
+#main-content button[id*="btn-cancel"],
+#main-content button[data-close] {
+    background: var(--hay-gray-bg) !important;
+    color: var(--hay-gray-text) !important;
+    border: 1px solid var(--hay-gray-border) !important;
+    box-shadow: 0 2px 8px var(--hay-gray-shadow);
+}
+
+#main-content button[id*="cerrar"]:hover:not(:disabled),
+#main-content button[id*="cancelar"]:hover:not(:disabled),
+#main-content button[id*="btn-cancel"]:hover:not(:disabled),
+#main-content button[data-close]:hover:not(:disabled) {
+    background: #eceff1 !important;
+    border-color: #78909c !important;
+    transform: translateY(-1px);
+}
+
+#main-content button:disabled,
+#main-content button.primary:disabled,
+#main-content input[type="submit"]:disabled,
+#main-content input[type="button"]:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+#main-content input[type="submit"]:not([class]),
+#main-content input[type="button"]:not([class]) {
+    background: linear-gradient(180deg, var(--hay-green-top) 0%, var(--hay-green-bot) 100%);
+    color: #fff;
+    border: 1px solid var(--hay-green-border);
+    border-radius: var(--hay-btn-radius);
+    padding: var(--hay-btn-py) var(--hay-btn-px);
+    font-weight: var(--hay-btn-fw);
+    cursor: pointer;
+    box-shadow: 0 3px 10px var(--hay-green-shadow);
+}
+
+#main-content a.primary,
+#main-content a.secondary,
+#main-content a.info,
+#main-content a.danger,
+#main-content a.warning {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--hay-btn-py) var(--hay-btn-px);
+    border-radius: var(--hay-btn-radius);
+    font-weight: var(--hay-btn-fw);
+    font-size: var(--hay-btn-fs);
+}
+
+#main-content .btn-sm,
+#main-content button.btn-sm {
+    padding: 6px 12px !important;
+    font-size: 0.85rem !important;
+}

@@ -1,0 +1,264 @@
+.rep-vent-wrap { max-width: 100%; }
+
+.rep-vent-layout {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .rep-vent-layout { grid-template-columns: 1fr; }
+}
+
+.rep-vent-tabs-periodo {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.rep-vent-tabs-periodo button {
+  border: 1px solid #ccc;
+  background: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.rep-vent-tabs-periodo button.active {
+  background: #1a237e;
+  color: #fff;
+  border-color: #1a237e;
+}
+
+.rep-vent-nav-fecha {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 16px;
+  flex-wrap: wrap;
+}
+
+.rep-vent-nav-fecha > .rep-vent-fecha-nav-btn {
+  border: none;
+  background: #eee;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.rep-vent-corte-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 12px 0 16px;
+}
+
+.rep-vent-fecha-label--inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: auto;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.rep-vent-fecha-label--inline input[type="date"] {
+  font-weight: 400;
+}
+
+.rep-vent-fecha-label {
+  font-size: 1.05rem;
+  font-weight: 600;
+  min-width: 220px;
+  text-align: center;
+}
+
+.rep-vent-panel-main {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.rep-vent-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.rep-vent-cuentas {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.rep-vent-cuentas button {
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: #888;
+  border-bottom: 2px solid transparent;
+}
+
+.rep-vent-cuentas button.active {
+  color: #1565c0;
+  border-bottom-color: #1565c0;
+}
+
+.rep-vent-toggle-b {
+  font-size: 0.8rem;
+  color: #1565c0;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  text-decoration: underline;
+}
+
+.rep-vent-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rep-vent-btn-corte {
+  width: 100%;
+  background: #1a237e;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rep-vent-total-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px 16px;
+  text-align: center;
+}
+
+.rep-vent-total-card small {
+  display: block;
+  color: #666;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.rep-vent-total-card strong {
+  font-size: 1.6rem;
+  color: #111;
+}
+
+.rep-vent-tabla .concepto-multiline {
+  white-space: pre-line;
+  line-height: 1.35;
+  font-size: 0.9rem;
+}
+
+.rep-vent-tabla .btn-ticket {
+  border: none;
+  background: #eee;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+.rep-vent-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  padding: 16px;
+}
+
+.rep-vent-modal[hidden] { display: none; }
+
+.rep-vent-modal-box {
+  background: #fff;
+  border-radius: 8px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  padding: 20px;
+}
+
+.rep-vent-modal-box h3 {
+  margin: 0 0 4px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rep-vent-modal-box .sub {
+  text-align: center;
+  color: #666;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.rep-vent-corte-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.rep-vent-corte-table th,
+.rep-vent-corte-table td {
+  border: 1px solid #ddd;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.rep-vent-corte-table th { width: 38%; background: #f9f9f9; }
+
+.rep-vent-corte-table input {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+}
+
+.rep-vent-corte-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.rep-vent-corte-subtotal {
+  font-weight: 700;
+  text-align: right;
+  margin: 8px 0;
+}
+
+.rep-vent-corte-entregar {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}

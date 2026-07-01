@@ -1,0 +1,16 @@
+﻿=== SEM25 full structure ===
+R1: C2='PERIODO'
+R2: C2=datetime.datetime(2026, 6, 14, 0, 0) | C3='AL' | C4=datetime.datetime(2026, 6, 20, 0, 0)
+R3: C4='PLANTEL'
+R4: C1='FECHA' | C2='SEMANA '
+R5: C1=datetime.datetime(2026, 6, 20, 0, 0) | C2=25 | C4='SALAMANCA'
+R6: C4='RESUTADOS/COBRANZA'
+R29: C1='TOTAL EGRESOS' | C2=26980
+R30: C1='TOTAL INGRESOS' | C2=27410
+R31: C1='SALDO' | C2=430
+
+=== SEM26 rows 6-30 ===
+R6: C4='RESUTADOS/COBRANZA'
+R27: C1='TOTAL EGRESOS' | C2=6530
+R28: C1='TOTAL INGRESOS' | C2=0
+R29: C1='SALDO' | C2=-6530
