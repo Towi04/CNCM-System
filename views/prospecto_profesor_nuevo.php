@@ -37,7 +37,7 @@ if ($id > 0) {
       <div class="full"><label>Observaciones</label><textarea name="observaciones" rows="2"><?php echo htmlspecialchars($p['observaciones'] ?? ''); ?></textarea></div>
       <div class="full"><label>Motivo si no se contrató / seguimiento</label><textarea name="motivo_no_contratacion" rows="2"><?php echo htmlspecialchars($p['motivo_no_contratacion'] ?? ''); ?></textarea></div>
     </div>
-    <p style="color:#888; font-size:0.9rem;">Evaluación inicial: use el menú Sistema HAY / exámenes con acceso temporal (próximo paso: vincular usuario limitado).</p>
+    <p style="color:#888; font-size:0.9rem;">Evaluación inicial: use el menú Evaluación HAY / exámenes con acceso temporal (próximo paso: vincular usuario limitado).</p>
     <button type="submit" class="primary" style="margin-top:16px;">Guardar prospecto</button>
   </form>
 </div>

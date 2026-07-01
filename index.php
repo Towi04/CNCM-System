@@ -26,9 +26,9 @@ if (!empty($_SESSION['user_id']) && empty($_GET['force_login']) && empty($_GET['
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema HAY - Iniciar sesión</title>
-    <link rel="icon" href="src/logobco.png" type="image/png">
-    <link rel="stylesheet" href="css/login.css">
+    <title><?php echo htmlspecialchars(app_page_title('Iniciar sesión'), ENT_QUOTES, 'UTF-8'); ?></title>
+    <link rel="icon" href="<?php echo htmlspecialchars(function_exists('hay_asset_url') ? hay_asset_url('src/logobco.png') : 'src/logobco.png', ENT_QUOTES, 'UTF-8'); ?>" type="image/png">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(function_exists('hay_asset_url') ? hay_asset_url('css/login.css') : 'css/login.css', ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="login-page">

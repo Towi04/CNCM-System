@@ -42,9 +42,9 @@ if ($user && !empty($user['email'])) {
     $link = $base . '/restablecer.php?token=' . urlencode($token);
     $nombre = htmlspecialchars($user['nombre'], ENT_QUOTES, 'UTF-8');
 
-    $subject = 'Recuperación de contraseña - Sistema HAY';
+    $subject = 'Recuperación de contraseña — ' . app_display_name();
     $body = '<p>Hola ' . $nombre . ',</p>'
-        . '<p>Recibimos una solicitud para restablecer tu contraseña del Sistema HAY.</p>'
+        . '<p>Recibimos una solicitud para restablecer tu contraseña de ' . htmlspecialchars(app_display_name(), ENT_QUOTES, 'UTF-8') . '.</p>'
         . '<p><a href="' . htmlspecialchars($link, ENT_QUOTES, 'UTF-8') . '">Haz clic aquí para crear una nueva contraseña</a></p>'
         . '<p>Este enlace expira en 1 hora. Si no solicitaste el cambio, ignora este mensaje.</p>'
         . '<p style="font-size:12px;color:#666;">Enlace directo: ' . htmlspecialchars($link, ENT_QUOTES, 'UTF-8') . '</p>';

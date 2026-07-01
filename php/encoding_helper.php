@@ -34,7 +34,7 @@ function hay_json_response(array $data, int $code = 200): void
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
 }
 
-/** Raíz web de HAY (p. ej. `/hay/`), aunque el script actual esté en `/hay/views/`. */
+/** Raíz web de la aplicación (p. ej. `/` o `/hay/`), aunque el script esté en `/views/`. */
 function hay_web_root(): string
 {
     if (defined('HAY_WEB_ROOT') && (string) HAY_WEB_ROOT !== '') {

@@ -190,7 +190,7 @@ function google_client($scopes = null)
     }
 
     $client = new Google_Client();
-    $client->setApplicationName('Sistema HAY CNCM');
+    $client->setApplicationName(app_display_name());
 
     $cred = new Google_Auth_AssertionCredentials(
         (string) $json->client_email,

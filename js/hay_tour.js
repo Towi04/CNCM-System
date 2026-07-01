@@ -53,7 +53,7 @@
         const target = paso.selector ? document.querySelector(paso.selector) : null;
 
         popover.innerHTML =
-            '<h4>' + (paso.title || 'Asistente HAY') + '</h4>' +
+            '<h4>' + (paso.title || 'Asistente del sistema') + '</h4>' +
             '<p>' + (paso.body || '') + '</p>' +
             '<div class="hay-tour-actions">' +
             '<span class="hay-tour-step-label">' + (index + 1) + ' / ' + pasos.length + '</span>' +

@@ -37,7 +37,9 @@ function hay_openrouter_site_url(): string
     if (defined('OPENROUTER_SITE_URL') && OPENROUTER_SITE_URL !== '') {
         return (string) OPENROUTER_SITE_URL;
     }
-    $root = defined('HAY_WEB_ROOT') ? (string) HAY_WEB_ROOT : '/hay/';
+    $root = function_exists('hay_web_root')
+        ? hay_web_root()
+        : (defined('HAY_WEB_ROOT') ? (string) HAY_WEB_ROOT : '/');
     if (!str_starts_with($root, 'http')) {
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
@@ -51,7 +53,7 @@ function hay_openrouter_site_name(): string
     if (defined('OPENROUTER_SITE_NAME') && OPENROUTER_SITE_NAME !== '') {
         return (string) OPENROUTER_SITE_NAME;
     }
-    return 'Sistema HAY CNCM';
+    return function_exists('app_display_name') ? app_display_name() : 'Sistema CNCM';
 }
 
 /**

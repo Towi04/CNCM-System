@@ -12,7 +12,7 @@ header('Content-Type: text/html; charset=utf-8');
 
 if (empty($_SESSION['user_id'])) {
     http_response_code(403);
-    echo '<p>Debe iniciar sesión en HAY primero.</p>';
+    echo '<p>Debe iniciar sesión primero.</p>';
     exit;
 }
 
@@ -84,7 +84,7 @@ try {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Importar legado → HAY</title>
+  <title><?php echo htmlspecialchars(app_page_title('Importar legado'), ENT_QUOTES, 'UTF-8'); ?></title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; color: #222; }
     h1 { font-size: 1.35rem; }

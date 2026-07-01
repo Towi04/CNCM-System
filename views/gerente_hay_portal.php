@@ -18,7 +18,7 @@ $puedeMatrizEquipo = rbac_cap('menu_gerente_matriz');
 
 <div class="catalog-wrap hay-eval-wrap">
   <div class="catalog-header">
-    <h2><i class="fas fa-layer-group"></i> Sistema HAY — Gerente</h2>
+    <h2><i class="fas fa-layer-group"></i> Evaluación HAY — Gerente</h2>
     <p style="color:#666;">Su evaluación personal, seguimiento del equipo y herramientas de coordinación.</p>
   </div>
 

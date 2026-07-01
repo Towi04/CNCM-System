@@ -738,7 +738,7 @@ function rol_aula_render_pdf_html(array $pub, string $tituloPlantel = ''): strin
         }
     }
 
-    $html .= '<p class="pie">Grupo Educativo CNCM · Sistema HAY · Documento para periódico mural y consulta interna</p>';
+    $html .= '<p class="pie">' . htmlspecialchars(APP_INSTITUTION, ENT_QUOTES, 'UTF-8') . ' · ' . htmlspecialchars(app_display_name(), ENT_QUOTES, 'UTF-8') . ' · Documento para periódico mural y consulta interna</p>';
     $html .= '</body></html>';
 
     return $html;

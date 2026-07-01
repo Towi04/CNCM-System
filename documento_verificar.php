@@ -76,7 +76,7 @@ $token = trim($_GET['token'] ?? '');
 
     <h1>Documento auténtico</h1>
 
-    <p>Este documento fue emitido por el Sistema HAY del Grupo Educativo CNCM.</p>
+    <p>Este documento fue emitido por <?php echo htmlspecialchars(app_display_name(), ENT_QUOTES, 'UTF-8'); ?> de <?php echo htmlspecialchars(APP_INSTITUTION, ENT_QUOTES, 'UTF-8'); ?>.</p>
 
     <dl>
 

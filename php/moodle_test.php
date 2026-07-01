@@ -87,11 +87,11 @@ function moodle_test_sesion_diagnostico(): array
     $rolReal = function_exists('rbac_rol_real') ? rbac_rol_real() : $rol;
     $cookieName = function_exists('hay_session_name') ? hay_session_name() : 'HAYSESSID';
     $tieneCookie = !empty($_COOKIE[$cookieName]);
-    $loginUrl = function_exists('hay_asset_url') ? hay_asset_url('index.php') : '/hay/index.php';
+    $loginUrl = function_exists('hay_asset_url') ? hay_asset_url('index.php') : '/index.php';
 
     $hint = $tieneCookie
         ? 'Hay cookie de sesión pero user_id vacío: cierre sesión, vuelva a entrar en ' . $loginUrl
-        : 'No hay cookie ' . $cookieName . '. Debe iniciar sesión en HAY en ESTE navegador (mismo dominio www.cncm.edu.mx) y luego abrir esta URL, o use fetch desde la app con credentials. No use Postman sin cookie.';
+        : 'No hay cookie ' . $cookieName . '. Debe iniciar sesión en el sistema en ESTE navegador (mismo dominio) y luego abrir esta URL, o use fetch desde la app con credentials. No use Postman sin cookie.';
 
     return [
         'sesion_activa' => $idU > 0,
@@ -105,7 +105,7 @@ function moodle_test_sesion_diagnostico(): array
         'hint' => $hint,
         'pasos' => [
             '1. Entre a ' . $loginUrl . ' e inicie sesión.',
-            '2. Sin cerrar el navegador, abra: /hay/php/moodle_test.php?paso=crear&id_alumno=ID',
+            '2. Sin cerrar el navegador, abra: ' . (function_exists('hay_asset_url') ? hay_asset_url('php/moodle_test.php') : '/php/moodle_test.php') . '?paso=crear&id_alumno=ID',
             '3. Use el mismo host (www.cncm.edu.mx) que en el login.',
             '4. Opcional: defina MOODLE_DIAG_KEY en config.local.php y agregue &key=... para pruebas sin sesión.',
         ],

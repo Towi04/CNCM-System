@@ -8,7 +8,10 @@ if (!defined('HAY_ROOT')) {
 define('INSTITUTIONAL_EMAIL_DOMAIN', 'cncm.edu.mx');
 /** Debe coincidir con SMTP_USER en config.mail.php (cuenta Google Workspace que envía) */
 define('APP_FROM_EMAIL', 'noreply@cncm.edu.mx');
-define('APP_FROM_NAME', 'Sistema');
+require_once __DIR__ . '/php/branding.php';
+if (!defined('APP_FROM_NAME')) {
+    define('APP_FROM_NAME', APP_DISPLAY_NAME);
+}
 
 /** Opcional: clave para php/asistencia_huella_api.php (lector fijo). Vacío = sin clave. */
 if (!defined('HAY_HUELLA_API_KEY')) {
@@ -30,7 +33,7 @@ if (!defined('HAY_DP_LITE_CLIENT_LOCAL')) {
     define('HAY_DP_LITE_CLIENT_LOCAL', '');
 }
 
-/** Raíz URL de HAY en el hosting (ej. '/hay/'). Vacío = detección automática. */
+/** Raíz URL de la aplicación en el hosting (ej. '/hay/' en subcarpeta). Vacío = detección automática. */
 if (!defined('HAY_WEB_ROOT')) {
     define('HAY_WEB_ROOT', '');
 }

@@ -108,7 +108,7 @@ function menu_cncm_secciones(): array
 
                 ['cap' => 'menu_gerente_perdidos', 'seccion' => 'gerente_reporte_pendientes', 'query' => 'tab=perdidos', 'icon' => 'fa-user-times', 'text' => 'No inscritos', 'title' => 'Motivos de no inscripción', 'breadcrumb' => 'NO INSCRITOS'],
 
-                ['cap' => 'menu_gerente_hay', 'seccion' => 'gerente_hay_portal', 'icon' => 'fa-layer-group', 'text' => 'Sistema HAY', 'title' => 'Sistema HAY — gerente', 'breadcrumb' => 'HAY GERENTE'],
+                ['cap' => 'menu_gerente_hay', 'seccion' => 'gerente_hay_portal', 'icon' => 'fa-layer-group', 'text' => 'Evaluación HAY', 'title' => 'Evaluación HAY — gerente', 'breadcrumb' => 'EVALUACIÓN HAY'],
 
                 ['cap' => 'menu_gerente_matriz', 'seccion' => 'gerente_matriz_entrenamiento', 'icon' => 'fa-graduation-cap', 'text' => 'Matriz equipo', 'title' => 'Matriz de entrenamiento del equipo', 'breadcrumb' => 'MATRIZ EQUIPO'],
 
@@ -784,7 +784,7 @@ function menu_cncm_secciones_por_rol(): array
 
                 ['seccion' => 'gerente_reporte_pendientes', 'query' => 'tab=perdidos', 'icon' => 'fa-user-times', 'text' => 'No inscritos', 'title' => 'Motivos de no inscripción', 'breadcrumb' => 'NO INSCRITOS'],
 
-                ['seccion' => 'gerente_hay_portal', 'icon' => 'fa-layer-group', 'text' => 'Sistema HAY (equipo)', 'title' => 'Sistema HAY — gerente', 'breadcrumb' => 'HAY GERENTE'],
+                ['seccion' => 'gerente_hay_portal', 'icon' => 'fa-layer-group', 'text' => 'Evaluación HAY (equipo)', 'title' => 'Evaluación HAY — gerente', 'breadcrumb' => 'EVALUACIÓN HAY'],
 
                 ['seccion' => 'gerente_matriz_entrenamiento', 'icon' => 'fa-graduation-cap', 'text' => 'Matriz del equipo', 'title' => 'Matriz de entrenamiento del equipo', 'breadcrumb' => 'MATRIZ EQUIPO'],
 

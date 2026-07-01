@@ -7,6 +7,9 @@
 /** XAMPP: carpeta en htdocs (ej. C:\xampp\htdocs\hay → http://localhost/hay/) */
 // define('HAY_WEB_ROOT', '/hay/');
 
+/** Producción en subdominio (archivos en raíz): deje vacío o comente la línea. */
+// define('HAY_WEB_ROOT', '');
+
 /**
  * MySQL — en cPanel use el usuario COMPLETO (ej. cncmedum_tovar), no solo "cncmedum".
  * Las cuatro líneas son obligatorias en producción.
@@ -16,8 +19,8 @@ define('HAY_DB_NAME', 'cncmedum_hay_system');
 define('HAY_DB_USER', 'cncmedum_tovar');
 define('HAY_DB_PASS', 'PONER_AQUI_LA_CLAVE_DE_CPANEL');
 
-/** Obligatorio en producción si la URL es https://cncm.edu.mx/hay/ (cookie de sesión). */
-define('HAY_WEB_ROOT', '/hay/');
+/** Obligatorio en producción si la app está en subcarpeta (ej. https://cncm.edu.mx/hay/). En subdominio raíz déjelo comentado. */
+// define('HAY_WEB_ROOT', '/hay/');
 
 /** Correo en local: use config.mail.php con MAIL_DRIVER=php o deje sin enviar */
 // define('MAIL_DRIVER', 'php');
@@ -47,8 +50,8 @@ define('HAY_WEB_ROOT', '/hay/');
 /** OpenRouter — https://openrouter.ai/keys (acceso a OpenAI, Claude, etc.) */
 // define('OPENROUTER_API_KEY', 'sk-or-v1-...');
 // define('OPENROUTER_MODEL', 'openai/gpt-4o');
-// define('OPENROUTER_SITE_URL', 'https://cncm.edu.mx/hay');
-// define('OPENROUTER_SITE_NAME', 'Sistema HAY CNCM');
+// define('OPENROUTER_SITE_URL', 'https://sistema.cncm.edu.mx');
+// define('OPENROUTER_SITE_NAME', 'Sistema CNCM');
 
 /** Google Gemini (alternativa) */
 // define('GEMINI_API_KEY', 'su-clave-de-google-ai-studio');

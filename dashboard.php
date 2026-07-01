@@ -59,12 +59,12 @@ if ($debeCompletarPerfil) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema HAY - CNCM</title>
+    <title><?php echo htmlspecialchars(app_page_title(), ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="icon" href="<?php echo htmlspecialchars(hay_asset_url('src/logobco.png'), ENT_QUOTES, 'UTF-8'); ?>" type="image/png">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/main.css?v=20260608'), ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/plantel_fondo.css'), ENT_QUOTES, 'UTF-8'); ?>">
-    <link rel="stylesheet" href="css/top_nav.css">
-    <link rel="stylesheet" href="css/side_nav.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/top_nav.css'), ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/side_nav.css'), ENT_QUOTES, 'UTF-8'); ?>">
     <style>
     .rbac-sim-banner {
         display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
@@ -78,7 +78,7 @@ if ($debeCompletarPerfil) {
     .rbac-sim-restore:hover { background: #fff3cd; }
     </style>
     <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/hay_buttons.css?v=20260602'), ENT_QUOTES, 'UTF-8'); ?>">
-    <link rel="stylesheet" href="css/hay_icon_buttons.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/hay_icon_buttons.css'), ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/hay_datatables.css'), ENT_QUOTES, 'UTF-8'); ?>">
@@ -109,7 +109,7 @@ if ($debeCompletarPerfil) {
             <?php if ($plantelFondoUrl): ?>style="--plantel-fondo-url: url('<?php echo htmlspecialchars($plantelFondoUrl, ENT_QUOTES, 'UTF-8'); ?>');"<?php endif; ?>
         >
             <div class="welcome-card" id="inicio-view">
-                <img src="src/logo.png" alt="Logo" style="width:150px;">
+                <img src="<?php echo htmlspecialchars(hay_asset_url('src/logo.png'), ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" style="width:150px;">
                 <h1>Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?></h1>
                 <p>Panel de control — <?php echo htmlspecialchars($_SESSION['plantel_nombre'] ?? 'CNCM'); ?></p>
                 <div id="inicio-notificaciones-wrap">
@@ -137,7 +137,7 @@ if ($debeCompletarPerfil) {
       const fd = new FormData();
       fd.append('accion', 'restaurar');
       try {
-        const res = await fetch('php/perfil_cambiar_rol.php', { method: 'POST', body: fd });
+        const res = await fetch(<?php echo json_encode(hay_asset_url('php/perfil_cambiar_rol.php'), JSON_UNESCAPED_UNICODE); ?>, { method: 'POST', body: fd });
         const data = await res.json();
         if (data.status === 'ok') location.reload();
         else alert(data.message || 'No se pudo restaurar el rol');

@@ -191,7 +191,7 @@ $puedeSimularRol = rbac_puede_simular_rol();
         <?php endif; ?>
 
         <?php if ((rbac_cap('menu_examenes') || rbac_cap('menu_hay')) && in_array($rolNav, ['director', 'gerente', 'supervisor'], true)): ?>
-        <li class="section-title">Sistema HAY</li>
+        <li class="section-title">Evaluación HAY</li>
         <?php endif; ?>
 
         <?php if (rbac_cap('menu_examenes') && in_array($rolNav, ['director', 'gerente', 'supervisor'], true)): ?>
@@ -208,9 +208,9 @@ $puedeSimularRol = rbac_puede_simular_rol();
         <?php endif; ?>
 
         <?php if (rbac_cap('menu_hay') && in_array($rolNav, ['director', 'gerente', 'supervisor'], true)): ?>
-        <li class="nav-item has-flyout" data-flyout="flyout-hay" data-title="Sistema HAY" data-breadcrumb="SISTEMA HAY">
+        <li class="nav-item has-flyout" data-flyout="flyout-hay" data-title="Evaluación HAY" data-breadcrumb="EVALUACIÓN HAY">
             <i class="fas fa-layer-group"></i>
-            <span class="nav-text">Sistema HAY</span>
+            <span class="nav-text">Evaluación HAY</span>
             <i class="fas fa-chevron-down arrow"></i>
         </li>
         <?php endif; ?>
@@ -315,7 +315,7 @@ $puedeSimularRol = rbac_puede_simular_rol();
                 <?php endif; ?>
                 <li data-seccion="admin_configuracion" data-title="Configuración" data-breadcrumb="CONFIGURACIÓN">Configuración</li>
                 <?php if (in_array(rbac_rol_real(), ['supervisor', 'director'], true)): ?>
-                <li data-seccion="legacy_mapeo" data-title="Equivalencias legado" data-breadcrumb="MAPEO LEGADO">Equivalencias legado → HAY</li>
+                <li data-seccion="legacy_mapeo" data-title="Equivalencias legado" data-breadcrumb="MAPEO LEGADO">Equivalencias legado → sistema</li>
                 <li data-seccion="legacy_mapeo_grupos" data-title="Grupos: sustituir especialidad" data-breadcrumb="GRUPOS / ESP. LEGADO">Grupos: sustituir especialidad</li>
                 <li data-seccion="legacy_import_admin" data-title="Importar legado" data-breadcrumb="IMPORTAR LEGADO">Importar datos legado</li>
                 <?php endif; ?>
@@ -492,7 +492,7 @@ $puedeSimularRol = rbac_puede_simular_rol();
 
     <?php if (rbac_cap('menu_hay') || rbac_cap('hay_eval_configurar') || rbac_cap('hay_eval_gestionar')): ?>
     <div class="menu-flyout" id="flyout-hay" data-flyout-id="flyout-hay">
-        <div class="flyout-title">Sistema HAY</div>
+        <div class="flyout-title">Evaluación HAY</div>
         <ul class="flyout-list">
             <?php if (function_exists('hay_eval_puede_configurar') && hay_eval_puede_configurar()): ?>
             <li data-seccion="hay_config_rubrica" data-title="Configurar HAY" data-breadcrumb="CONFIG HAY">Configurar evaluación</li>

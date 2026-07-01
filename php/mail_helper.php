@@ -154,7 +154,7 @@ function mail_smtp_open_connection(string $host): ?array
 function mail_send_php(string $to, string $subject, string $bodyHtml): bool
 {
     $fromEmail = defined('APP_FROM_EMAIL') ? APP_FROM_EMAIL : 'noreply@cncm.edu.mx';
-    $fromName = defined('APP_FROM_NAME') ? APP_FROM_NAME : 'Sistema HAY - CNCM';
+    $fromName = defined('APP_FROM_NAME') ? APP_FROM_NAME : app_display_name();
 
     $headers = [
         'MIME-Version: 1.0',
@@ -175,7 +175,7 @@ function mail_send_smtp(string $to, string $subject, string $bodyHtml): bool
     $user = defined('SMTP_USER') ? SMTP_USER : '';
     $pass = defined('SMTP_PASS') ? SMTP_PASS : '';
     $fromEmail = ($user !== '') ? $user : (defined('APP_FROM_EMAIL') ? APP_FROM_EMAIL : 'noreply@cncm.edu.mx');
-    $fromName = defined('APP_FROM_NAME') ? APP_FROM_NAME : 'Sistema HAY - CNCM';
+    $fromName = defined('APP_FROM_NAME') ? APP_FROM_NAME : app_display_name();
 
     $host = defined('SMTP_HOST') ? SMTP_HOST : '';
     if ($host === '') {

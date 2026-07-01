@@ -5,7 +5,8 @@
  */
 define('INSTITUTIONAL_EMAIL_DOMAIN', 'cncm.edu.mx');
 define('APP_FROM_EMAIL', 'noreply@cncm.edu.mx');
-define('APP_FROM_NAME', 'Sistema HAY - CNCM');
+require __DIR__ . '/../php/branding.php';
+define('APP_FROM_NAME', APP_DISPLAY_NAME);
 
 if (is_file(__DIR__ . '/../config.mail.php')) {
     require __DIR__ . '/../config.mail.php';
@@ -28,7 +29,7 @@ if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-$ok = mail_send($to, 'Prueba recuperación - Sistema HAY', '<p>Si lees esto, el SMTP funciona.</p>');
+$ok = mail_send($to, 'Prueba recuperación — ' . app_display_name(), '<p>Si lees esto, el SMTP funciona.</p>');
 echo $ok ? "Resultado: ENVIADO\n" : "Resultado: FALLO\n";
 
 $log = dirname(__DIR__) . '/logs/mail.log';

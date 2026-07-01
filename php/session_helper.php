@@ -1,11 +1,9 @@
 <?php
 
-
+require_once __DIR__ . '/branding.php';
 
 /**
-
- * Sesión con cookie en la raíz de HAY (/hay/), no en /hay/php/ (evita login que “no hace nada”).
-
+ * Sesión con cookie en la raíz de la aplicación, no en /php/ (evita login que “no hace nada”).
  */
 
 function hay_session_bootstrap_config(): void
@@ -145,23 +143,20 @@ function hay_session_name(): string
 
 
 function hay_session_cookie_paths_to_clear(): array
-
 {
-
-    $paths = ['/hay/', '/hay/php/', '/hay/views/', '/'];
-
+    $paths = ['/'];
     $current = hay_app_cookie_path();
-
-    if ($current !== '' && !in_array($current, $paths, true)) {
-
+    if ($current !== '' && $current !== '/' && !in_array($current, $paths, true)) {
         $paths[] = $current;
-
+    }
+    // Rutas legacy (instalación anterior en /hay/)
+    foreach (['/hay/', '/hay/php/', '/hay/views/'] as $legacy) {
+        if (!in_array($legacy, $paths, true)) {
+            $paths[] = $legacy;
+        }
     }
 
-
-
-    return array_values(array_unique($paths));
-
+    return $paths;
 }
 
 
