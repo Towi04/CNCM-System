@@ -42,7 +42,9 @@ try {
 
 $totalAvisos = count($items);
 ?>
-<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/inicio_panel.css?v=20260701'), ENT_QUOTES, 'UTF-8'); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/hay_buttons.css'), ENT_QUOTES, 'UTF-8'); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/hay_icon_buttons.css'), ENT_QUOTES, 'UTF-8'); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/inicio_panel.css?v=20260702'), ENT_QUOTES, 'UTF-8'); ?>">
 
 <div class="inicio-panel">
   <h2 class="inicio-panel__title"><i class="fas fa-th-large"></i> Panel — <?php echo htmlspecialchars($labels[$perfil] ?? $perfil); ?></h2>
@@ -77,8 +79,8 @@ $totalAvisos = count($items);
     <h3 class="inicio-panel__subtitle"><i class="fas fa-bell"></i> Avisos pendientes<?php if ($totalAvisos > 0): ?> <span class="inicio-panel__count">(<?php echo (int) $totalAvisos; ?>)</span><?php endif; ?></h3>
     <?php if ($totalAvisos > 0): ?>
     <div class="inicio-panel__avisos-actions">
-      <button type="button" class="secondary inicio-panel__aviso-bulk" data-notif-accion="marcar_todas" title="Ocultar todos los avisos visibles">Marcar todas leídas</button>
-      <button type="button" class="secondary inicio-panel__aviso-bulk" data-notif-accion="archivar_todas" title="Archivar todos los avisos visibles">Archivar todas</button>
+      <button type="button" class="secondary inicio-panel__aviso-bulk" data-notif-accion="marcar_todas" title="Ocultar todos los avisos visibles"><i class="fas fa-check-double"></i> Marcar todas leídas</button>
+      <button type="button" class="secondary inicio-panel__aviso-bulk" data-notif-accion="archivar_todas" title="Archivar todos los avisos visibles"><i class="fas fa-archive"></i> Archivar todas</button>
     </div>
     <?php endif; ?>
   </div>
@@ -99,11 +101,15 @@ $totalAvisos = count($items);
             <span class="inicio-panel__tipo"><?php echo htmlspecialchars($it['titulo']); ?></span>
             <div class="inicio-panel__item-actions">
               <?php if (!empty($it['enlace'])): ?>
-                <button type="button" class="inicio-panel__link" data-seccion="<?php echo htmlspecialchars(strtok($it['enlace'], '&')); ?>"
-                  data-query="<?php echo htmlspecialchars($it['enlace']); ?>">Ver</button>
+                <button type="button" class="btn-icon-only btn-icon-only--edit inicio-panel__aviso-btn inicio-panel__aviso-btn--view inicio-panel__link"
+                  data-seccion="<?php echo htmlspecialchars(strtok($it['enlace'], '&')); ?>"
+                  data-query="<?php echo htmlspecialchars($it['enlace']); ?>"
+                  title="Ver aviso" aria-label="Ver aviso">
+                  <i class="fas fa-eye" aria-hidden="true"></i>
+                </button>
               <?php endif; ?>
-              <button type="button" class="inicio-panel__aviso-btn" data-notif-accion="marcar_leida" title="Marcar como leída"><i class="fas fa-check"></i></button>
-              <button type="button" class="inicio-panel__aviso-btn inicio-panel__aviso-btn--muted" data-notif-accion="archivar" title="Archivar"><i class="fas fa-archive"></i></button>
+              <button type="button" class="btn-icon-only btn-icon-only--ok inicio-panel__aviso-btn" data-notif-accion="marcar_leida" title="Marcar como leída"><i class="fas fa-check"></i></button>
+              <button type="button" class="btn-icon-only btn-icon-only--muted inicio-panel__aviso-btn inicio-panel__aviso-btn--muted" data-notif-accion="archivar" title="Archivar"><i class="fas fa-archive"></i></button>
             </div>
           </div>
           <p class="inicio-panel__msg"><?php echo htmlspecialchars($it['mensaje']); ?></p>
