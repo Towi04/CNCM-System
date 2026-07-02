@@ -174,6 +174,7 @@ function pago_migrate_alumno_inscripcion_global(PDO $pdo): void
     plantel_ensure_column($pdo, 'alumno_especialidades', 'colegiatura_meses_pausa', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0', 'cuatrimestre_actual');
     plantel_ensure_column($pdo, 'alumno_especialidades', 'colegiatura_meses_extension', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0', 'colegiatura_meses_pausa');
     plantel_ensure_column($pdo, 'alumno_especialidades', 'colegiatura_pausa_desde', 'DATE NULL', 'colegiatura_meses_extension');
+    plantel_ensure_column($pdo, 'alumno_especialidades', 'creado_en', 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP', 'activo');
 }
 
 function pago_seed_promociones(PDO $pdo): void
@@ -206,6 +207,7 @@ function pago_migrate_alumno_pagos_columns(PDO $pdo): void
     plantel_ensure_column($pdo, 'alumno_pagos', 'cuenta_contable', "CHAR(1) NULL COMMENT 'A=tarjeta/transfer/factura B=efectivo sin factura' AFTER forma_pago", 'forma_pago');
     plantel_ensure_column($pdo, 'alumno_pagos', 'cliente_nombre', "VARCHAR(160) NULL COMMENT 'Comprador si no es alumno' AFTER concepto", 'concepto');
     plantel_ensure_column($pdo, 'alumno_pagos', 'id_solicitud_cert', 'INT UNSIGNED NULL COMMENT \'Certificación cobrada en PV\'', 'id_producto');
+    plantel_ensure_column($pdo, 'alumno_pagos', 'fecha_pago', 'DATE NULL AFTER creado_en', 'creado_en');
 
     $pdo->exec(
         'CREATE TABLE IF NOT EXISTS corte_caja (
@@ -358,7 +360,7 @@ function pago_listar_alumno(PDO $pdo, int $idAlumno): array
          LEFT JOIN usuarios u ON u.id_usuario = ap.id_usuario
          LEFT JOIN productos p ON p.id_producto = ap.id_producto
          WHERE ap.id_alumno = ?' . pago_sql_filtro_activos('ap') . '
-         ORDER BY ap.creado_en ASC'
+         ORDER BY COALESCE(ap.fecha_pago, DATE(ap.creado_en)) ASC, ap.creado_en ASC'
     );
     $stmt->execute([$idAlumno]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -378,7 +380,7 @@ function pago_listar_alumno_todos(PDO $pdo, int $idAlumno): array
          LEFT JOIN usuarios ua ON ua.id_usuario = ap.anulado_por
          LEFT JOIN productos p ON p.id_producto = ap.id_producto
          WHERE ap.id_alumno = ?
-         ORDER BY ap.creado_en ASC'
+         ORDER BY COALESCE(ap.fecha_pago, DATE(ap.creado_en)) ASC, ap.creado_en ASC'
     );
     $stmt->execute([$idAlumno]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);

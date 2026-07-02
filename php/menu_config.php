@@ -338,6 +338,8 @@ function menu_cncm_director_items(): array
 
         ['cap' => 'menu_grupos', 'seccion' => 'grupos', 'icon' => 'fa-users', 'text' => 'Grupos', 'title' => 'Ver grupos', 'breadcrumb' => 'GRUPOS'],
 
+        ['callback' => 'supervisor_grupos_historico_puede_ver', 'seccion' => 'supervisor_grupos_historico', 'icon' => 'fa-history', 'text' => 'Carga histórica grupos', 'title' => 'Carga histórica de grupos', 'breadcrumb' => 'CARGA HISTÓRICA'],
+
         ['cap' => 'menu_consulta_adeudo', 'seccion' => 'consulta_adeudo', 'icon' => 'fa-calculator', 'text' => 'Consulta de adeudo', 'title' => 'Consulta de adeudo', 'breadcrumb' => 'CONSULTA ADEUDO'],
 
         ['callback' => 'operativo_piso_puede_ver', 'seccion' => 'piso_operativo', 'icon' => 'fa-concierge-bell', 'text' => 'Piso operativo', 'title' => 'Entrega documentos y cobranza', 'breadcrumb' => 'PISO OPERATIVO'],
@@ -725,6 +727,8 @@ function menu_cncm_secciones_por_rol(): array
                 ['seccion' => 'reporte_pagos_anulados', 'icon' => 'fa-ban', 'text' => 'Pagos anulados', 'title' => 'Reporte de pagos anulados', 'breadcrumb' => 'PAGOS ANULADOS'],
 
                 ['seccion' => 'supervisor_acuerdo_escolar', 'icon' => 'fa-file-signature', 'text' => 'Acuerdo escolar', 'title' => 'Acuerdo escolar', 'breadcrumb' => 'ACUERDO ESCOLAR'],
+
+                ['seccion' => 'supervisor_grupos_historico', 'icon' => 'fa-history', 'text' => 'Carga histórica grupos', 'title' => 'Carga histórica de grupos', 'breadcrumb' => 'CARGA HISTÓRICA'],
 
             ],
 
