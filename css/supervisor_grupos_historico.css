@@ -1,0 +1,78 @@
+.hist-grupos-wrap {
+    max-width: 1320px;
+}
+
+.hist-grupos-intro {
+    color: #666;
+    margin: 6px 0 0;
+}
+
+.hist-grupos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 16px;
+}
+
+.hist-card {
+    margin: 0;
+    padding: 18px;
+}
+
+.hist-card--wide,
+.hist-table-card {
+    grid-column: 1 / -1;
+}
+
+.hist-card h3,
+.hist-table-card h3 {
+    margin-top: 0;
+}
+
+.hist-card p {
+    color: #666;
+    margin-top: 0;
+}
+
+.hist-card code {
+    background: #f5f7fb;
+    border: 1px solid #e1e7f5;
+    border-radius: 6px;
+    padding: 1px 5px;
+}
+
+.hist-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.hist-card textarea {
+    min-height: 150px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.45;
+}
+
+.hist-table-card {
+    margin-top: 18px;
+    padding: 18px;
+}
+
+.hist-muted {
+    color: #888;
+}
+
+.hist-errors {
+    margin: 8px 0 0;
+    padding-left: 18px;
+}
+
+@media (max-width: 760px) {
+    .hist-grupos-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hist-card--wide,
+    .hist-table-card {
+        grid-column: auto;
+    }
+}

@@ -102,7 +102,8 @@ $plantelNombre = $_SESSION['plantel_nombre'] ?? 'CNCM';
       <?php
       $partesInsc = [];
       foreach ($ec['pagos_inscripcion'] as $pi) {
-          $partesInsc[] = date('d/m/Y', strtotime($pi['creado_en']))
+          $fechaPago = $pi['fecha_pago'] ?? $pi['creado_en'];
+          $partesInsc[] = date('d/m/Y', strtotime($fechaPago))
               . ' · ' . catalog_format_mxn((float) $pi['monto'])
               . (!empty($pi['folio']) ? ' · ' . htmlspecialchars((string) $pi['folio']) : '');
       }
@@ -127,7 +128,7 @@ $plantelNombre = $_SESSION['plantel_nombre'] ?? 'CNCM';
       <tbody>
         <?php foreach ($ec['pagos_colegiatura'] as $p): ?>
           <tr>
-            <td><?php echo date('d/m/Y H:i', strtotime($p['creado_en'])); ?></td>
+            <td><?php echo date('d/m/Y', strtotime($p['fecha_pago'] ?? $p['creado_en'])); ?></td>
             <td><?php echo htmlspecialchars(pago_label_tipo($p['tipo'] ?? 'abono')); ?></td>
             <td><?php echo htmlspecialchars($p['periodo_ref'] ?? '—'); ?></td>
             <td><?php echo htmlspecialchars($p['folio'] ?? '—'); ?></td>
@@ -158,7 +159,7 @@ $plantelNombre = $_SESSION['plantel_nombre'] ?? 'CNCM';
         <tbody>
           <?php foreach ($ec['pagos_productos'] as $p): ?>
             <tr>
-              <td><?php echo date('d/m/Y', strtotime($p['creado_en'])); ?></td>
+              <td><?php echo date('d/m/Y', strtotime($p['fecha_pago'] ?? $p['creado_en'])); ?></td>
               <td><?php echo htmlspecialchars($p['producto_nombre'] ?? $p['concepto'] ?? 'Producto'); ?></td>
               <td class="monto"><?php echo catalog_format_mxn((float)$p['monto']); ?></td>
             </tr>

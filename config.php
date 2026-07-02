@@ -183,6 +183,7 @@ require_once __DIR__ . '/php/legacy_import_helper.php';
 require_once __DIR__ . '/php/operativo_cncm_helper.php';
 require_once __DIR__ . '/php/plan_version_helper.php';
 require_once __DIR__ . '/php/acuerdo_escolar_helper.php';
+require_once __DIR__ . '/php/supervisor_grupos_historico_helper.php';
 require_once __DIR__ . '/php/curso_personalizado_helper.php';
 require_once __DIR__ . '/php/inscripcion_protocolo_helper.php';
 require_once __DIR__ . '/php/bandeja_aprobaciones_helper.php';

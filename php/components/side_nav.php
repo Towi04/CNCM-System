@@ -394,6 +394,9 @@ $puedeSimularRol = rbac_puede_simular_rol();
             <li data-seccion="cronologia_grupos" data-title="Cronología de fases" data-breadcrumb="CRONOLOGÍA GRUPOS">Cronología de fases</li>
             <li data-seccion="grupo_fusion_plan" data-title="Planificación de fusiones" data-breadcrumb="FUSIONES GRUPOS">Planificación de fusiones</li>
             <li data-seccion="grupo_nuevo" data-title="Nuevo grupo" data-breadcrumb="NUEVO GRUPO">Nuevo grupo</li>
+            <?php if (function_exists('supervisor_grupos_historico_puede_ver') && supervisor_grupos_historico_puede_ver()): ?>
+            <li data-seccion="supervisor_grupos_historico" data-title="Carga histórica de grupos" data-breadcrumb="CARGA HISTÓRICA">Carga histórica de grupos</li>
+            <?php endif; ?>
             <?php if (rbac_cap('menu_grupo_plan')): ?>
             <li data-seccion="grupo_plan" data-title="Plan de parciales" data-breadcrumb="PLAN PARCIALES">Plan de parciales (grupo)</li>
             <?php endif; ?>
