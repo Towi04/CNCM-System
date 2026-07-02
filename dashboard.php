@@ -128,7 +128,7 @@ if ($debeCompletarPerfil) {
     <script src="<?php echo htmlspecialchars(hay_asset_url('js/hay_ui_core.js?v=20260606'), ENT_QUOTES, 'UTF-8'); ?>"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="<?php echo htmlspecialchars(hay_asset_url('js/hay_modal.js?v=20260612'), ENT_QUOTES, 'UTF-8'); ?>"></script>
-    <script src="<?php echo htmlspecialchars(hay_asset_url('js/inicio_panel.js?v=20260623'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+    <script src="<?php echo htmlspecialchars(hay_asset_url('js/inicio_panel.js?v=20260701'), ENT_QUOTES, 'UTF-8'); ?>"></script>
     <script src="<?php echo htmlspecialchars(hay_asset_url('js/navigation.js?v=20260612'), ENT_QUOTES, 'UTF-8'); ?>"></script>
     <script src="<?php echo htmlspecialchars(hay_asset_url('js/hay_tour.js?v=20260602'), ENT_QUOTES, 'UTF-8'); ?>"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>

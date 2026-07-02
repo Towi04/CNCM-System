@@ -1017,22 +1017,48 @@ function calendario_evento_publicar(PDO $pdo, int $idEvento, int $idUsuarioPubli
 /** @return list<array<string, mixed>> */
 function notificaciones_usuario_bd(PDO $pdo, int $idUsuario, int $limite = 20): array
 {
+    if (function_exists('notificaciones_panel_ensure_schema')) {
+        notificaciones_panel_ensure_schema($pdo);
+    }
     try {
         $st = $pdo->prepare(
             'SELECT id, tipo, titulo, mensaje, enlace_seccion, enlace_params, leida, creado_en
              FROM notificacion_usuario
-             WHERE id_usuario = ? AND leida = 0
+             WHERE id_usuario = ? AND leida = 0 AND archivada = 0
              ORDER BY creado_en DESC
              LIMIT ' . max(1, min(50, $limite))
         );
         $st->execute([$idUsuario]);
+    } catch (PDOException $e) {
+        if (stripos($e->getMessage(), 'archivada') === false) {
+            return [];
+        }
+        try {
+            $st = $pdo->prepare(
+                'SELECT id, tipo, titulo, mensaje, enlace_seccion, enlace_params, leida, creado_en
+                 FROM notificacion_usuario
+                 WHERE id_usuario = ? AND leida = 0
+                 ORDER BY creado_en DESC
+                 LIMIT ' . max(1, min(50, $limite))
+            );
+            $st->execute([$idUsuario]);
+        } catch (PDOException $e2) {
+            return [];
+        }
+    }
+    try {
         $out = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $enlace = $r['enlace_seccion'] ?? '';
             if (!empty($r['enlace_params'])) {
                 $enlace .= '&' . ltrim((string) $r['enlace_params'], '&');
             }
+            $id = (int) ($r['id'] ?? 0);
             $out[] = [
+                'id_notificacion' => $id,
+                'clave' => 'db:' . $id,
+                'fuente' => 'bd',
+                'tipo' => $r['tipo'] ?? '',
                 'titulo' => $r['titulo'],
                 'mensaje' => $r['mensaje'],
                 'prioridad' => ($r['tipo'] ?? '') === 'calendario_admin' ? 'alta' : 'media',

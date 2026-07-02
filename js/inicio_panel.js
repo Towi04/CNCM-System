@@ -6,6 +6,93 @@
 
   const api = (window.HAY_INICIO_PANEL && window.HAY_INICIO_PANEL.api)
     || 'php/operativo_panel_api.php';
+  const notifApi = (window.HAY_INICIO_PANEL && window.HAY_INICIO_PANEL.notifApi)
+    || 'php/notificaciones_panel_api.php';
+
+  function notifApiUrl() {
+    return typeof window.hayResolveAssetUrl === 'function'
+      ? window.hayResolveAssetUrl(notifApi)
+      : notifApi;
+  }
+
+  function updateAvisosCount() {
+    const list = document.getElementById('inicio-panel-list');
+    const countEl = document.querySelector('.inicio-panel__count');
+    const bulkWrap = document.querySelector('.inicio-panel__avisos-actions');
+    const emptyEl = document.getElementById('inicio-panel-empty');
+    const n = list ? list.querySelectorAll('.inicio-panel__item').length : 0;
+    if (countEl) {
+      countEl.textContent = '(' + n + ')';
+    }
+    if (bulkWrap) {
+      bulkWrap.style.display = n > 0 ? '' : 'none';
+    }
+    if (n === 0 && list) {
+      list.remove();
+      if (emptyEl) {
+        emptyEl.hidden = false;
+      } else {
+        const panel = document.querySelector('.inicio-panel');
+        const p = document.createElement('p');
+        p.className = 'inicio-panel__empty';
+        p.id = 'inicio-panel-empty';
+        p.textContent = 'No hay alertas pendientes para tu perfil en este plantel.';
+        panel?.appendChild(p);
+      }
+    }
+  }
+
+  function removeAvisoItem(li) {
+    if (!li) return;
+    li.classList.add('is-removing');
+    setTimeout(() => {
+      li.remove();
+      updateAvisosCount();
+    }, 180);
+  }
+
+  async function accionNotificacion(accion, li) {
+    const fd = new FormData();
+    fd.append('accion', accion);
+    if (li) {
+      fd.append('clave', li.getAttribute('data-notif-clave') || '');
+      const idNotif = li.getAttribute('data-notif-id');
+      if (idNotif) {
+        fd.append('id_notificacion', idNotif);
+      }
+    }
+    const btns = li
+      ? li.querySelectorAll('button')
+      : document.querySelectorAll('.inicio-panel__aviso-bulk');
+    btns.forEach((b) => { b.disabled = true; });
+    try {
+      const res = await fetch(notifApiUrl(), {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'fetch' },
+      });
+      const data = await res.json();
+      if (data.status !== 'ok') {
+        alert(data.message || 'No se pudo actualizar el aviso');
+        btns.forEach((b) => { b.disabled = false; });
+        return;
+      }
+      if (li) {
+        removeAvisoItem(li);
+      } else {
+        const list = document.getElementById('inicio-panel-list');
+        if (list) {
+          list.querySelectorAll('.inicio-panel__item').forEach((item) => removeAvisoItem(item));
+        } else {
+          updateAvisosCount();
+        }
+      }
+    } catch (err) {
+      alert('Error de conexión');
+      btns.forEach((b) => { b.disabled = false; });
+    }
+  }
 
   let sugTimer = null;
 
@@ -45,6 +132,28 @@
   }
 
   document.addEventListener('click', (e) => {
+    const bulk = e.target.closest('.inicio-panel__aviso-bulk');
+    if (bulk) {
+      const accion = bulk.getAttribute('data-notif-accion');
+      if (!accion) return;
+      const msg = accion === 'archivar_todas'
+        ? '¿Archivar todos los avisos visibles?'
+        : '¿Marcar todos los avisos visibles como leídos?';
+      if (!window.confirm(msg)) return;
+      accionNotificacion(accion, null);
+      return;
+    }
+
+    const avisoBtn = e.target.closest('.inicio-panel__aviso-btn');
+    if (avisoBtn) {
+      const li = avisoBtn.closest('.inicio-panel__item');
+      const accion = avisoBtn.getAttribute('data-notif-accion');
+      if (li && accion) {
+        accionNotificacion(accion, li);
+      }
+      return;
+    }
+
     const kpi = e.target.closest('.inicio-panel__kpi, .inicio-panel__link');
     if (kpi) {
       const raw = kpi.dataset.query || '';

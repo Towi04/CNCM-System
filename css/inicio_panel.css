@@ -26,9 +26,46 @@
 .inicio-panel__item { background: #fff; border: 1px solid #e0e0e0; border-left: 4px solid #90a4ae; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
 .inicio-panel__item--alta { border-left-color: #c62828; }
 .inicio-panel__item--media { border-left-color: #f57c00; }
-.inicio-panel__item-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.inicio-panel__item-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.inicio-panel__item-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .inicio-panel__tipo { font-weight: 700; color: #1565c0; }
 .inicio-panel__link { background: #1976d2; color: #fff; border: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.inicio-panel__aviso-btn {
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  color: #444;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.inicio-panel__aviso-btn:hover { background: #e8f5e9; border-color: #81c784; color: #2e7d32; }
+.inicio-panel__aviso-btn--muted:hover { background: #eceff1; border-color: #90a4ae; color: #455a64; }
+.inicio-panel__aviso-btn:disabled { opacity: 0.5; cursor: wait; }
+.inicio-panel__avisos-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0 10px;
+}
+.inicio-panel__avisos-head .inicio-panel__subtitle { margin: 0; }
+.inicio-panel__count { font-weight: 400; color: #888; font-size: 0.92rem; }
+.inicio-panel__avisos-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.inicio-panel__aviso-bulk {
+  font-size: 0.82rem;
+  padding: 6px 10px;
+}
+.inicio-panel__item.is-removing {
+  opacity: 0;
+  transform: translateX(8px);
+  transition: opacity 0.2s, transform 0.2s;
+}
 .inicio-panel__msg { margin: 6px 0 0; color: #444; font-size: 0.9rem; }
 
 .inicio-panel__buscar-wrap {

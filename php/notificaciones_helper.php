@@ -55,6 +55,22 @@ function notificaciones_perfiles_visibles(): array
  */
 function notificaciones_panel_inicio(PDO $pdo, int $idPlantel): array
 {
+    $items = notificaciones_panel_inicio_raw($pdo, $idPlantel);
+    $idUsuario = (int) ($_SESSION['user_id'] ?? 0);
+    if ($idUsuario > 0) {
+        $items = notificaciones_panel_preparar_lista($pdo, $idUsuario, $idPlantel, $items);
+    }
+
+    return $items;
+}
+
+/**
+ * Avisos del panel según rol (sin filtrar leídos/archivados).
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function notificaciones_panel_inicio_raw(PDO $pdo, int $idPlantel): array
+{
     $perfiles = notificaciones_perfiles_visibles();
     $items = [];
 
@@ -112,6 +128,22 @@ function notificaciones_panel_inicio(PDO $pdo, int $idPlantel): array
     return $items;
 }
 
+/** @return array<int, array<string, mixed>> */
+function notificaciones_panel_lista_completa(PDO $pdo, int $idUsuario, int $idPlantel, int $limiteBd = 50): array
+{
+    notificaciones_panel_ensure_schema($pdo);
+    $items = [];
+    if ($idUsuario > 0 && function_exists('notificaciones_usuario_bd')) {
+        $items = array_merge($items, notificaciones_usuario_bd($pdo, $idUsuario, $limiteBd));
+    }
+    $items = array_merge($items, notificaciones_panel_inicio_raw($pdo, $idPlantel));
+    if ($idUsuario > 0) {
+        $items = notificaciones_panel_preparar_lista($pdo, $idUsuario, $idPlantel, $items);
+    }
+
+    return $items;
+}
+
 /** Alertas de constancias solicitadas pendientes de cobro en caja. */
 function notificaciones_constancias_pendientes(PDO $pdo, int $idPlantel): array
 {
@@ -129,6 +161,7 @@ function notificaciones_constancias_pendientes(PDO $pdo, int $idPlantel): array
         'mensaje' => $n . ' solicitud(es) esperan pago en punto de venta',
         'enlace' => 'piso_operativo',
         'prioridad' => 'alta',
+        'agregada' => true,
     ]];
 }
 
@@ -155,6 +188,7 @@ function notificaciones_documentos_entrega(PDO $pdo, int $idPlantel): array
         'mensaje' => $n . ' documento(s) listos para entrega en mostrador' . ($det !== '' ? ' (' . $det . ')' : ''),
         'enlace' => 'piso_operativo&tab=entrega',
         'prioridad' => 'alta',
+        'agregada' => true,
     ]];
 }
 
@@ -198,6 +232,7 @@ function notificaciones_cartera_vencida(PDO $pdo, int $idPlantel): array
             'mensaje' => $msg,
             'enlace' => 'consulta_adeudo',
             'prioridad' => 'alta',
+            'agregada' => true,
         ]];
     }
 
@@ -420,6 +455,7 @@ function notificaciones_coordinador_plantel(PDO $pdo, int $idPlantel): array
                 'mensaje' => $nPerm . ' solicitud(es)' . ($nombre !== '' ? ' · primera: ' . $nombre : ''),
                 'enlace' => 'bandeja_aprobaciones&filtro=permiso_profesor',
                 'prioridad' => 'alta',
+                'agregada' => true,
             ];
         }
     }
@@ -449,6 +485,7 @@ function notificaciones_coordinador_plantel(PDO $pdo, int $idPlantel): array
                 'mensaje' => $nPlan . ' planeación(es) de clase esperan revisión de coordinación',
                 'enlace' => 'planeaciones_revision',
                 'prioridad' => 'alta',
+                'agregada' => true,
             ];
         }
     }
@@ -557,6 +594,7 @@ function notificaciones_riesgo_academico(PDO $pdo, int $idPlantel): array
             'mensaje' => $n . ' alumno(s) requieren seguimiento (avanzaron sin ≥ 6)',
             'enlace' => 'academico_riesgo',
             'prioridad' => 'alta',
+            'agregada' => true,
         ],
     ];
 }
@@ -579,5 +617,199 @@ function notificaciones_graduacion_alertas(PDO $pdo, int $idPlantel): array
         'mensaje' => $n . ' alumno(s) en revisión final antes de proyecto final',
         'enlace' => 'graduacion_alertas',
         'prioridad' => 'alta',
+        'agregada' => true,
     ]];
+}
+
+function notificaciones_panel_ensure_schema(PDO $pdo): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    $path = dirname(__DIR__) . '/sql/migrations/045_notificacion_panel_archivo.sql';
+    if (!is_file($path) || !function_exists('hay_schema_ejecutar_sql')) {
+        return;
+    }
+    try {
+        $sql = file_get_contents($path);
+        if ($sql !== false && trim($sql) !== '') {
+            hay_schema_ejecutar_sql($pdo, $sql);
+        }
+    } catch (Throwable $e) {
+        error_log('notificaciones_panel_ensure_schema: ' . $e->getMessage());
+    }
+}
+
+/** Clave estable para ocultar un aviso del panel. */
+function notificaciones_item_clave(array $it, int $idPlantel = 0): string
+{
+    if (!empty($it['id_notificacion'])) {
+        return 'db:' . (int) $it['id_notificacion'];
+    }
+    if (!empty($it['clave'])) {
+        return (string) $it['clave'];
+    }
+    $tipo = (string) ($it['tipo'] ?? 'aviso');
+    if (!empty($it['ref_id'])) {
+        return $tipo . ':' . (string) $it['ref_id'];
+    }
+    if (!empty($it['agregada'])) {
+        return $tipo . ':p' . max(0, $idPlantel);
+    }
+    $hash = substr(
+        hash('sha256', ($it['titulo'] ?? '') . '|' . ($it['mensaje'] ?? '') . '|' . ($it['enlace'] ?? '')),
+        0,
+        24
+    );
+
+    return $tipo . ':' . $hash;
+}
+
+/** @return list<string> */
+function notificaciones_panel_claves_ocultas(PDO $pdo, int $idUsuario): array
+{
+    notificaciones_panel_ensure_schema($pdo);
+    try {
+        $st = $pdo->prepare(
+            'SELECT clave FROM notificacion_panel_oculta WHERE id_usuario = ?'
+        );
+        $st->execute([$idUsuario]);
+
+        return array_column($st->fetchAll(PDO::FETCH_ASSOC), 'clave');
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * Enriquece avisos con clave/fuente y quita los ya leídos u archivados.
+ *
+ * @param array<int, array<string, mixed>> $items
+ * @return array<int, array<string, mixed>>
+ */
+function notificaciones_panel_preparar_lista(PDO $pdo, int $idUsuario, int $idPlantel, array $items): array
+{
+    notificaciones_panel_ensure_schema($pdo);
+    $ocultas = notificaciones_panel_claves_ocultas($pdo, $idUsuario);
+    $out = [];
+    foreach ($items as $it) {
+        if (!is_array($it)) {
+            continue;
+        }
+        if (empty($it['clave'])) {
+            $it['clave'] = notificaciones_item_clave($it, $idPlantel);
+        }
+        if (empty($it['fuente'])) {
+            $it['fuente'] = !empty($it['id_notificacion']) ? 'bd' : 'panel';
+        }
+        if (in_array((string) $it['clave'], $ocultas, true)) {
+            continue;
+        }
+        $out[] = $it;
+    }
+
+    return $out;
+}
+
+/** @return array{status:string,message?:string} */
+function notificaciones_panel_ocultar(
+    PDO $pdo,
+    int $idUsuario,
+    string $clave,
+    string $estado = 'leida',
+    ?int $idNotificacion = null,
+    ?int $idPlantel = null
+): array {
+    notificaciones_panel_ensure_schema($pdo);
+    $clave = trim($clave);
+    if ($clave === '') {
+        return ['status' => 'error', 'message' => 'Aviso inválido'];
+    }
+    if (!in_array($estado, ['leida', 'archivada'], true)) {
+        return ['status' => 'error', 'message' => 'Estado inválido'];
+    }
+
+    try {
+        if ($idNotificacion > 0 || str_starts_with($clave, 'db:')) {
+            $idDb = $idNotificacion > 0 ? $idNotificacion : (int) substr($clave, 3);
+            if ($idDb > 0) {
+                $pdo->prepare(
+                    'UPDATE notificacion_usuario
+                     SET leida = 1, archivada = ?
+                     WHERE id = ? AND id_usuario = ?'
+                )->execute([$estado === 'archivada' ? 1 : 0, $idDb, $idUsuario]);
+            }
+        }
+
+        $pdo->prepare(
+            'INSERT INTO notificacion_panel_oculta (id_usuario, clave, estado, id_plantel)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE estado = VALUES(estado), creado_en = CURRENT_TIMESTAMP'
+        )->execute([
+            $idUsuario,
+            $clave,
+            $estado,
+            $idPlantel > 0 ? $idPlantel : null,
+        ]);
+
+        return ['status' => 'ok', 'message' => $estado === 'archivada' ? 'Aviso archivado' : 'Marcado como leído'];
+    } catch (PDOException $e) {
+        error_log('notificaciones_panel_ocultar: ' . $e->getMessage());
+
+        return ['status' => 'error', 'message' => 'No se pudo actualizar el aviso'];
+    }
+}
+
+/**
+ * @param list<string> $claves
+ * @return array{status:string,message?:string,procesados?:int}
+ */
+function notificaciones_panel_ocultar_varios(
+    PDO $pdo,
+    int $idUsuario,
+    array $claves,
+    string $estado = 'leida',
+    ?int $idPlantel = null
+): array {
+    $n = 0;
+    foreach ($claves as $clave) {
+        if (!is_string($clave) || trim($clave) === '') {
+            continue;
+        }
+        $idNotif = null;
+        if (str_starts_with($clave, 'db:')) {
+            $idNotif = (int) substr($clave, 3);
+        }
+        $res = notificaciones_panel_ocultar($pdo, $idUsuario, $clave, $estado, $idNotif, $idPlantel);
+        if (($res['status'] ?? '') === 'ok') {
+            $n++;
+        }
+    }
+
+    return [
+        'status' => 'ok',
+        'message' => $n . ' aviso(s) actualizado(s)',
+        'procesados' => $n,
+    ];
+}
+
+/** @return array{status:string,message?:string,procesados?:int} */
+function notificaciones_panel_ocultar_todos(
+    PDO $pdo,
+    int $idUsuario,
+    int $idPlantel,
+    string $estado = 'leida'
+): array {
+    $items = notificaciones_panel_lista_completa($pdo, $idUsuario, $idPlantel, 50);
+    $claves = [];
+    foreach ($items as $it) {
+        if (!is_array($it) || empty($it['clave'])) {
+            continue;
+        }
+        $claves[] = (string) $it['clave'];
+    }
+
+    return notificaciones_panel_ocultar_varios($pdo, $idUsuario, $claves, $estado, $idPlantel);
 }
