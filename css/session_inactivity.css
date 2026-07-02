@@ -1,0 +1,192 @@
+/**
+ * Estilos para el modal de advertencia de inactividad de sesión
+ */
+
+.session-warning-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+}
+
+.session-warning-modal.active {
+    display: flex;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.session-warning-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.session-warning-header {
+    background: linear-gradient(135deg, #f5365c 0%, #ec250d 100%);
+    color: white;
+    padding: 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.session-warning-header i {
+    font-size: 32px;
+}
+
+.session-warning-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.session-warning-body {
+    padding: 24px;
+    text-align: center;
+}
+
+.session-warning-body p {
+    margin: 0 0 16px 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.session-warning-body p.warning-message {
+    font-size: 13px;
+    color: #999;
+    margin-top: 12px;
+}
+
+.session-warning-countdown {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 20px 0;
+}
+
+.countdown-number {
+    font-size: 48px;
+    font-weight: 700;
+    color: #f5365c;
+    font-variant-numeric: tabular-nums;
+    min-width: 60px;
+    text-align: center;
+}
+
+.countdown-label {
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+}
+
+.session-warning-actions {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px 24px 24px;
+    flex-direction: column;
+}
+
+.btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+    background: #efefef;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .session-warning-content {
+        max-width: 100%;
+        border-radius: 0;
+    }
+
+    .session-warning-header {
+        padding: 20px 16px;
+    }
+
+    .session-warning-header h2 {
+        font-size: 16px;
+    }
+
+    .session-warning-body {
+        padding: 20px 16px;
+    }
+
+    .session-warning-actions {
+        padding: 12px 16px 16px 16px;
+    }
+
+    .countdown-number {
+        font-size: 36px;
+    }
+}

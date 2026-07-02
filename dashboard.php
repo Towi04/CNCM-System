@@ -83,6 +83,7 @@ if ($debeCompletarPerfil) {
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/hay_datatables.css'), ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/hay_tour.css?v=20260602'), ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/session_inactivity.css'), ENT_QUOTES, 'UTF-8'); ?>">
 </head>
 <body data-plantel-slug="<?php echo htmlspecialchars($plantelSlug, ENT_QUOTES, 'UTF-8'); ?>"<?php echo $bodyClass !== [] ? ' class="' . htmlspecialchars(implode(' ', $bodyClass), ENT_QUOTES, 'UTF-8') . '"' : ''; ?>>
 
@@ -132,6 +133,7 @@ if ($debeCompletarPerfil) {
     <script src="<?php echo htmlspecialchars(hay_asset_url('js/hay_tour.js?v=20260602'), ENT_QUOTES, 'UTF-8'); ?>"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="<?php echo htmlspecialchars(hay_asset_url('js/hay_datatables.js?v=20260602'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+    <script src="<?php echo htmlspecialchars(hay_asset_url('js/session_inactivity.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
     <script>
     document.getElementById('rbac-sim-restore-btn')?.addEventListener('click', async function () {
       const fd = new FormData();
