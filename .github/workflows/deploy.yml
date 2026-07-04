@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Call Deployment Script
         run: |
-          curl -s "http://sistema.cncm.edu.mx/git-neubox-deploy-connect.php"
+          curl -s "http://sistema.cncm.edu.mx/upload_version.php?run=${{ github.run_number }}"
