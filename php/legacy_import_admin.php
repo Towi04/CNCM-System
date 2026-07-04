@@ -1,12 +1,11 @@
 <?php
 
 /**
- * Importación legado → HAY desde el navegador (solo administración).
- * URL: php/legacy_import_admin.php
+ * Importación legado → CNCM (acceso directo por URL, fuera del panel).
+ * En el panel use views/legacy_import_admin.php vía cargarSeccion.
  */
 require dirname(__DIR__) . '/config.php';
 require_once __DIR__ . '/auth_helpers.php';
-require_once __DIR__ . '/legacy_import_helper.php';
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -16,67 +15,18 @@ if (empty($_SESSION['user_id'])) {
     exit;
 }
 
-$rolReal = function_exists('rbac_rol_real') ? rbac_rol_real() : ($_SESSION['rol'] ?? '');
-if (!in_array($rolReal, ['supervisor', 'gerente'], true)) {
+if (!legacy_import_admin_puede()) {
     http_response_code(403);
-    echo '<p>Solo supervisión o gerencia puede ejecutar la importación del legado.</p>';
+    echo '<p>Solo supervisión puede ejecutar la importación del legado.</p>';
     exit;
 }
 
-$leg = legacy_import_pdo_legacy();
-$hayOk = true;
-$legOk = $leg !== null;
-
-$fases = [
-    'all' => 'Todo (orden recomendado)',
-    'planteles' => 'Planteles ← sucursales',
-    'especialidades' => 'Especialidades',
-    'usuarios' => 'Usuarios ← users',
-    'productos' => 'Productos',
-    'grupos' => 'Grupos',
-    'grupos_remap_esp' => 'Grupos: aplicar especialidad (equivalencias)',
-    'preregistros' => 'Pre-registros',
-    'alumnos' => 'Alumnos inscritos',
-    'alumno_grupos' => 'Alumnos en grupos',
-    'alumno_especialidades' => 'Alumnos ↔ especialidades',
-    'pagos' => 'Pagos / abonos históricos',
-];
-
-$resultado = null;
-$error = null;
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $legOk) {
-    $fase = trim($_POST['fase'] ?? 'all');
-    $dryRun = !empty($_POST['dry_run']);
-    if (isset($_POST['reset_map']) && !$dryRun) {
-        legacy_import_reset_map($pdo);
-    }
-    try {
-        @set_time_limit(0);
-        legacy_import_ensure_schema($pdo);
-        $resultado = legacy_import_run($pdo, $leg, $fase, $dryRun);
-    } catch (Throwable $e) {
-        $error = $e->getMessage();
-    }
-}
-
-$logs = [];
-try {
-    legacy_import_ensure_schema($pdo);
-    $logs = $pdo->query(
-        'SELECT fase, nivel, mensaje, creado_en FROM hay_legacy_import_log
-         ORDER BY id_log DESC LIMIT 30'
-    )->fetchAll(PDO::FETCH_ASSOC);
-} catch (Throwable $e) {
-    $logs = [];
-}
-
-$mapCount = 0;
-try {
-    $mapCount = (int) $pdo->query('SELECT COUNT(*) FROM hay_legacy_map')->fetchColumn();
-} catch (Throwable $e) {
-    $mapCount = 0;
-}
+$conn = legacy_import_legacy_connection();
+$leg = $conn['ok'] ? $conn['pdo'] : null;
+$ctx = legacy_import_admin_handle($pdo, $leg, $_POST);
+$fases = legacy_import_admin_fases();
+$legacyDb = defined('LEGACY_DB_NAME') ? LEGACY_DB_NAME : '?';
+$dashUrl = hay_asset_url('dashboard.php');
 
 ?>
 <!DOCTYPE html>
@@ -95,74 +45,73 @@ try {
     th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
     .btn { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
     .btn-primary { background: #11458b; color: #fff; }
-    .btn-warn { background: #b45309; color: #fff; margin-left: 8px; }
+    .btn-warn { background: #b45309; color: #fff; margin-left: 8px; text-decoration: none; display: inline-block; }
     label { display: block; margin: 8px 0; }
     select, input[type=checkbox] { margin-right: 6px; }
     .hint { font-size: 13px; color: #666; }
   </style>
 </head>
 <body>
-  <h1>Importar datos: <?= htmlspecialchars(defined('LEGACY_DB_NAME') ? LEGACY_DB_NAME : '?', ENT_QUOTES, 'UTF-8') ?> → HAY</h1>
+  <h1>Importar datos: <?php echo htmlspecialchars($legacyDb, ENT_QUOTES, 'UTF-8'); ?> → CNCM</h1>
 
-  <?php if (!$legOk): ?>
-    <p class="err">No hay conexión al legado. Revise LEGACY_DB_* en <code>config.local.php</code>.</p>
+  <?php if (!$conn['ok']): ?>
+    <p class="err"><?php echo htmlspecialchars($conn['error'], ENT_QUOTES, 'UTF-8'); ?></p>
   <?php else: ?>
-    <p class="ok">Conexión al legado: OK. Registros mapeados en HAY: <strong><?= (int) $mapCount ?></strong></p>
+    <p class="ok">Conexión al legado: OK. Registros mapeados: <strong><?php echo (int) $ctx['mapCount']; ?></strong></p>
   <?php endif; ?>
 
-  <p class="hint">
-    No borra la base legado. Copia datos a <code>cncmedum_hay_system</code> usando el modelo HAY.
-    Ejecute primero <strong>simulación</strong>, luego importación real fase por fase si el hosting corta por tiempo.
-  </p>
+  <p class="hint">No borra la base legado. Ejecute primero simulación, luego importación real fase por fase.</p>
 
   <div class="box">
     <form method="post">
       <label>
         Fase
         <select name="fase">
-          <?php foreach ($fases as $k => $label): ?>
-            <option value="<?= htmlspecialchars($k) ?>"><?= htmlspecialchars($label) ?></option>
+          <?php foreach ($fases as $f): ?>
+            <option value="<?php echo htmlspecialchars($f['key'], ENT_QUOTES, 'UTF-8'); ?>">
+              <?php echo htmlspecialchars($f['label'], ENT_QUOTES, 'UTF-8'); ?>
+            </option>
           <?php endforeach; ?>
         </select>
       </label>
-      <label><input type="checkbox" name="dry_run" value="1" checked> Solo simular (no escribe en HAY)</label>
-      <label><input type="checkbox" name="reset_map" value="1"> Reiniciar mapa antes (solo si va a reimportar todo)</label>
+      <label><input type="checkbox" name="dry_run" value="1" checked> Solo simular (no escribe en CNCM)</label>
+      <label><input type="checkbox" name="reset_map" value="1"> Reiniciar mapa antes (solo reimportación total)</label>
       <p style="margin-top:14px;">
-        <button type="submit" class="btn btn-primary">Ejecutar</button>
-        <a href="../dashboard.php" class="btn btn-warn" style="text-decoration:none;display:inline-block;">Volver al panel</a>
+        <button type="submit" class="btn btn-primary" <?php echo $leg ? '' : 'disabled'; ?>>Ejecutar</button>
+        <a href="<?php echo htmlspecialchars($dashUrl, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-warn">Volver al panel</a>
       </p>
     </form>
   </div>
 
-  <?php if ($error): ?>
-    <p class="err"><?= htmlspecialchars($error) ?></p>
+  <?php if (!empty($ctx['error'])): ?>
+    <p class="err"><?php echo htmlspecialchars($ctx['error'], ENT_QUOTES, 'UTF-8'); ?></p>
   <?php endif; ?>
 
-  <?php if ($resultado): ?>
+  <?php if (!empty($ctx['resultado'])): ?>
     <h2>Resultado</h2>
     <table>
       <tr><th>Fase</th><th>Insertados</th><th>Omitidos</th><th>Errores</th></tr>
-      <?php foreach ($resultado as $nombre => $st): ?>
+      <?php foreach ($ctx['resultado'] as $nombre => $st): ?>
         <tr>
-          <td><?= htmlspecialchars($nombre) ?></td>
-          <td><?= (int) $st['inserted'] ?></td>
-          <td><?= (int) $st['skipped'] ?></td>
-          <td><?= (int) $st['errors'] ?></td>
+          <td><?php echo htmlspecialchars((string) $nombre, ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><?php echo (int) ($st['inserted'] ?? 0); ?></td>
+          <td><?php echo (int) ($st['skipped'] ?? 0); ?></td>
+          <td><?php echo (int) ($st['errors'] ?? 0); ?></td>
         </tr>
       <?php endforeach; ?>
     </table>
   <?php endif; ?>
 
-  <?php if ($logs): ?>
+  <?php if (!empty($ctx['logs'])): ?>
     <h2>Últimos mensajes</h2>
     <table>
       <tr><th>Hora</th><th>Fase</th><th>Nivel</th><th>Mensaje</th></tr>
-      <?php foreach ($logs as $l): ?>
+      <?php foreach ($ctx['logs'] as $l): ?>
         <tr>
-          <td><?= htmlspecialchars($l['creado_en'] ?? '') ?></td>
-          <td><?= htmlspecialchars($l['fase'] ?? '') ?></td>
-          <td><?= htmlspecialchars($l['nivel'] ?? '') ?></td>
-          <td><?= htmlspecialchars($l['mensaje'] ?? '') ?></td>
+          <td><?php echo htmlspecialchars((string) ($l['creado_en'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><?php echo htmlspecialchars((string) ($l['fase'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><?php echo htmlspecialchars((string) ($l['nivel'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+          <td><?php echo htmlspecialchars((string) ($l['mensaje'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
         </tr>
       <?php endforeach; ?>
     </table>

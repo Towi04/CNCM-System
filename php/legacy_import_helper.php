@@ -67,6 +67,96 @@ function legacy_import_pdo_legacy(): ?PDO
     ]);
 }
 
+/** Conexión legado sin lanzar excepción (para vistas del panel). */
+function legacy_import_legacy_connection(): array
+{
+    try {
+        $pdo = legacy_import_pdo_legacy();
+        if (!$pdo instanceof PDO) {
+            return ['ok' => false, 'pdo' => null, 'error' => 'Configure LEGACY_DB_* en config.local.php'];
+        }
+
+        return ['ok' => true, 'pdo' => $pdo, 'error' => ''];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'pdo' => null, 'error' => $e->getMessage()];
+    }
+}
+
+function legacy_import_admin_puede(): bool
+{
+    $rol = function_exists('rbac_rol_real') ? rbac_rol_real() : ($_SESSION['rol'] ?? '');
+
+    return $rol === 'supervisor';
+}
+
+/** @return list<array{key:string,label:string}> */
+function legacy_import_admin_fases(): array
+{
+    return [
+        ['key' => 'all', 'label' => 'Todo (orden recomendado)'],
+        ['key' => 'planteles', 'label' => 'Planteles ← sucursales'],
+        ['key' => 'especialidades', 'label' => 'Especialidades'],
+        ['key' => 'usuarios', 'label' => 'Usuarios ← users'],
+        ['key' => 'productos', 'label' => 'Productos'],
+        ['key' => 'grupos', 'label' => 'Grupos'],
+        ['key' => 'grupos_remap_esp', 'label' => 'Grupos: aplicar especialidad (equivalencias)'],
+        ['key' => 'preregistros', 'label' => 'Pre-registros'],
+        ['key' => 'alumnos', 'label' => 'Alumnos inscritos'],
+        ['key' => 'alumno_grupos', 'label' => 'Alumnos en grupos'],
+        ['key' => 'alumno_especialidades', 'label' => 'Alumnos ↔ especialidades'],
+        ['key' => 'pagos', 'label' => 'Pagos / abonos históricos'],
+        ['key' => 'asistencias', 'label' => 'Asistencias'],
+    ];
+}
+
+/**
+ * @return array{resultado:?array,error:?string,mapCount:int,logs:list<array<string,mixed>>}
+ */
+function legacy_import_admin_handle(PDO $hay, ?PDO $leg, array $post): array
+{
+    $out = ['resultado' => null, 'error' => null, 'mapCount' => 0, 'logs' => []];
+
+    legacy_import_ensure_schema($hay);
+    try {
+        $out['mapCount'] = (int) $hay->query('SELECT COUNT(*) FROM hay_legacy_map')->fetchColumn();
+    } catch (Throwable $e) {
+        $out['mapCount'] = 0;
+    }
+
+    try {
+        $out['logs'] = $hay->query(
+            'SELECT fase, nivel, mensaje, creado_en FROM hay_legacy_import_log
+             ORDER BY id_log DESC LIMIT 30'
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $out['logs'] = [];
+    }
+
+    if ($leg === null || ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        return $out;
+    }
+
+    $fase = trim((string) ($post['fase'] ?? 'all'));
+    $dryRun = !empty($post['dry_run']);
+    if (isset($post['reset_map']) && !$dryRun) {
+        legacy_import_reset_map($hay);
+    }
+    try {
+        @set_time_limit(0);
+        hay_bootstrap_schema($hay);
+        $out['resultado'] = legacy_import_run($hay, $leg, $fase, $dryRun);
+        $out['logs'] = $hay->query(
+            'SELECT fase, nivel, mensaje, creado_en FROM hay_legacy_import_log
+             ORDER BY id_log DESC LIMIT 30'
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $out['mapCount'] = (int) $hay->query('SELECT COUNT(*) FROM hay_legacy_map')->fetchColumn();
+    } catch (Throwable $e) {
+        $out['error'] = $e->getMessage();
+    }
+
+    return $out;
+}
+
 function legacy_import_log(PDO $pdo, string $fase, string $nivel, string $mensaje, ?int $idLegacy = null): void
 {
     $pdo->prepare(

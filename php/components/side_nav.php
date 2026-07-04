@@ -318,6 +318,8 @@ $puedeSimularRol = rbac_puede_simular_rol();
                 <li data-seccion="legacy_migracion" data-title="Migración legado" data-breadcrumb="MIGRACIÓN LEGADO">Asistente migración legado</li>
                 <li data-seccion="legacy_mapeo" data-title="Equivalencias legado" data-breadcrumb="MAPEO LEGADO">Equivalencias legado → sistema</li>
                 <li data-seccion="legacy_mapeo_grupos" data-title="Grupos: sustituir especialidad" data-breadcrumb="GRUPOS / ESP. LEGADO">Grupos: sustituir especialidad</li>
+                <?php endif; ?>
+                <?php if (function_exists('legacy_import_admin_puede') && legacy_import_admin_puede()): ?>
                 <li data-seccion="legacy_import_admin" data-title="Importar legado" data-breadcrumb="IMPORTAR LEGADO">Importar datos legado</li>
                 <?php endif; ?>
             </ul>

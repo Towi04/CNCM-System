@@ -23,7 +23,7 @@ legacy_import_ensure_schema($pdo);
       <li>Pulse <strong>Guardar</strong> en la fila (o use equivalencias ya guardadas).</li>
       <li>Si los grupos ya están en HAY, pulse <strong>Aplicar a grupos importados</strong>.</li>
       <li>Grupos nuevos: importe la fase <strong>grupos</strong> en
-        <a href="#" onclick="cargarSeccion('legacy_import_admin'); return false;">Importar legado</a>.</li>
+        <a href="#" onclick="cargarSeccion('legacy_migracion'); return false;">Asistente migración legado</a>.</li>
     </ol>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button type="button" class="primary" id="btn-aplicar-grupos">Aplicar a grupos ya importados en HAY</button>
