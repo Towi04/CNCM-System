@@ -450,6 +450,8 @@ function legacy_import_fase_usuarios(PDO $hay, PDO $leg, bool $dryRun = false): 
             $idHay = (int) $hay->lastInsertId();
             legacy_map_set($hay, $fase, $lid, $idHay);
             $ins++;
+        } else {
+            $ins++;
         }
     }
     legacy_import_log($hay, 'usuarios', 'info', "Usuarios: $ins nuevos, $skipped omitidos");
@@ -568,6 +570,86 @@ function legacy_grupo_resolve_especialidad_hay(PDO $hay, PDO $leg, array $g): ?i
     return legacy_resolve_hay_id($hay, 'especialidad', (int) $lid);
 }
 
+/** Infiere área y horario CNCM a partir de especialidad HAY y texto legado. */
+function legacy_grupo_infer_codigos(PDO $hay, ?int $idEspHay, array $g, ?PDO $leg = null): array
+{
+    $area = 'I';
+    $horario = 'M';
+    $extensivo = false;
+    $personalizado = false;
+
+    if ($leg instanceof PDO
+        && legacy_import_column_exists($leg, 'grupos', 'infantil')
+        && !empty($g['infantil'])) {
+        $area = 'K';
+    }
+
+    if ($idEspHay !== null && $idEspHay > 0) {
+        $st = $hay->prepare('SELECT clave, nombre, modalidad FROM especialidades WHERE id_especialidad = ? LIMIT 1');
+        $st->execute([$idEspHay]);
+        $esp = $st->fetch(PDO::FETCH_ASSOC);
+        if ($esp) {
+            $clave = strtoupper(trim((string) ($esp['clave'] ?? '')));
+            $nombre = strtoupper(trim((string) ($esp['nombre'] ?? '')));
+            $modalidad = strtolower(trim((string) ($esp['modalidad'] ?? '')));
+            if ($modalidad === 'kids' || str_contains($clave, '-K') || str_contains($nombre, 'INFANTIL')) {
+                $area = 'K';
+            } elseif ($clave !== '' && ($clave[0] === 'C' || str_starts_with($clave, 'COMP'))) {
+                $area = 'C';
+            } elseif (str_contains($nombre, 'COMPUT') || str_contains($nombre, 'INFORM')) {
+                $area = 'C';
+            } elseif (str_contains($nombre, 'PREPA') && str_contains($nombre, 'ABIERT')) {
+                $area = 'PA';
+            } elseif (str_contains($nombre, 'PREPA')) {
+                $area = 'PE';
+            }
+        }
+    }
+
+    $text = strtoupper(trim(
+        ((string) ($g['horario_texto'] ?? '')) . ' '
+        . ((string) ($g['horario'] ?? '')) . ' '
+        . ((string) ($g['dias'] ?? ''))
+    ));
+    if (preg_match('/\b(SAB|SÁB|SABADO|SÁBADO)\b/u', $text)) {
+        $horario = 'S';
+    } elseif (preg_match('/\b(DOM|DOMINGO)\b/u', $text)) {
+        $horario = 'D';
+    } elseif (preg_match('/\b(VES|VESPERTINO|NOCHE)\b/u', $text)) {
+        $horario = 'V';
+    } elseif (preg_match('/\b(MAT|MATUTINO|AM)\b/u', $text)) {
+        $horario = 'M';
+    }
+
+    if (preg_match('/\b(EXT|EXTENSIVO)\b/u', $text)) {
+        $extensivo = true;
+    }
+
+    return [
+        'area' => $area,
+        'horario' => $horario,
+        'extensivo' => $extensivo,
+        'personalizado' => $personalizado,
+    ];
+}
+
+/** Genera clave CNCM para grupo legado (vista previa o real). */
+function legacy_grupo_generar_clave_hay(PDO $hay, int $idPlantel, array $codigos, bool $preview = false): array
+{
+    grupo_clave_ensure_schema($hay);
+    $fn = $preview ? 'grupo_clave_vista_previa' : 'grupo_clave_generar';
+
+    return $fn(
+        $hay,
+        $idPlantel,
+        $codigos['area'],
+        $codigos['horario'],
+        $codigos['extensivo'],
+        $codigos['personalizado'],
+        ''
+    );
+}
+
 /** Actualiza id_especialidad en grupos HAY ya importados según equivalencias. */
 function legacy_import_fase_grupos_remap_especialidad(PDO $hay, PDO $leg, bool $dryRun = false): array
 {
@@ -641,15 +723,31 @@ function legacy_import_fase_grupos(PDO $hay, PDO $leg, bool $dryRun = false): ar
             continue;
         }
         $idPlantel = legacy_resolve_hay_id($hay, 'plantel', (int) ($g['id_sucursal'] ?? 0)) ?? plantel_default_id($hay);
-        $clave = $hasClave && !empty($g['clave'])
+        $claveLegacy = $hasClave && !empty($g['clave'])
             ? trim((string) $g['clave'])
-            : ('LEG-G' . $lid);
-        $dup = $hay->prepare('SELECT id_grupo FROM grupos WHERE clave = ? LIMIT 1');
-        $dup->execute([$clave]);
-        if ($dup->fetchColumn()) {
-            $clave = $clave . '-L' . $lid;
-        }
+            : ('G' . $lid);
         $idEsp = legacy_grupo_resolve_especialidad_hay($hay, $leg, $g);
+        if ($idEsp === null) {
+            $errors++;
+            legacy_import_log($hay, 'grupos', 'warn', 'Grupo sin especialidad mapeada', $lid);
+            continue;
+        }
+        $codigos = legacy_grupo_infer_codigos($hay, $idEsp, $g, $leg);
+        try {
+            $gen = legacy_grupo_generar_clave_hay($hay, $idPlantel, $codigos, $dryRun);
+            $clave = (string) ($gen['clave'] ?? '');
+            if ($clave === '' || str_contains($clave, ' + ')) {
+                $clave = 'IS' . $lid;
+            }
+        } catch (Throwable $e) {
+            $clave = 'IS' . $lid;
+            $gen = ['codigo_area' => $codigos['area'], 'codigo_horario' => $codigos['horario'], 'numero_secuencial' => null, 'es_extensivo' => $codigos['extensivo'] ? 1 : 0, 'es_personalizado' => 0];
+        }
+        $dup = $hay->prepare('SELECT id_grupo FROM grupos WHERE id_plantel = ? AND clave = ? LIMIT 1');
+        $dup->execute([$idPlantel, $clave]);
+        if ($dup->fetchColumn()) {
+            $clave = $gen['prefijo'] . ($gen['numero_secuencial'] ?? $lid) . 'L';
+        }
         $idProf = null;
         if ($hasProf && !empty($g['id_profesor'])) {
             $idProf = legacy_resolve_hay_id($hay, 'usuario', (int) $g['id_profesor']);
@@ -663,25 +761,32 @@ function legacy_import_fase_grupos(PDO $hay, PDO $leg, bool $dryRun = false): ar
             try {
                 $hay->prepare(
                     'INSERT INTO grupos (
-                        id_plantel, clave, fecha_inicio, id_profesor, aula, id_especialidad,
-                        horario_texto, codigo_area, es_extensivo, es_personalizado
-                     ) VALUES (?,?,?,?,?,?,?,?,0,0)'
+                        id_plantel, clave, clave_anterior, fecha_inicio, id_profesor, aula, id_especialidad,
+                        horario_texto, codigo_area, codigo_horario, es_extensivo, es_personalizado, numero_secuencial
+                     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
                 )->execute([
                     $idPlantel,
                     $clave,
+                    $claveLegacy !== $clave ? $claveLegacy : null,
                     substr((string) $fecha, 0, 10),
                     $idProf,
-                    null,
+                    !empty($g['aula']) ? trim((string) $g['aula']) : null,
                     $idEsp,
                     $horario !== '' ? $horario : null,
-                    'LEG',
+                    $gen['codigo_area'] ?? $codigos['area'],
+                    $gen['codigo_horario'] ?? $codigos['horario'],
+                    (int) ($gen['es_extensivo'] ?? ($codigos['extensivo'] ? 1 : 0)),
+                    (int) ($gen['es_personalizado'] ?? 0),
+                    $gen['numero_secuencial'] ?? null,
                 ]);
-                legacy_map_set($hay, $fase, $lid, (int) $hay->lastInsertId());
+                legacy_map_set($hay, $fase, $lid, (int) $hay->lastInsertId(), 'clave_legacy:' . $claveLegacy);
                 $ins++;
             } catch (PDOException $e) {
                 $errors++;
                 legacy_import_log($hay, 'grupos', 'error', $e->getMessage(), $lid);
             }
+        } else {
+            $ins++;
         }
     }
     legacy_import_log($hay, 'grupos', 'info', "Grupos: $ins nuevos, $skipped omitidos, $errors errores");
@@ -775,6 +880,8 @@ function legacy_import_fase_preregistros(PDO $hay, PDO $leg, bool $dryRun = fals
             ]);
             legacy_map_set($hay, $fase, $lid, (int) $hay->lastInsertId());
             $ins++;
+        } else {
+            $ins++;
         }
     }
     legacy_import_log($hay, 'preregistros', 'info', "Pre-registros: $ins nuevos, $skipped omitidos");
@@ -806,9 +913,12 @@ function legacy_import_fase_alumnos(PDO $hay, PDO $leg, bool $dryRun = false): a
         }
         $dup = $hay->prepare('SELECT id_alumno FROM alumnos WHERE numero_control = ? LIMIT 1');
         $dup->execute([$nc]);
-        if ($dup->fetchColumn()) {
+        $existingId = $dup->fetchColumn();
+        if ($existingId) {
             $skipped++;
-            legacy_map_set($hay, $fase, $lid, (int) $dup->fetchColumn(), 'dup_nc');
+            if (!$dryRun) {
+                legacy_map_set($hay, $fase, $lid, (int) $existingId, 'dup_nc');
+            }
             continue;
         }
         $idPlantel = legacy_resolve_hay_id($hay, 'plantel', (int) ($a['id_sucursal'] ?? 0)) ?? plantel_default_id($hay);
@@ -842,6 +952,8 @@ function legacy_import_fase_alumnos(PDO $hay, PDO $leg, bool $dryRun = false): a
                 $nc,
             ]);
             legacy_map_set($hay, $fase, $lid, (int) $hay->lastInsertId());
+            $ins++;
+        } else {
             $ins++;
         }
     }
@@ -888,6 +1000,8 @@ function legacy_import_fase_alumno_grupos(PDO $hay, PDO $leg, bool $dryRun = fal
             $hay->prepare('UPDATE alumnos SET id_grupo = ? WHERE id_alumno = ? AND id_grupo IS NULL')
                 ->execute([$idGr, $idAl]);
             $ins++;
+        } else {
+            $ins++;
         }
     }
     legacy_import_log($hay, 'alumno_grupos', 'info', "Relaciones grupo: $ins, omitidos $skipped");
@@ -929,6 +1043,8 @@ function legacy_import_fase_alumno_especialidades(PDO $hay, PDO $leg, bool $dryR
                 (float) ($r['monto_pronto_pago'] ?? 0),
                 (float) ($r['monto'] ?? 0),
             ]);
+            $ins++;
+        } else {
             $ins++;
         }
     }
@@ -1048,6 +1164,71 @@ function legacy_import_fase_pagos(PDO $hay, PDO $leg, bool $dryRun = false): arr
     return ['inserted' => $ins, 'skipped' => $skipped, 'errors' => $sinAlumno];
 }
 
+/** @return array{inserted:int,skipped:int,errors:int} */
+function legacy_import_fase_asistencias(PDO $hay, PDO $leg, bool $dryRun = false): array
+{
+    $ins = $skipped = $errors = 0;
+    if (!legacy_import_table_exists($leg, 'asistencias')) {
+        return ['inserted' => 0, 'skipped' => 0, 'errors' => 0];
+    }
+    asistencia_ensure_schema($hay);
+    $cols = legacy_import_select_cols($leg, 'asistencias', [
+        'id', 'id_alumno', 'id_grupo', 'fecha', 'id_usuario',
+    ]);
+    $rows = $leg->query("SELECT {$cols} FROM asistencias ORDER BY id")->fetchAll();
+    $stDup = $hay->prepare(
+        'SELECT id_asistencia FROM asistencias WHERE id_grupo = ? AND id_alumno = ? AND fecha = ? LIMIT 1'
+    );
+    foreach ($rows as $r) {
+        $idAl = legacy_resolve_hay_id($hay, 'alumno', (int) ($r['id_alumno'] ?? 0));
+        $idGr = legacy_resolve_hay_id($hay, 'grupo', (int) ($r['id_grupo'] ?? 0));
+        if ($idAl === null || $idGr === null) {
+            $skipped++;
+            continue;
+        }
+        $fechaRaw = (string) ($r['fecha'] ?? '');
+        $fecha = substr($fechaRaw, 0, 10);
+        if ($fecha === '' || $fecha === '0000-00-00') {
+            $errors++;
+            continue;
+        }
+        $stDup->execute([$idGr, $idAl, $fecha]);
+        if ($stDup->fetchColumn()) {
+            $skipped++;
+            continue;
+        }
+        [$anio, $semana] = asistencia_calc_semana($fecha);
+        $hora = strlen($fechaRaw) > 10 ? substr($fechaRaw, 11, 8) : null;
+        $idUsr = !empty($r['id_usuario'])
+            ? legacy_resolve_hay_id($hay, 'usuario', (int) $r['id_usuario'])
+            : null;
+        if (!$dryRun) {
+            try {
+                $hay->prepare(
+                    'INSERT INTO asistencias (id_grupo, id_alumno, fecha, anio, semana, presente, origen, hora_llegada, id_usuario_registro)
+                     VALUES (?,?,?,?,?,1,?,?,?)'
+                )->execute([
+                    $idGr,
+                    $idAl,
+                    $fecha,
+                    $anio,
+                    $semana,
+                    'recepcion',
+                    $hora,
+                    $idUsr,
+                ]);
+                $ins++;
+            } catch (PDOException $e) {
+                $errors++;
+            }
+        } else {
+            $ins++;
+        }
+    }
+    legacy_import_log($hay, 'asistencias', 'info', "Asistencias: $ins importadas, $skipped omitidas, $errors errores");
+    return ['inserted' => $ins, 'skipped' => $skipped, 'errors' => $errors];
+}
+
 /**
  * @return array<string, array{inserted:int,skipped:int,errors:int}>
  */
@@ -1068,6 +1249,7 @@ function legacy_import_run(PDO $hay, PDO $leg, string $fase = 'all', bool $dryRu
         'alumno_grupos' => 'legacy_import_fase_alumno_grupos',
         'alumno_especialidades' => 'legacy_import_fase_alumno_especialidades',
         'pagos' => 'legacy_import_fase_pagos',
+        'asistencias' => 'legacy_import_fase_asistencias',
     ];
 
     $run = $fase === 'all' ? array_keys($fases) : [$fase];

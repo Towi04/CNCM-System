@@ -314,7 +314,8 @@ $puedeSimularRol = rbac_puede_simular_rol();
                 <li data-seccion="documento_mostrador" data-title="Mostrador documentos" data-breadcrumb="MOSTRADOR DOC">Mostrador de documentos</li>
                 <?php endif; ?>
                 <li data-seccion="admin_configuracion" data-title="Configuración" data-breadcrumb="CONFIGURACIÓN">Configuración</li>
-                <?php if (in_array(rbac_rol_real(), ['supervisor', 'director'], true)): ?>
+                <?php if (function_exists('legacy_migracion_puede') && legacy_migracion_puede()): ?>
+                <li data-seccion="legacy_migracion" data-title="Migración legado" data-breadcrumb="MIGRACIÓN LEGADO">Asistente migración legado</li>
                 <li data-seccion="legacy_mapeo" data-title="Equivalencias legado" data-breadcrumb="MAPEO LEGADO">Equivalencias legado → sistema</li>
                 <li data-seccion="legacy_mapeo_grupos" data-title="Grupos: sustituir especialidad" data-breadcrumb="GRUPOS / ESP. LEGADO">Grupos: sustituir especialidad</li>
                 <li data-seccion="legacy_import_admin" data-title="Importar legado" data-breadcrumb="IMPORTAR LEGADO">Importar datos legado</li>

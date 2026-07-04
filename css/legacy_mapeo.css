@@ -65,3 +65,33 @@
 .legacy-grupos-wrap .legacy-sel-hay {
     min-width: 220px;
 }
+
+/* Asistente migración por fases */
+.legacy-mig-wrap { max-width: 1200px; }
+.legacy-mig-layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .legacy-mig-layout { grid-template-columns: 1fr; } }
+.legacy-mig-fases { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 12px; }
+.legacy-mig-fase-btn {
+  text-align: left; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px;
+  background: #fff; cursor: pointer; font-size: 0.88rem;
+}
+.legacy-mig-fase-btn.is-active { border-color: #1976d2; background: #e3f2fd; font-weight: 600; }
+.legacy-mig-fase-btn:hover { background: #f5f9ff; }
+.legacy-mig-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; }
+.legacy-mig-panel-head h3 { margin: 0 0 6px; font-size: 1.1rem; }
+.legacy-mig-panel-head p { margin: 0 0 12px; color: #666; font-size: 0.92rem; }
+.legacy-mig-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.legacy-mig-resumen { background: #f5f9ff; border: 1px solid #bbdefb; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.92rem; }
+.legacy-mig-advertencias { background: #fff8e1; border: 1px solid #ffe082; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.88rem; }
+.legacy-mig-advertencias ul { margin: 6px 0 0; padding-left: 18px; }
+.legacy-mig-estado p { margin: 4px 0; font-size: 0.9rem; }
+.legacy-mig-ok { color: #2e7d32; }
+.legacy-mig-warn { color: #e65100; }
+.legacy-mig-alert { color: #c62828; }
+.legacy-mig-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; }
+.legacy-mig-badge--ok { background: #e8f5e9; color: #2e7d32; }
+.legacy-mig-badge--skip { background: #eceff1; color: #546e7a; }
+.legacy-mig-badge--warn { background: #fff3e0; color: #ef6c00; }
+.legacy-mig-badge--err { background: #ffebee; color: #c62828; }
+.legacy-mig-equiv-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.legacy-mig-estado { background: #f0f7ff; border: 1px solid #bbdefb; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }

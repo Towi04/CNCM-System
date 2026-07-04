@@ -180,6 +180,7 @@ require_once __DIR__ . '/php/marketing_helper.php';
 require_once __DIR__ . '/php/alumno_portal_helper.php';
 require_once __DIR__ . '/php/soporte_helper.php';
 require_once __DIR__ . '/php/legacy_import_helper.php';
+require_once __DIR__ . '/php/legacy_migracion_helper.php';
 require_once __DIR__ . '/php/operativo_cncm_helper.php';
 require_once __DIR__ . '/php/plan_version_helper.php';
 require_once __DIR__ . '/php/acuerdo_escolar_helper.php';
