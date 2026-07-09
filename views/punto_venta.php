@@ -741,6 +741,9 @@ $pvPreloadId = (int) ($_GET['id_alumno'] ?? 0);
         if (data.pdf_constancia) {
           window.open(data.pdf_constancia, '_blank', 'noopener');
         }
+        if (data.ticket_url) {
+          window.open(data.ticket_url, '_blank', 'noopener');
+        }
         await cargarPendientes(idAlumno, idEsp || 0);
       }
 

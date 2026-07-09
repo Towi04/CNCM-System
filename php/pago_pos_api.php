@@ -397,6 +397,7 @@ if ($action === 'cobrar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $pagos = [];
     $pdfConstancia = null;
     $idDocPagado = 0;
+    $ticketInscripcionUrl = null;
     foreach ($items as $it) {
         $idSolCertItem = (int) ($it['id_solicitud_cert'] ?? 0);
         $idDocItem = (int) ($it['id_documento'] ?? 0);
@@ -431,6 +432,11 @@ if ($action === 'cobrar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             hay_json_response(['status' => 'error', 'message' => $res['message']]);
             exit;
         }
+        if (($it['tipo'] ?? '') === 'inscripcion' && !empty($res['id_pago']) && $ticketInscripcionUrl === null) {
+            $ticketInscripcionUrl = hay_asset_url(
+                'views/ticket_pago_inscripcion.php?id_pago=' . (int) $res['id_pago'] . '&print=1'
+            );
+        }
         if ($idSolCertItem > 0 && !empty($res['id_pago'])) {
             certificacion_aplicar_pago(
                 $pdo,
@@ -464,6 +470,7 @@ if ($action === 'cobrar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'pagos' => $pagos,
         'seccion' => 'punto_venta',
         'pdf_constancia' => $pdfConstancia,
+        'ticket_url' => $ticketInscripcionUrl,
         'id_documento' => $idDocPagado > 0 ? $idDocPagado : null,
     ]);
     exit;
