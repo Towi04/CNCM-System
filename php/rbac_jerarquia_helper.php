@@ -109,6 +109,7 @@ function rbac_cap_caja(): array
 {
     return [
         'menu_caja',
+        'menu_asistencia',
         'menu_consulta_adeudo',
         'menu_punto_venta',
         'menu_venta_productos',
@@ -118,6 +119,8 @@ function rbac_cap_caja(): array
         'cobro_precio_lista',
         'ticket_apoyo_educativo',
         'curso_personalizado_gestionar',
+        'asistencia_lista_grupo',
+        'asistencia_checada',
         'asistencia_movil',
         'asistencia_eliminar_registro',
         'inscripcion_solicitar_autorizacion',

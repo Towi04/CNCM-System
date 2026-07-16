@@ -148,6 +148,8 @@ function menu_cncm_secciones(): array
 
                 ['callback' => 'cola_facturacion_puede_ver', 'seccion' => 'cola_facturacion', 'icon' => 'fa-file-invoice', 'text' => 'Cola de facturación', 'title' => 'Cola de facturación', 'breadcrumb' => 'COLA FACTURACIÓN'],
 
+                ['cap' => 'menu_asistencia', 'flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
+
                 ['cap' => 'menu_reportes', 'seccion' => 'corte_caja', 'icon' => 'fa-coins', 'text' => 'Corte de caja', 'title' => 'Corte de caja diario', 'breadcrumb' => 'CORTE DE CAJA'],
 
                 ['cap' => 'menu_reportes', 'flyout' => 'flyout-reportes', 'icon' => 'fa-chart-bar', 'text' => 'Reportes', 'title' => 'Reportes', 'breadcrumb' => 'REPORTES'],
@@ -648,6 +650,8 @@ function menu_cncm_secciones_compactas(): array
 
                 ['callback' => 'cola_facturacion_puede_ver', 'seccion' => 'cola_facturacion', 'icon' => 'fa-file-invoice', 'text' => 'Cola de facturación', 'title' => 'Cola de facturación', 'breadcrumb' => 'COLA FACTURACIÓN'],
 
+                ['cap' => 'menu_asistencia', 'flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
+
                 ['cap' => 'menu_reportes', 'seccion' => 'corte_caja', 'icon' => 'fa-coins', 'text' => 'Corte de caja', 'title' => 'Corte de caja diario', 'breadcrumb' => 'CORTE DE CAJA'],
 
                 ['cap' => 'menu_reportes', 'flyout' => 'flyout-reportes', 'icon' => 'fa-chart-bar', 'text' => 'Reportes financieros', 'title' => 'Reportes financieros', 'breadcrumb' => 'REPORTES'],
@@ -837,6 +841,8 @@ function menu_cncm_secciones_por_rol(): array
                 ['flyout' => 'flyout-reportes', 'icon' => 'fa-chart-bar', 'text' => 'Reportes financieros', 'title' => 'Reportes', 'breadcrumb' => 'REPORTES'],
 
                 ['callback' => 'rol_aula_puede_ver', 'seccion' => 'rol_aulas_consulta', 'icon' => 'fa-door-closed', 'text' => 'Rol de aulas', 'title' => 'Consulta rol de aulas', 'breadcrumb' => 'ROL DE AULAS'],
+
+                ['flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
 
             ],
 
