@@ -98,6 +98,8 @@ function rbac_cap_recepcion(): array
         'menu_mi_evaluacion',
         'menu_matriz_entrenamiento',
         'menu_mi_expediente',
+        'menu_tutor',
+        'tutor_usar',
         'expediente_consultar',
         'menu_calendario_consulta',
         'admin_usuarios',
