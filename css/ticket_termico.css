@@ -123,6 +123,34 @@ body.ticket-termico-page {
   margin: 1mm 0 3mm;
 }
 
+.ticket-termico__accesos {
+  font-size: 9px;
+  line-height: 1.28;
+  margin: 1mm 0 3mm;
+}
+
+.ticket-termico__acceso {
+  margin: 0 0 2mm;
+  word-break: break-word;
+}
+
+.ticket-termico__acceso p {
+  margin: 0 0 1px;
+}
+
+.ticket-termico__acceso-title {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ticket-termico__acceso-alert {
+  border-top: 1px dashed #000;
+  margin: 2mm 0 0;
+  padding-top: 1.5mm;
+  font-weight: 700;
+  text-align: center;
+}
+
 .ticket-termico__pie {
   font-size: 9px;
   line-height: 1.4;

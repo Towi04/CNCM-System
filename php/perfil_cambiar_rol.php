@@ -17,12 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-if (!rbac_puede_simular_rol()) {
-    http_response_code(403);
-    echo json_encode(['status' => 'error', 'message' => 'Su cuenta no puede cambiar la vista de rol.']);
-    exit;
-}
-
 $accion = trim((string) ($_POST['accion'] ?? 'cambiar'));
 $rol = strtolower(trim((string) ($_POST['rol'] ?? '')));
 
@@ -36,6 +30,12 @@ if ($accion === 'restaurar' || $rol === '' || $rol === 'real') {
         'rol_label' => rbac_etiqueta_rol(),
         'simulando' => false,
     ]);
+    exit;
+}
+
+if (!rbac_puede_simular_rol()) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Su cuenta no puede cambiar la vista de rol.']);
     exit;
 }
 

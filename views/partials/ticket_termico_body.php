@@ -64,6 +64,24 @@ $tituloTicket = $tituloTicket ?? 'pago';
     Total: <?php echo htmlspecialchars($ticket['monto_fmt'] ?? ''); ?>
   </div>
 
+  <?php if ($tituloTicket === 'inscripcion' && !empty($ticket['accesos']) && is_array($ticket['accesos'])): ?>
+  <hr class="ticket-termico__sep">
+  <div class="ticket-termico__section-title">Datos de acceso</div>
+  <div class="ticket-termico__accesos">
+    <?php foreach ($ticket['accesos'] as $acceso): ?>
+      <div class="ticket-termico__acceso">
+        <p class="ticket-termico__acceso-title"><?php echo htmlspecialchars($acceso['plataforma'] ?? ''); ?></p>
+        <p>Link: <?php echo htmlspecialchars($acceso['url'] ?? ''); ?></p>
+        <p>Usuario: <?php echo htmlspecialchars($acceso['usuario'] ?? ''); ?></p>
+        <p>Contraseña: <?php echo htmlspecialchars($acceso['password'] ?? ''); ?></p>
+      </div>
+    <?php endforeach; ?>
+    <p class="ticket-termico__acceso-alert">
+      Estas contraseñas son temporales. Por seguridad, cambielas al ingresar por primera vez.
+    </p>
+  </div>
+  <?php endif; ?>
+
   <div class="ticket-termico__pie">
     <p>Efectos fiscales al pago.</p>
     <p>Pago hecho en una sola exhibición.</p>

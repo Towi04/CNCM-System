@@ -230,14 +230,20 @@ function rbac_puede_registrar_usuarios(): bool
 /** Puede usar el selector «ver como otro rol». */
 function rbac_puede_simular_rol(): bool
 {
-    $real = rbac_rol_real();
-    return in_array($real, ['supervisor', 'director', 'gerente', 'admin'], true);
+    return rbac_roles_para_simular() !== [] || rbac_esta_simulando_rol();
 }
 
 /** @return list<string> */
 function rbac_roles_para_simular(): array
 {
-    return ['alumno', 'asesor', 'profesor', 'coordinador', 'admin', 'gerente', 'director', 'supervisor'];
+    $real = rbac_rol_real();
+    return match ($real) {
+        'supervisor' => ['director', 'gerente', 'coordinador', 'admin', 'asesor', 'profesor', 'alumno'],
+        'director' => ['gerente', 'coordinador', 'admin', 'asesor', 'profesor', 'alumno'],
+        'gerente' => ['asesor', 'alumno'],
+        'coordinador' => ['profesor', 'alumno'],
+        default => [],
+    };
 }
 
 function rbac_establecer_rol_simulado(string $rol): bool
@@ -246,12 +252,12 @@ function rbac_establecer_rol_simulado(string $rol): bool
         return false;
     }
     $rol = strtolower(trim($rol));
-    if (!in_array($rol, rbac_roles_para_simular(), true)) {
-        return false;
-    }
     if ($rol === rbac_rol_real()) {
         rbac_restaurar_rol_real();
         return true;
+    }
+    if (!in_array($rol, rbac_roles_para_simular(), true)) {
+        return false;
     }
     $_SESSION['rol'] = $rol;
     $_SESSION['rol_simulado'] = 1;
