@@ -76,8 +76,13 @@ function alumno_ensure_schema(PDO $pdo): void
         'pagos_programados' => "SMALLINT UNSIGNED NULL AFTER id_preregistro",
         'email' => "VARCHAR(160) NULL AFTER pagos_programados",
         'telefono' => "VARCHAR(30) NULL AFTER email",
+        'telefono2' => 'VARCHAR(30) NULL AFTER telefono',
         'fecha_nacimiento' => 'DATE NULL AFTER telefono',
         'edad' => 'SMALLINT UNSIGNED NULL AFTER fecha_nacimiento',
+        'domicilio' => 'VARCHAR(200) NULL AFTER edad',
+        'colonia' => 'VARCHAR(120) NULL AFTER domicilio',
+        'municipio' => 'VARCHAR(120) NULL AFTER colonia',
+        'codigo_postal' => 'VARCHAR(10) NULL AFTER municipio',
         'moodle_user_id' => 'INT UNSIGNED NULL AFTER id_usuario',
         'creado_en' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER fecha_alta',
     ];
@@ -264,6 +269,99 @@ function alumno_seed_fases_ejemplo(PDO $pdo): void
 function alumno_puede_ver(): bool
 {
     return isset($_SESSION['user_id']);
+}
+
+function alumno_datos_puede_editar(): bool
+{
+    if (function_exists('rbac_tiene_acceso_total') && rbac_tiene_acceso_total()) {
+        return true;
+    }
+    $rol = function_exists('rbac_rol_efectivo') ? rbac_rol_efectivo() : ($_SESSION['rol'] ?? '');
+
+    return in_array($rol, ['admin', 'coordinador', 'coordinacion', 'director'], true);
+}
+
+function alumno_nombre_puede_cambio_drastico(): bool
+{
+    if (function_exists('rbac_tiene_acceso_total') && rbac_tiene_acceso_total()) {
+        return true;
+    }
+    $rolReal = function_exists('rbac_rol_real') ? rbac_rol_real() : ($_SESSION['rol'] ?? '');
+    $rolEf = function_exists('rbac_rol_efectivo') ? rbac_rol_efectivo() : ($_SESSION['rol'] ?? '');
+
+    return in_array($rolReal, ['director', 'supervisor'], true) || in_array($rolEf, ['director', 'supervisor'], true);
+}
+
+function alumno_nombre_normalizado_para_comparar(string $texto): string
+{
+    $texto = trim($texto);
+    if ($texto === '') {
+        return '';
+    }
+    if (function_exists('iconv')) {
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
+        if (is_string($ascii) && $ascii !== '') {
+            $texto = $ascii;
+        }
+    }
+    $texto = mb_strtolower($texto, 'UTF-8');
+    $texto = preg_replace('/[^a-z0-9\s]/i', ' ', $texto) ?? '';
+    $texto = preg_replace('/\s+/', ' ', $texto) ?? '';
+
+    return trim($texto);
+}
+
+function alumno_nombre_cambio_sutil(string $anterior, string $nuevo): bool
+{
+    $prev = alumno_nombre_normalizado_para_comparar($anterior);
+    $next = alumno_nombre_normalizado_para_comparar($nuevo);
+    if ($prev === $next) {
+        return true;
+    }
+    if ($prev === '' || $next === '') {
+        return false;
+    }
+    $prevTokens = explode(' ', $prev);
+    $nextTokens = explode(' ', $next);
+    if (count($prevTokens) !== count($nextTokens)) {
+        return false;
+    }
+    $totalDist = levenshtein($prev, $next);
+    $totalMax = max(2, (int) ceil(max(strlen($prev), strlen($next)) * 0.20));
+    if ($totalDist > $totalMax) {
+        return false;
+    }
+    foreach ($prevTokens as $i => $tokenPrev) {
+        $tokenNext = $nextTokens[$i] ?? '';
+        $maxLen = max(strlen($tokenPrev), strlen($tokenNext));
+        $maxDist = max(1, (int) ceil($maxLen * 0.25));
+        if (levenshtein($tokenPrev, $tokenNext) > $maxDist) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function alumno_datos_validar_cambio_nombre(array $actual, array $nuevo): array
+{
+    $anterior = alumno_nombre_completo($actual);
+    $nuevoTxt = alumno_nombre_completo($nuevo);
+    if ($anterior === $nuevoTxt) {
+        return ['ok' => true, 'drastico' => false];
+    }
+    if (alumno_nombre_cambio_sutil($anterior, $nuevoTxt)) {
+        return ['ok' => true, 'drastico' => false];
+    }
+    if (alumno_nombre_puede_cambio_drastico()) {
+        return ['ok' => true, 'drastico' => true];
+    }
+
+    return [
+        'ok' => false,
+        'drastico' => true,
+        'message' => 'El cambio de nombre parece drástico. Recepción/coordinación solo puede corregir errores menores; solicite autorización de dirección o supervisión.',
+    ];
 }
 
 function alumno_nombre_completo(array $a): string

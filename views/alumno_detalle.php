@@ -97,6 +97,8 @@ if ($fotoUrl === null && !empty($a['id_preregistro'])) {
 }
 $tieneFoto = $fotoUrl !== null;
 $puedeEditarFoto = function_exists('usuario_puede_gestionar_alumnos') && usuario_puede_gestionar_alumnos();
+$puedeEditarDatosAlumno = function_exists('alumno_datos_puede_editar') && alumno_datos_puede_editar();
+$puedeCambioDrasticoNombre = function_exists('alumno_nombre_puede_cambio_drastico') && alumno_nombre_puede_cambio_drastico();
 $puedeTarifaSupervisor = function_exists('alumno_tarifa_supervisor_puede') && alumno_tarifa_supervisor_puede();
 $control = $a['numero_control'] ?? $a['matricula'] ?? $id;
 $puedeSuspenderAlumno = function_exists('usuario_suspension_puede_gestionar_alumno') && usuario_suspension_puede_gestionar_alumno();
@@ -362,6 +364,57 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
       <p style="margin-bottom:16px;"><i class="fas fa-fingerprint"></i> ID lector: <strong><?php echo htmlspecialchars($a['codigo_huella']); ?></strong></p>
       <?php endif; ?>
 
+      <?php if ($puedeEditarDatosAlumno): ?>
+      <div class="welcome-card" style="padding:16px; margin-bottom:18px;">
+        <h3 style="margin-top:0;">Actualizar datos del alumno</h3>
+        <p style="color:#666; font-size:0.9rem; margin-top:0;">
+          Puede corregir datos de contacto y dirección libremente. En el nombre, recepción/coordinación solo puede hacer correcciones menores
+          (acentos o errores de captura). Cambios drásticos requieren dirección o supervisión.
+          <?php if ($puedeCambioDrasticoNombre): ?><strong>Su rol puede autorizar cambios drásticos de nombre.</strong><?php endif; ?>
+        </p>
+        <form id="form-alumno-datos" class="catalog-form-grid" data-no-global-ajax>
+          <input type="hidden" name="id_alumno" value="<?php echo (int) $id; ?>">
+          <label>Nombres
+            <input type="text" name="nombres" required value="<?php echo htmlspecialchars($a['nombres'] ?? $a['nombre'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label>Apellido paterno
+            <input type="text" name="apellido_paterno" required value="<?php echo htmlspecialchars($a['apellido_paterno'] ?? $a['apellido'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label>Apellido materno
+            <input type="text" name="apellido_materno" value="<?php echo htmlspecialchars($a['apellido_materno'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label>Fecha de nacimiento
+            <input type="date" name="fecha_nacimiento" value="<?php echo htmlspecialchars($a['fecha_nacimiento'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label>Teléfono
+            <input type="text" name="telefono" value="<?php echo htmlspecialchars($a['telefono'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label>Teléfono alterno
+            <input type="text" name="telefono2" value="<?php echo htmlspecialchars($a['telefono2'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label class="full">Correo
+            <input type="email" name="email" value="<?php echo htmlspecialchars($a['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label class="full">Domicilio
+            <input type="text" name="domicilio" value="<?php echo htmlspecialchars($a['domicilio'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label>Colonia
+            <input type="text" name="colonia" value="<?php echo htmlspecialchars($a['colonia'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label>Municipio
+            <input type="text" name="municipio" value="<?php echo htmlspecialchars($a['municipio'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <label>Código postal
+            <input type="text" name="codigo_postal" maxlength="10" value="<?php echo htmlspecialchars($a['codigo_postal'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+          </label>
+          <div class="full" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button type="submit" class="primary">Guardar datos</button>
+            <span id="alumno-datos-msg" style="font-size:0.9rem;"></span>
+          </div>
+        </form>
+      </div>
+      <?php endif; ?>
+
       <div class="prereg-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div><strong>Asesor que inscribió</strong><br><?php echo htmlspecialchars($a['asesor_nombre'] ?? '—'); ?></div>
         <div><strong>Especialidad principal</strong><br><?php echo htmlspecialchars($a['especialidad_nombre'] ?? '—'); ?></div>
@@ -371,7 +424,13 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
           echo $modoK === 'dual' ? 'Inglés + Computación' : ($modoK === 'solo_ingles' ? 'Solo inglés' : ($modoK === 'solo_computacion' ? 'Solo computación' : '—'));
         ?></div>
         <div><strong>Teléfono</strong><br><?php echo htmlspecialchars($a['telefono'] ?? '—'); ?></div>
+        <div><strong>Teléfono alterno</strong><br><?php echo htmlspecialchars($a['telefono2'] ?? '—'); ?></div>
         <div><strong>Correo</strong><br><?php echo htmlspecialchars($a['email'] ?? '—'); ?></div>
+        <div><strong>Fecha de nacimiento</strong><br><?php echo htmlspecialchars($a['fecha_nacimiento'] ?? '—'); ?></div>
+        <div class="full-width"><strong>Domicilio</strong><br><?php
+          $dom = trim(($a['domicilio'] ?? '') . ' ' . ($a['colonia'] ?? '') . ' ' . ($a['municipio'] ?? '') . ' ' . ($a['codigo_postal'] ?? ''));
+          echo htmlspecialchars($dom !== '' ? $dom : '—');
+        ?></div>
         <div><strong>Fecha de alta</strong><br><?php echo htmlspecialchars($a['fecha_alta'] ?? '—'); ?></div>
         <div><strong>Estado</strong><br><?php echo htmlspecialchars(alumno_estado_label($a['estado'] ?? 'activo')); ?></div>
         <?php if (!empty($a['inscripcion_vigente_hasta'])): ?>
@@ -743,6 +802,35 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
 (function () {
   const idAlumno = <?php echo (int)$id; ?>;
   const alumnoControl = <?php echo json_encode((string) $control, JSON_UNESCAPED_UNICODE); ?>;
+
+  document.getElementById('form-alumno-datos')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const msg = document.getElementById('alumno-datos-msg');
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    if (msg) {
+      msg.textContent = 'Guardando...';
+      msg.style.color = '#666';
+    }
+    try {
+      const { data } = await hayFetchJson('php/alumno_datos_api.php', { method: 'POST', body: new FormData(form) });
+      if (msg) {
+        msg.textContent = data.message || '';
+        msg.style.color = data.status === 'ok' ? '#2e7d32' : '#c62828';
+      }
+      if (data.status === 'ok') {
+        setTimeout(() => cargarSeccion('alumno_detalle', 'id=' + idAlumno), 700);
+      }
+    } catch (err) {
+      if (msg) {
+        msg.textContent = err.message || 'No se pudieron guardar los datos.';
+        msg.style.color = '#c62828';
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
 
   async function filtrarGruposPorUbicacion() {
     const selEsp = document.getElementById('esp-nueva-id');
