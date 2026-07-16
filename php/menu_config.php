@@ -148,6 +148,12 @@ function menu_cncm_secciones(): array
 
                 ['callback' => 'cola_facturacion_puede_ver', 'seccion' => 'cola_facturacion', 'icon' => 'fa-file-invoice', 'text' => 'Cola de facturación', 'title' => 'Cola de facturación', 'breadcrumb' => 'COLA FACTURACIÓN'],
 
+                ['cap' => 'menu_asistencia', 'flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
+
+                ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
+
+                ['cap' => 'menu_calendario_consulta', 'seccion' => 'calendario_consulta', 'icon' => 'fa-calendar', 'text' => 'Calendario institucional', 'title' => 'Calendario institucional', 'breadcrumb' => 'CALENDARIO INSTITUCIONAL'],
+
                 ['cap' => 'menu_reportes', 'seccion' => 'corte_caja', 'icon' => 'fa-coins', 'text' => 'Corte de caja', 'title' => 'Corte de caja diario', 'breadcrumb' => 'CORTE DE CAJA'],
 
                 ['cap' => 'menu_reportes', 'flyout' => 'flyout-reportes', 'icon' => 'fa-chart-bar', 'text' => 'Reportes', 'title' => 'Reportes', 'breadcrumb' => 'REPORTES'],
@@ -648,6 +654,12 @@ function menu_cncm_secciones_compactas(): array
 
                 ['callback' => 'cola_facturacion_puede_ver', 'seccion' => 'cola_facturacion', 'icon' => 'fa-file-invoice', 'text' => 'Cola de facturación', 'title' => 'Cola de facturación', 'breadcrumb' => 'COLA FACTURACIÓN'],
 
+                ['cap' => 'menu_asistencia', 'flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
+
+                ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
+
+                ['cap' => 'menu_calendario_consulta', 'seccion' => 'calendario_consulta', 'icon' => 'fa-calendar', 'text' => 'Calendario institucional', 'title' => 'Calendario institucional', 'breadcrumb' => 'CALENDARIO INSTITUCIONAL'],
+
                 ['cap' => 'menu_reportes', 'seccion' => 'corte_caja', 'icon' => 'fa-coins', 'text' => 'Corte de caja', 'title' => 'Corte de caja diario', 'breadcrumb' => 'CORTE DE CAJA'],
 
                 ['cap' => 'menu_reportes', 'flyout' => 'flyout-reportes', 'icon' => 'fa-chart-bar', 'text' => 'Reportes financieros', 'title' => 'Reportes financieros', 'breadcrumb' => 'REPORTES'],
@@ -657,6 +669,8 @@ function menu_cncm_secciones_compactas(): array
                 ['cap' => 'asesoria_agendar', 'seccion' => 'asesoria_agendar', 'icon' => 'fa-user-clock', 'text' => 'Agendar asesoría', 'title' => 'Agendar asesoría', 'breadcrumb' => 'AGENDAR ASESORÍA'],
                 ['cap' => 'asesoria_agenda_dia', 'seccion' => 'asesoria_agenda_dia', 'icon' => 'fa-calendar-day', 'text' => 'Agenda del día', 'title' => 'Agenda asesorías', 'breadcrumb' => 'AGENDA ASESORÍAS'],
                 ['cap' => 'asesoria_calendario', 'seccion' => 'asesoria_calendario', 'icon' => 'fa-calendar-week', 'text' => 'Calendario asesorías', 'title' => 'Calendario asesorías', 'breadcrumb' => 'CALENDARIO ASESORÍAS'],
+
+                ['callback' => 'curso_personalizado_puede_gestionar', 'seccion' => 'curso_personalizado_admin', 'icon' => 'fa-file-contract', 'text' => 'Cursos personalizados', 'title' => 'Cursos personalizados', 'breadcrumb' => 'CURSOS PERSONALIZADOS'],
 
                 ['callback' => 'rol_aula_puede_ver', 'seccion' => 'rol_aulas_consulta', 'icon' => 'fa-door-closed', 'text' => 'Rol de aulas', 'title' => 'Consulta rol de aulas', 'breadcrumb' => 'ROL DE AULAS'],
 
@@ -837,6 +851,14 @@ function menu_cncm_secciones_por_rol(): array
                 ['flyout' => 'flyout-reportes', 'icon' => 'fa-chart-bar', 'text' => 'Reportes financieros', 'title' => 'Reportes', 'breadcrumb' => 'REPORTES'],
 
                 ['callback' => 'rol_aula_puede_ver', 'seccion' => 'rol_aulas_consulta', 'icon' => 'fa-door-closed', 'text' => 'Rol de aulas', 'title' => 'Consulta rol de aulas', 'breadcrumb' => 'ROL DE AULAS'],
+
+                ['flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
+
+                ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
+
+                ['seccion' => 'calendario_consulta', 'icon' => 'fa-calendar', 'text' => 'Calendario institucional', 'title' => 'Calendario institucional', 'breadcrumb' => 'CALENDARIO INSTITUCIONAL'],
+
+                ['callback' => 'curso_personalizado_puede_gestionar', 'seccion' => 'curso_personalizado_admin', 'icon' => 'fa-file-contract', 'text' => 'Cursos personalizados', 'title' => 'Cursos personalizados', 'breadcrumb' => 'CURSOS PERSONALIZADOS'],
 
             ],
 

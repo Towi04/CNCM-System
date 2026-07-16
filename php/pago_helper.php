@@ -1782,6 +1782,7 @@ function pago_datos_ticket(PDO $pdo, int $idPago, int $idPlantel): ?array
 
     return [
         'id_pago' => (int) $row['id_pago'],
+        'id_alumno' => (int) $row['id_alumno'],
         'folio' => $row['folio'] ?? ('PAG-' . $idPago),
         'fecha' => $fechaRaw,
         'fecha_fmt' => date('d-m-Y', $ts),
@@ -1803,6 +1804,107 @@ function pago_datos_ticket(PDO $pdo, int $idPago, int $idPlantel): ?array
     ];
 }
 
+function pago_ticket_url_absoluta(string $relative = ''): string
+{
+    $relative = ltrim(str_replace('\\', '/', $relative), '/');
+    $root = function_exists('hay_web_root') ? hay_web_root() : '/';
+    $path = rtrim($root, '/') . '/' . $relative;
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+    if ($host === '') {
+        return $path;
+    }
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['SERVER_PORT']) && (string) $_SERVER['SERVER_PORT'] === '443');
+    $scheme = $https ? 'https' : 'http';
+
+    return $scheme . '://' . $host . $path;
+}
+
+function pago_ticket_moodle_url(): string
+{
+    if (function_exists('moodle_base_url')) {
+        $url = moodle_base_url();
+        if ($url !== '') {
+            return $url;
+        }
+    }
+    if (defined('MOODLE_URL') && trim((string) MOODLE_URL) !== '') {
+        return rtrim((string) MOODLE_URL, '/');
+    }
+
+    return 'https://www.cncm.edu.mx/courses';
+}
+
+/** @return list<array{plataforma:string,url:string,usuario:string,password:string}> */
+function pago_ticket_accesos_inscripcion(PDO $pdo, int $idAlumno, int $idPlantel): array
+{
+    if ($idAlumno <= 0) {
+        return [];
+    }
+    $st = $pdo->prepare(
+        'SELECT a.id_alumno, a.id_plantel, a.numero_control, a.nombres, a.nombre,
+                a.apellido_paterno, a.apellido_materno, a.apellido, a.email,
+                u.username AS hay_username, u.email AS hay_email
+         FROM alumnos a
+         LEFT JOIN usuarios u ON u.id_usuario = a.id_usuario
+         WHERE a.id_alumno = ? AND a.id_plantel = ?
+         LIMIT 1'
+    );
+    $st->execute([$idAlumno, $idPlantel]);
+    $al = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$al) {
+        return [];
+    }
+
+    $numeroControl = trim((string) ($al['numero_control'] ?? ''));
+    $password = function_exists('cuenta_password_inicial')
+        ? cuenta_password_inicial()
+        : (function_exists('usuario_password_default_moodle')
+            ? usuario_password_default_moodle($numeroControl)
+            : 'Cncm*1234');
+    $correo = strtolower(trim((string) ($al['email'] ?? '')));
+    if ($correo === '' && $numeroControl !== '') {
+        $correo = function_exists('cuenta_email_alumno')
+            ? cuenta_email_alumno($numeroControl)
+            : strtolower($numeroControl) . '@' . INSTITUTIONAL_EMAIL_DOMAIN;
+    }
+    $dominio = function_exists('cuenta_dominio_email')
+        ? cuenta_dominio_email()
+        : (defined('GOOGLE_WORKSPACE_DOMAIN') ? (string) GOOGLE_WORKSPACE_DOMAIN : INSTITUTIONAL_EMAIL_DOMAIN);
+    $hayUser = trim((string) ($al['hay_username'] ?? '')) ?: $numeroControl;
+    $moodleUser = $numeroControl;
+    if (function_exists('moodle_user_payload_from_alumno')) {
+        $payload = moodle_user_payload_from_alumno($al);
+        $moodleUser = (string) ($payload['username'] ?? $moodleUser);
+    } elseif (function_exists('moodle_username_from_numero_control')) {
+        $moodleUser = moodle_username_from_numero_control($numeroControl);
+    }
+
+    return [
+        [
+            'plataforma' => 'Google Workspace',
+            'url' => 'https://mail.google.com/a/' . rawurlencode($dominio),
+            'usuario' => $correo,
+            'password' => $password,
+        ],
+        [
+            'plataforma' => 'Sistema CNCM',
+            'url' => pago_ticket_url_absoluta('dashboard.php'),
+            'usuario' => $hayUser,
+            'password' => $password,
+        ],
+        [
+            'plataforma' => 'Moodle',
+            'url' => pago_ticket_moodle_url(),
+            'usuario' => $moodleUser,
+            'password' => $password,
+        ],
+    ];
+}
+
 /** @return array<string, mixed>|null */
 function pago_datos_ticket_inscripcion(PDO $pdo, int $idPago, int $idPlantel): ?array
 {
@@ -1810,6 +1912,8 @@ function pago_datos_ticket_inscripcion(PDO $pdo, int $idPago, int $idPlantel): ?
     if (!$ticket || ($ticket['tipo'] ?? '') !== 'inscripcion') {
         return null;
     }
+
+    $ticket['accesos'] = pago_ticket_accesos_inscripcion($pdo, (int) ($ticket['id_alumno'] ?? 0), $idPlantel);
 
     return $ticket;
 }
