@@ -166,6 +166,12 @@ $gradPendientes = $puedeGraduacion ? count(graduacion_listar_alertas($pdo, $idPl
                   <i class="fas fa-calendar-check"></i>
                 </button>
               <?php endif; ?>
+              <button type="button" class="btn-icon-only btn-icon-only--muted btn-lista-asistencia-pdf"
+                title="Imprimir lista de asistencia"
+                data-id="<?php echo (int)$g['id_grupo']; ?>"
+                data-clave="<?php echo htmlspecialchars((string)$g['clave'], ENT_QUOTES, 'UTF-8'); ?>">
+                <i class="fas fa-print"></i>
+              </button>
               <?php if ($puedeAvance): ?>
                 <button type="button" class="btn-icon-only btn-icon-only--ok btn-avanzar-grupo" title="Avanzar al siguiente parcial"
                   data-id="<?php echo (int)$g['id_grupo']; ?>">
@@ -219,6 +225,33 @@ $gradPendientes = $puedeGraduacion ? count(graduacion_listar_alertas($pdo, $idPl
 })();
 </script>
 <?php endif; ?>
+
+<script>
+(function () {
+  document.querySelectorAll('.btn-lista-asistencia-pdf').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idGrupo = btn.dataset.id;
+      if (!idGrupo) return;
+      const clave = btn.dataset.clave || 'grupo';
+      const incluirTelefonos = window.confirm('¿Incluir números de teléfono de los alumnos en la lista de asistencia?');
+      const semanaActual = <?php echo (int) date('W'); ?>;
+      const respuesta = window.prompt('¿A partir de qué número de semana debe iniciar la lista?', String(semanaActual));
+      if (respuesta === null) return;
+      const semana = parseInt(respuesta, 10);
+      if (!Number.isInteger(semana) || semana < 1 || semana > 53) {
+        alert('Indique una semana válida entre 1 y 53.');
+        return;
+      }
+      const url = new URL('<?php echo htmlspecialchars(hay_asset_url('php/asistencia_lista_pdf.php'), ENT_QUOTES, 'UTF-8'); ?>', window.location.href);
+      url.searchParams.set('id_grupo', idGrupo);
+      url.searchParams.set('semana_inicio', String(semana));
+      url.searchParams.set('telefonos', incluirTelefonos ? '1' : '0');
+      url.searchParams.set('filename', 'lista_' + clave);
+      window.open(url.toString(), '_blank', 'noopener');
+    });
+  });
+})();
+</script>
 
 <?php if ($puedeMoodle): ?>
 <script>
