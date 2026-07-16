@@ -133,7 +133,7 @@ $labelsRol = rbac_roles_etiquetas();
         <div id="perfil-huella-msg" class="perfil-avatar-msg" style="display:none;" role="status"></div>
       </div>
       <?php endif; ?>
-      <?php if (rbac_puede_simular_rol()): ?>
+      <?php if ($puedeSimular || $simulando): ?>
       <div class="perfil-rol-block" id="perfil-rol-block">
         <h3 style="margin:24px 0 10px; font-size:1.05rem;"><i class="fas fa-eye"></i> Ver el sistema como otro rol</h3>
         <p style="margin:0 0 12px; color:#666; font-size:14px;">
@@ -141,8 +141,9 @@ $labelsRol = rbac_roles_etiquetas();
           <strong><?php echo htmlspecialchars(rbac_etiqueta_rol(rbac_rol_real())); ?></strong>.
         </p>
         <div class="perfil-rol-actions">
+          <?php if ($rolesSimular !== []): ?>
           <select id="perfil-rol-select" class="perfil-rol-select" aria-label="Seleccionar rol de vista">
-            <?php foreach (rbac_roles_para_simular() as $r): ?>
+            <?php foreach ($rolesSimular as $r): ?>
               <?php if ($r === rbac_rol_real()) { continue; } ?>
               <option value="<?php echo htmlspecialchars($r); ?>" <?php echo $r === rbac_rol_efectivo() ? 'selected' : ''; ?>>
                 <?php echo htmlspecialchars(rbac_etiqueta_rol($r)); ?>
@@ -150,6 +151,7 @@ $labelsRol = rbac_roles_etiquetas();
             <?php endforeach; ?>
           </select>
           <button type="button" class="btn-guardar" id="perfil-rol-aplicar">Aplicar vista</button>
+          <?php endif; ?>
           <?php if (rbac_esta_simulando_rol()): ?>
           <button type="button" class="perfil-btn-remove" id="perfil-rol-restaurar">Volver a mi rol</button>
           <?php endif; ?>
