@@ -20,23 +20,49 @@
 
   let tinyInicializado = false;
 
+  function escapeHtml(text) {
+    return String(text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function initialEditorContent() {
+    const raw = contenidoField?.value || '';
+    if (/<(p|div|br|ul|ol|li|strong|b|em|i|u|blockquote|h[1-6])\b/i.test(raw)) {
+      return raw;
+    }
+    return escapeHtml(raw).replace(/\r?\n/g, '<br>');
+  }
+
   function initTinyMce() {
     if (tinyInicializado || !window.tinymce || !contenidoField) {
       return;
     }
+    const initialContent = initialEditorContent();
     tinyInicializado = true;
     window.tinymce.init({
       selector: '#acuerdo-contenido',
       menubar: false,
       branding: false,
-      height: 420,
-      plugins: 'lists code autoresize',
+      promotion: false,
+      license_key: 'gpl',
+      height: 300,
+      min_height: 220,
+      max_height: 650,
+      resize: 'both',
+      plugins: 'lists code',
       toolbar: 'undo redo | blocks | bold italic underline | bullist numlist outdent indent | removeformat | code',
       block_formats: 'Párrafo=p; Título=h3; Subtítulo=h4; Cita=blockquote',
       content_style: 'body{font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;} ul,ol{padding-left:24px;}',
       invalid_elements: 'script,style,iframe,object,embed,form,input,button,textarea,select',
       extended_valid_elements: 'p,div,br,ul,ol,li,strong/b,em/i,u,blockquote,h1,h2,h3,h4,h5,h6',
       setup(editor) {
+        editor.on('init', () => {
+          editor.setContent(initialContent || '<p></p>');
+          syncEditor();
+        });
         editor.on('change keyup undo redo', syncEditor);
       },
     });
@@ -49,7 +75,7 @@
     }
     const script = document.createElement('script');
     script.id = 'tinymce-fallback-script';
-    script.src = 'https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js';
+    script.src = 'https://unpkg.com/tinymce@7/tinymce.min.js';
     script.referrerPolicy = 'origin';
     script.onload = initTinyMce;
     document.head.appendChild(script);
