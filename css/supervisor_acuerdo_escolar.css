@@ -18,6 +18,29 @@
 
 }
 
+.acuerdo-field {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.acuerdo-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.acuerdo-field input[type="text"] {
+  width: 100%;
+  max-width: 280px;
+  padding: 8px 10px;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+}
+
+.acuerdo-field--editor {
+  width: 100%;
+}
+
 
 
 .acuerdo-meta {
@@ -83,6 +106,7 @@
 }
 
 .acuerdo-editor-textarea {
+  display: block;
   width: 100%;
   padding: 14px;
   border: 1px solid #d7dce5;
@@ -92,6 +116,12 @@
   outline: none;
   font-family: inherit;
   min-height: 320px;
+}
+
+.acuerdo-editor-fallback-note {
+  color: #64748b;
+  font-size: 0.82rem;
+  margin: 6px 0 0;
 }
 
 .acuerdo-editor-textarea:focus {

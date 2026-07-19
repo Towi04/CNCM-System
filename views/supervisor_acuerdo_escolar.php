@@ -24,7 +24,7 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
 
 <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/admin_catalogo.css'), ENT_QUOTES, 'UTF-8'); ?>">
 
-<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/supervisor_acuerdo_escolar.css'), ENT_QUOTES, 'UTF-8'); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/supervisor_acuerdo_escolar.css?v=20260719b'), ENT_QUOTES, 'UTF-8'); ?>">
 
 
 
@@ -72,21 +72,21 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
 
     <form id="form-acuerdo-publicar" novalidate>
 
-      <label for="acuerdo-version-label">Etiqueta de versión</label>
-
-      <input type="text" id="acuerdo-version-label" name="version_label" maxlength="40"
-
-        placeholder="Ej. v2026.06" value="<?php echo htmlspecialchars('v' . date('Y.m'), ENT_QUOTES, 'UTF-8'); ?>"
-
-        style="width:100%; max-width:280px; padding:8px; margin-bottom:12px;">
+      <div class="acuerdo-field">
+        <label for="acuerdo-version-label">Etiqueta de versión</label>
+        <input type="text" id="acuerdo-version-label" name="version_label" maxlength="40"
+          placeholder="Ej. v2026.06" value="<?php echo htmlspecialchars('v' . date('Y.m'), ENT_QUOTES, 'UTF-8'); ?>">
+      </div>
 
 
 
-      <label for="acuerdo-contenido">Texto del acuerdo</label>
-
-      <textarea id="acuerdo-contenido" name="contenido" rows="16" class="acuerdo-editor-textarea"><?php
-        echo htmlspecialchars((string) ($activo['contenido'] ?? ''), ENT_QUOTES, 'UTF-8');
-      ?></textarea>
+      <div class="acuerdo-field acuerdo-field--editor">
+        <label for="acuerdo-contenido">Texto del acuerdo</label>
+        <textarea id="acuerdo-contenido" name="contenido" rows="16" class="acuerdo-editor-textarea" style="display:block;width:100%;min-height:360px;padding:14px;font-family:inherit;line-height:1.55;"><?php
+          echo htmlspecialchars((string) ($activo['contenido'] ?? ''), ENT_QUOTES, 'UTF-8');
+        ?></textarea>
+        <p class="acuerdo-editor-fallback-note">Si el editor avanzado no carga, puede editar el texto en esta caja y publicarlo normalmente.</p>
+      </div>
 
 
 
@@ -181,8 +181,8 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
   window.HayAcuerdoSupervisor = { api: <?php echo json_encode($apiUrl, JSON_UNESCAPED_UNICODE); ?> };
 
 </script>
-<script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
 
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/supervisor_acuerdo_escolar.js?v=20260719'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/supervisor_acuerdo_escolar.js?v=20260719b'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 
 

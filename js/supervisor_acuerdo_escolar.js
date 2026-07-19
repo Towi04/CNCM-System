@@ -18,13 +18,18 @@
     }
   }
 
-  if (window.tinymce && contenidoField) {
+  let tinyInicializado = false;
+
+  function initTinyMce() {
+    if (tinyInicializado || !window.tinymce || !contenidoField) {
+      return;
+    }
+    tinyInicializado = true;
     window.tinymce.init({
       selector: '#acuerdo-contenido',
       menubar: false,
       branding: false,
       height: 420,
-      language: 'es',
       plugins: 'lists code autoresize',
       toolbar: 'undo redo | blocks | bold italic underline | bullist numlist outdent indent | removeformat | code',
       block_formats: 'Párrafo=p; Título=h3; Subtítulo=h4; Cita=blockquote',
@@ -35,6 +40,25 @@
         editor.on('change keyup undo redo', syncEditor);
       },
     });
+  }
+
+  function cargarTinyFallback() {
+    if (window.tinymce || document.getElementById('tinymce-fallback-script')) {
+      initTinyMce();
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'tinymce-fallback-script';
+    script.src = 'https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js';
+    script.referrerPolicy = 'origin';
+    script.onload = initTinyMce;
+    document.head.appendChild(script);
+  }
+
+  if (window.tinymce) {
+    initTinyMce();
+  } else {
+    setTimeout(cargarTinyFallback, 1200);
   }
 
 
