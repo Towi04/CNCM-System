@@ -82,66 +82,21 @@
   color: #444;
 }
 
-.acuerdo-editor-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid #d7dce5;
-  border-bottom: none;
-  border-radius: 10px 10px 0 0;
-  background: #f8fafc;
-}
-
-.acuerdo-editor-toolbar button {
-  min-width: 34px;
-  min-height: 32px;
-  padding: 6px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 7px;
-  background: #fff;
-  color: #334155;
-  cursor: pointer;
-}
-
-.acuerdo-editor-toolbar button:hover {
-  background: #eef4ff;
-  border-color: #90caf9;
-  color: #11458B;
-}
-
-.acuerdo-editor-toolbar__sep {
-  width: 1px;
-  background: #cbd5e1;
-  margin: 4px 2px;
-}
-
-.acuerdo-editor {
-  min-height: 320px;
+.acuerdo-editor-textarea {
   width: 100%;
   padding: 14px;
   border: 1px solid #d7dce5;
-  border-radius: 0 0 10px 10px;
+  border-radius: 10px;
   background: #fff;
   line-height: 1.55;
   outline: none;
-  overflow: auto;
+  font-family: inherit;
+  min-height: 320px;
 }
 
-.acuerdo-editor:focus {
+.acuerdo-editor-textarea:focus {
   border-color: #90caf9;
   box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
-}
-
-.acuerdo-editor p,
-.acuerdo-editor ul,
-.acuerdo-editor ol {
-  margin: 0 0 10px;
-}
-
-.acuerdo-editor ul,
-.acuerdo-editor ol {
-  padding-left: 24px;
 }
 
 

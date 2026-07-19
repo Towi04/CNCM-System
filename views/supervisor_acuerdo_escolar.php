@@ -82,26 +82,9 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
 
 
 
-      <label for="acuerdo-editor">Texto del acuerdo</label>
+      <label for="acuerdo-contenido">Texto del acuerdo</label>
 
-      <div class="acuerdo-editor-toolbar" role="toolbar" aria-label="Formato del acuerdo escolar">
-        <button type="button" data-cmd="bold" title="Negritas"><i class="fas fa-bold"></i></button>
-        <button type="button" data-cmd="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
-        <button type="button" data-cmd="underline" title="Subrayado"><i class="fas fa-underline"></i></button>
-        <span class="acuerdo-editor-toolbar__sep"></span>
-        <button type="button" data-cmd="insertUnorderedList" title="Viñetas"><i class="fas fa-list-ul"></i></button>
-        <button type="button" data-cmd="insertOrderedList" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
-        <button type="button" data-cmd="outdent" title="Reducir sangría"><i class="fas fa-outdent"></i></button>
-        <button type="button" data-cmd="indent" title="Aumentar sangría"><i class="fas fa-indent"></i></button>
-        <span class="acuerdo-editor-toolbar__sep"></span>
-        <button type="button" data-block="p">Párrafo</button>
-        <button type="button" data-block="h3">Título</button>
-      </div>
-
-      <div id="acuerdo-editor" class="acuerdo-editor" contenteditable="true" role="textbox" aria-multiline="true"><?php
-        echo acuerdo_escolar_render_contenido((string) ($activo['contenido'] ?? ''));
-      ?></div>
-      <textarea id="acuerdo-contenido" name="contenido" hidden><?php
+      <textarea id="acuerdo-contenido" name="contenido" rows="16" class="acuerdo-editor-textarea"><?php
         echo htmlspecialchars((string) ($activo['contenido'] ?? ''), ENT_QUOTES, 'UTF-8');
       ?></textarea>
 
@@ -198,7 +181,8 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
   window.HayAcuerdoSupervisor = { api: <?php echo json_encode($apiUrl, JSON_UNESCAPED_UNICODE); ?> };
 
 </script>
+<script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
 
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/supervisor_acuerdo_escolar.js?v=20260623'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/supervisor_acuerdo_escolar.js?v=20260719'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 
 

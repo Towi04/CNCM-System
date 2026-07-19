@@ -10,41 +10,32 @@
 
   const btn = document.getElementById('btn-acuerdo-publicar');
 
-  const editor = document.getElementById('acuerdo-editor');
-
-  const hiddenContenido = document.getElementById('acuerdo-contenido');
+  const contenidoField = document.getElementById('acuerdo-contenido');
 
   function syncEditor() {
-    if (editor && hiddenContenido) {
-      hiddenContenido.value = editor.innerHTML.trim();
+    if (window.tinymce) {
+      window.tinymce.triggerSave();
     }
   }
 
-  document.querySelectorAll('.acuerdo-editor-toolbar [data-cmd]').forEach((button) => {
-    button.addEventListener('click', () => {
-      editor?.focus();
-      document.execCommand(button.dataset.cmd, false, null);
-      syncEditor();
+  if (window.tinymce && contenidoField) {
+    window.tinymce.init({
+      selector: '#acuerdo-contenido',
+      menubar: false,
+      branding: false,
+      height: 420,
+      language: 'es',
+      plugins: 'lists code autoresize',
+      toolbar: 'undo redo | blocks | bold italic underline | bullist numlist outdent indent | removeformat | code',
+      block_formats: 'Párrafo=p; Título=h3; Subtítulo=h4; Cita=blockquote',
+      content_style: 'body{font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;} ul,ol{padding-left:24px;}',
+      invalid_elements: 'script,style,iframe,object,embed,form,input,button,textarea,select',
+      extended_valid_elements: 'p,div,br,ul,ol,li,strong/b,em/i,u,blockquote,h1,h2,h3,h4,h5,h6',
+      setup(editor) {
+        editor.on('change keyup undo redo', syncEditor);
+      },
     });
-  });
-
-  document.querySelectorAll('.acuerdo-editor-toolbar [data-block]').forEach((button) => {
-    button.addEventListener('click', () => {
-      editor?.focus();
-      document.execCommand('formatBlock', false, button.dataset.block || 'p');
-      syncEditor();
-    });
-  });
-
-  editor?.addEventListener('keydown', (event) => {
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      document.execCommand(event.shiftKey ? 'outdent' : 'indent', false, null);
-      syncEditor();
-    }
-  });
-
-  editor?.addEventListener('input', syncEditor);
+  }
 
 
 
@@ -54,7 +45,8 @@
 
     syncEditor();
 
-    const contenido = hiddenContenido?.value?.replace(/<[^>]*>/g, '').trim() || editor?.textContent?.trim() || '';
+    const contenidoHtml = contenidoField?.value?.trim() || '';
+    const contenido = contenidoHtml.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
     if (!contenido) {
 
