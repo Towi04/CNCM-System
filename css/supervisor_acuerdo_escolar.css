@@ -119,6 +119,37 @@
   resize: vertical;
 }
 
+.acuerdo-editor-inline {
+  width: 100%;
+  min-height: 260px;
+  max-height: 650px;
+  overflow: auto;
+  resize: vertical;
+  padding: 14px;
+  border: 1px solid #d7dce5;
+  border-radius: 10px;
+  background: #fff;
+  line-height: 1.55;
+  outline: none;
+}
+
+.acuerdo-editor-inline:focus,
+.acuerdo-editor-inline.tox-edit-focus {
+  border-color: #90caf9;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
+}
+
+.acuerdo-editor-inline p,
+.acuerdo-editor-inline ul,
+.acuerdo-editor-inline ol {
+  margin: 0 0 10px;
+}
+
+.acuerdo-editor-inline ul,
+.acuerdo-editor-inline ol {
+  padding-left: 24px;
+}
+
 .acuerdo-editor-fallback-note {
   color: #64748b;
   font-size: 0.82rem;

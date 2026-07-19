@@ -11,10 +11,14 @@
   const btn = document.getElementById('btn-acuerdo-publicar');
 
   const contenidoField = document.getElementById('acuerdo-contenido');
+  const editorInline = document.getElementById('acuerdo-editor-inline');
+  let editorTiny = null;
 
   function syncEditor() {
-    if (window.tinymce) {
-      window.tinymce.triggerSave();
+    if (editorTiny && contenidoField) {
+      contenidoField.value = editorTiny.getContent().trim();
+    } else if (editorInline && contenidoField && editorInline.style.display !== 'none') {
+      contenidoField.value = editorInline.innerHTML.trim();
     }
   }
 
@@ -37,33 +41,35 @@
   }
 
   function initTinyMce() {
-    if (tinyInicializado || !window.tinymce || !contenidoField) {
+    if (tinyInicializado || !window.tinymce || !contenidoField || !editorInline) {
       return;
     }
     const initialContent = initialEditorContent();
     tinyInicializado = true;
+    editorInline.innerHTML = initialContent || '<p><br></p>';
+    editorInline.style.display = 'block';
+    contenidoField.style.display = 'none';
     window.tinymce.init({
-      selector: '#acuerdo-contenido',
+      selector: '#acuerdo-editor-inline',
+      inline: true,
       menubar: false,
       branding: false,
       promotion: false,
       license_key: 'gpl',
-      height: 300,
-      min_height: 220,
-      max_height: 650,
-      resize: 'both',
       plugins: 'lists code',
       toolbar: 'undo redo | blocks | bold italic underline | bullist numlist outdent indent | removeformat | code',
+      toolbar_persist: true,
       block_formats: 'Párrafo=p; Título=h3; Subtítulo=h4; Cita=blockquote',
       content_style: 'body{font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;} ul,ol{padding-left:24px;}',
       invalid_elements: 'script,style,iframe,object,embed,form,input,button,textarea,select',
       extended_valid_elements: 'p,div,br,ul,ol,li,strong/b,em/i,u,blockquote,h1,h2,h3,h4,h5,h6',
       setup(editor) {
+        editorTiny = editor;
         editor.on('init', () => {
-          editor.setContent(initialContent || '<p></p>');
+          editor.setContent(initialContent || '<p><br></p>');
           syncEditor();
         });
-        editor.on('change keyup undo redo', syncEditor);
+        editor.on('change keyup undo redo input', syncEditor);
       },
     });
   }

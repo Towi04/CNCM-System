@@ -24,7 +24,7 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
 
 <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/admin_catalogo.css'), ENT_QUOTES, 'UTF-8'); ?>">
 
-<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/supervisor_acuerdo_escolar.css?v=20260719b'), ENT_QUOTES, 'UTF-8'); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/supervisor_acuerdo_escolar.css?v=20260719d'), ENT_QUOTES, 'UTF-8'); ?>">
 
 
 
@@ -82,6 +82,7 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
 
       <div class="acuerdo-field acuerdo-field--editor">
         <label for="acuerdo-contenido">Texto del acuerdo</label>
+        <div id="acuerdo-editor-inline" class="acuerdo-editor-inline" style="display:none;" aria-label="Editor del acuerdo escolar"></div>
         <textarea id="acuerdo-contenido" name="contenido" rows="12" class="acuerdo-editor-textarea" style="display:block;width:100%;min-height:260px;padding:14px;font-family:inherit;line-height:1.55;"><?php
           echo htmlspecialchars((string) ($activo['contenido'] ?? ''), ENT_QUOTES, 'UTF-8');
         ?></textarea>
@@ -183,6 +184,6 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
 </script>
 <script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
 
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/supervisor_acuerdo_escolar.js?v=20260719c'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/supervisor_acuerdo_escolar.js?v=20260719d'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 
 
