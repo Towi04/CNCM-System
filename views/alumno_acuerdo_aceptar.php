@@ -93,7 +93,7 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
 
     <p class="acuerdo-version-tag">Versión <?php echo htmlspecialchars($acuerdo['version_label'] ?? ''); ?></p>
 
-    <pre class="acuerdo-contenido-alumno"><?php echo htmlspecialchars((string) ($acuerdo['contenido'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></pre>
+    <div class="acuerdo-contenido-alumno"><?php echo acuerdo_escolar_render_contenido((string) ($acuerdo['contenido'] ?? '')); ?></div>
 
   </div>
 

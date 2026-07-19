@@ -36,8 +36,6 @@
 
 .acuerdo-contenido-alumno {
 
-  white-space: pre-wrap;
-
   font-family: inherit;
 
   font-size: 0.95rem;
@@ -58,6 +56,92 @@
 
   overflow: auto;
 
+}
+
+.acuerdo-preview p,
+.acuerdo-contenido-alumno p,
+.acuerdo-preview ul,
+.acuerdo-contenido-alumno ul,
+.acuerdo-preview ol,
+.acuerdo-contenido-alumno ol {
+  margin: 0 0 10px;
+}
+
+.acuerdo-preview ul,
+.acuerdo-contenido-alumno ul,
+.acuerdo-preview ol,
+.acuerdo-contenido-alumno ol {
+  padding-left: 24px;
+}
+
+.acuerdo-preview blockquote,
+.acuerdo-contenido-alumno blockquote {
+  border-left: 3px solid #90caf9;
+  margin: 8px 0;
+  padding: 4px 0 4px 12px;
+  color: #444;
+}
+
+.acuerdo-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #d7dce5;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: #f8fafc;
+}
+
+.acuerdo-editor-toolbar button {
+  min-width: 34px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.acuerdo-editor-toolbar button:hover {
+  background: #eef4ff;
+  border-color: #90caf9;
+  color: #11458B;
+}
+
+.acuerdo-editor-toolbar__sep {
+  width: 1px;
+  background: #cbd5e1;
+  margin: 4px 2px;
+}
+
+.acuerdo-editor {
+  min-height: 320px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #d7dce5;
+  border-radius: 0 0 10px 10px;
+  background: #fff;
+  line-height: 1.55;
+  outline: none;
+  overflow: auto;
+}
+
+.acuerdo-editor:focus {
+  border-color: #90caf9;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
+}
+
+.acuerdo-editor p,
+.acuerdo-editor ul,
+.acuerdo-editor ol {
+  margin: 0 0 10px;
+}
+
+.acuerdo-editor ul,
+.acuerdo-editor ol {
+  padding-left: 24px;
 }
 
 

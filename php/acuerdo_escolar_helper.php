@@ -200,6 +200,63 @@ function acuerdo_escolar_listar(PDO $pdo): array
 
 
 
+function acuerdo_escolar_contenido_es_html(string $contenido): bool
+{
+    return preg_match('/<(p|div|br|ul|ol|li|strong|b|em|i|u|blockquote|h[1-6])\b/i', $contenido) === 1;
+}
+
+function acuerdo_escolar_sanitizar_html(string $html): string
+{
+    $html = trim($html);
+    if ($html === '') {
+        return '';
+    }
+    $html = preg_replace('#<(script|style|iframe|object|embed|form|input|button|textarea|select)[^>]*>.*?</\1>#is', '', $html) ?? '';
+    $html = strip_tags($html, '<p><div><br><ul><ol><li><strong><b><em><i><u><blockquote><h1><h2><h3><h4><h5><h6>');
+    $html = preg_replace('/<([a-z][a-z0-9]*)(?:\s[^>]*)?>/i', '<$1>', $html) ?? '';
+    $html = preg_replace('/<(\/?)(b)>/i', '<$1strong>', $html) ?? '';
+    $html = preg_replace('/<(\/?)(i)>/i', '<$1em>', $html) ?? '';
+    $html = preg_replace('/(?:<br>\s*){3,}/i', '<br><br>', $html) ?? '';
+
+    return trim($html);
+}
+
+function acuerdo_escolar_contenido_para_guardar(string $contenido): string
+{
+    $contenido = trim($contenido);
+    if ($contenido === '') {
+        return '';
+    }
+    if (acuerdo_escolar_contenido_es_html($contenido)) {
+        return acuerdo_escolar_sanitizar_html($contenido);
+    }
+
+    return $contenido;
+}
+
+function acuerdo_escolar_render_contenido(string $contenido): string
+{
+    $contenido = trim($contenido);
+    if ($contenido === '') {
+        return '';
+    }
+    if (acuerdo_escolar_contenido_es_html($contenido)) {
+        return acuerdo_escolar_sanitizar_html($contenido);
+    }
+
+    return nl2br(htmlspecialchars($contenido, ENT_QUOTES, 'UTF-8'));
+}
+
+function acuerdo_escolar_preview_texto(string $contenido, int $limite = 600): string
+{
+    $texto = trim(preg_replace('/\s+/', ' ', strip_tags(acuerdo_escolar_render_contenido($contenido))) ?? '');
+    if (mb_strlen($texto) <= $limite) {
+        return $texto;
+    }
+
+    return mb_substr($texto, 0, $limite) . '...';
+}
+
 function acuerdo_alumno_acepto_version(PDO $pdo, int $idAlumno, int $idVersion): bool
 
 {
@@ -470,7 +527,7 @@ function acuerdo_publicar_nueva_version(PDO $pdo, string $label, string $conteni
 
     $label = trim($label) !== '' ? trim($label) : ('v' . date('Y.m'));
 
-    $contenido = trim($contenido);
+    $contenido = acuerdo_escolar_contenido_para_guardar($contenido);
 
     if ($contenido === '') {
 

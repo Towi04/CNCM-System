@@ -10,13 +10,51 @@
 
   const btn = document.getElementById('btn-acuerdo-publicar');
 
+  const editor = document.getElementById('acuerdo-editor');
+
+  const hiddenContenido = document.getElementById('acuerdo-contenido');
+
+  function syncEditor() {
+    if (editor && hiddenContenido) {
+      hiddenContenido.value = editor.innerHTML.trim();
+    }
+  }
+
+  document.querySelectorAll('.acuerdo-editor-toolbar [data-cmd]').forEach((button) => {
+    button.addEventListener('click', () => {
+      editor?.focus();
+      document.execCommand(button.dataset.cmd, false, null);
+      syncEditor();
+    });
+  });
+
+  document.querySelectorAll('.acuerdo-editor-toolbar [data-block]').forEach((button) => {
+    button.addEventListener('click', () => {
+      editor?.focus();
+      document.execCommand('formatBlock', false, button.dataset.block || 'p');
+      syncEditor();
+    });
+  });
+
+  editor?.addEventListener('keydown', (event) => {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      document.execCommand(event.shiftKey ? 'outdent' : 'indent', false, null);
+      syncEditor();
+    }
+  });
+
+  editor?.addEventListener('input', syncEditor);
+
 
 
   form?.addEventListener('submit', async function (e) {
 
     e.preventDefault();
 
-    const contenido = document.getElementById('acuerdo-contenido')?.value?.trim() || '';
+    syncEditor();
+
+    const contenido = hiddenContenido?.value?.replace(/<[^>]*>/g, '').trim() || editor?.textContent?.trim() || '';
 
     if (!contenido) {
 

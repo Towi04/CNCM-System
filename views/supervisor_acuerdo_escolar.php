@@ -58,7 +58,7 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
 
     </p>
 
-    <pre class="acuerdo-preview"><?php echo htmlspecialchars(mb_substr((string) ($activo['contenido'] ?? ''), 0, 600)); ?><?php echo mb_strlen((string) ($activo['contenido'] ?? '')) > 600 ? '…' : ''; ?></pre>
+    <div class="acuerdo-preview"><?php echo acuerdo_escolar_render_contenido((string) ($activo['contenido'] ?? '')); ?></div>
 
   </div>
 
@@ -82,16 +82,27 @@ $apiUrl = hay_asset_url('php/acuerdo_escolar_api.php');
 
 
 
-      <label for="acuerdo-contenido">Texto del acuerdo</label>
+      <label for="acuerdo-editor">Texto del acuerdo</label>
 
-      <textarea id="acuerdo-contenido" name="contenido" rows="14" required
+      <div class="acuerdo-editor-toolbar" role="toolbar" aria-label="Formato del acuerdo escolar">
+        <button type="button" data-cmd="bold" title="Negritas"><i class="fas fa-bold"></i></button>
+        <button type="button" data-cmd="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
+        <button type="button" data-cmd="underline" title="Subrayado"><i class="fas fa-underline"></i></button>
+        <span class="acuerdo-editor-toolbar__sep"></span>
+        <button type="button" data-cmd="insertUnorderedList" title="Viñetas"><i class="fas fa-list-ul"></i></button>
+        <button type="button" data-cmd="insertOrderedList" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+        <button type="button" data-cmd="outdent" title="Reducir sangría"><i class="fas fa-outdent"></i></button>
+        <button type="button" data-cmd="indent" title="Aumentar sangría"><i class="fas fa-indent"></i></button>
+        <span class="acuerdo-editor-toolbar__sep"></span>
+        <button type="button" data-block="p">Párrafo</button>
+        <button type="button" data-block="h3">Título</button>
+      </div>
 
-        placeholder="Escriba el acuerdo escolar completo…"
-
-        style="width:100%; padding:12px; font-family:inherit; line-height:1.5;"><?php
-
+      <div id="acuerdo-editor" class="acuerdo-editor" contenteditable="true" role="textbox" aria-multiline="true"><?php
+        echo acuerdo_escolar_render_contenido((string) ($activo['contenido'] ?? ''));
+      ?></div>
+      <textarea id="acuerdo-contenido" name="contenido" hidden><?php
         echo htmlspecialchars((string) ($activo['contenido'] ?? ''), ENT_QUOTES, 'UTF-8');
-
       ?></textarea>
 
 
