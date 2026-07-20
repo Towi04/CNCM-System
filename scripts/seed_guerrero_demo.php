@@ -280,19 +280,34 @@ function seed_g_aula(PDO $pdo, int $idPlantel, array $data): int
 
 function seed_g_clave(PDO $pdo, int $idPlantel, string $area, string $horario): string
 {
-    if (function_exists('grupo_clave_generar')) {
-        try {
-            $gen = grupo_clave_generar($pdo, $idPlantel, $area, $horario, false, false);
-            return (string) $gen['clave'];
-        } catch (Throwable $e) {
-            // fallback abajo
+    $area = strtoupper($area);
+    $horario = strtoupper($horario);
+    $pref = $area . $horario;
+    $chk = $pdo->prepare('SELECT 1 FROM grupos WHERE clave = ? LIMIT 1');
+
+    // uq_grupos_clave es GLOBAL (no por plantel): hay que validar en toda la tabla.
+    for ($attempt = 0; $attempt < 40; $attempt++) {
+        $clave = '';
+        if (function_exists('grupo_clave_generar') && $attempt < 25) {
+            try {
+                $gen = grupo_clave_generar($pdo, $idPlantel, $area, $horario, false, false);
+                $clave = trim((string) ($gen['clave'] ?? ''));
+            } catch (Throwable $e) {
+                $clave = '';
+            }
+        }
+        if ($clave === '') {
+            // Prefijo demo para no chocar con claves reales cortas (IS1, ID1, etc.)
+            $clave = 'G' . $pref . (900 + $attempt + random_int(0, 50));
+        }
+
+        $chk->execute([$clave]);
+        if (!$chk->fetchColumn()) {
+            return $clave;
         }
     }
-    $pref = $area . $horario;
-    $n = (int) $pdo->query(
-        'SELECT COUNT(*) FROM grupos WHERE id_plantel = ' . (int) $idPlantel . ' AND clave LIKE ' . $pdo->quote($pref . '%')
-    )->fetchColumn();
-    return $pref . str_pad((string) (100 + $n + random_int(1, 40)), 3, '0', STR_PAD_LEFT);
+
+    return 'G' . $pref . 'X' . substr((string) time(), -6) . random_int(10, 99);
 }
 
 /**
@@ -315,28 +330,53 @@ function seed_g_crear_grupo(
     ?int $idAula,
     string $codigoAula
 ): ?array {
-    $clave = seed_g_clave($pdo, $idPlantel, $area, $horario);
     $aulaLabel = $codigoAula . ' ' . SEED_G_TAG;
+    $idGrupo = 0;
+    $clave = '';
+    $lastError = null;
 
-    try {
-        $pdo->prepare(
-            'INSERT INTO grupos (
-                id_plantel, clave, fecha_inicio, id_profesor, id_especialidad, id_fase_actual,
-                codigo_area, codigo_horario, es_extensivo, es_personalizado, aula, id_aula, horario_texto
-             ) VALUES (?,?,?,?,?,?,?,?,0,0,?,?,?)'
-        )->execute([
-            $idPlantel, $clave, $fechaInicio, $idProfesor, $idEsp ?: null, $idFase,
-            $area, $horario, $aulaLabel, $idAula, $horarioTexto,
-        ]);
-    } catch (PDOException $e) {
-        $pdo->prepare(
-            'INSERT INTO grupos (id_plantel, clave, fecha_inicio, id_profesor, aula)
-             VALUES (?,?,?,?,?)'
-        )->execute([$idPlantel, $clave, $fechaInicio, $idProfesor, $aulaLabel]);
+    for ($try = 0; $try < 10; $try++) {
+        $clave = seed_g_clave($pdo, $idPlantel, $area, $horario);
+        try {
+            $pdo->prepare(
+                'INSERT INTO grupos (
+                    id_plantel, clave, fecha_inicio, id_profesor, id_especialidad, id_fase_actual,
+                    codigo_area, codigo_horario, es_extensivo, es_personalizado, aula, id_aula, horario_texto
+                 ) VALUES (?,?,?,?,?,?,?,?,0,0,?,?,?)'
+            )->execute([
+                $idPlantel, $clave, $fechaInicio, $idProfesor, $idEsp ?: null, $idFase,
+                $area, $horario, $aulaLabel, $idAula, $horarioTexto,
+            ]);
+            $idGrupo = (int) $pdo->lastInsertId();
+            break;
+        } catch (PDOException $e) {
+            $lastError = $e;
+            $msg = $e->getMessage();
+            $isDup = str_contains($msg, '1062') || stripos($msg, 'Duplicate') !== false;
+            if ($isDup) {
+                continue;
+            }
+            // Posible columna faltante: intentar insert mínimo con la misma clave nueva
+            try {
+                $pdo->prepare(
+                    'INSERT INTO grupos (id_plantel, clave, fecha_inicio, id_profesor, aula)
+                     VALUES (?,?,?,?,?)'
+                )->execute([$idPlantel, $clave, $fechaInicio, $idProfesor, $aulaLabel]);
+                $idGrupo = (int) $pdo->lastInsertId();
+                break;
+            } catch (PDOException $e2) {
+                $lastError = $e2;
+                if (str_contains($e2->getMessage(), '1062') || stripos($e2->getMessage(), 'Duplicate') !== false) {
+                    continue;
+                }
+                seed_g_log('  ERROR grupo: ' . $e2->getMessage());
+                return null;
+            }
+        }
     }
 
-    $idGrupo = (int) $pdo->lastInsertId();
     if ($idGrupo <= 0) {
+        seed_g_log('  ERROR grupo: no se pudo obtener clave única' . ($lastError ? (' — ' . $lastError->getMessage()) : ''));
         return null;
     }
 
