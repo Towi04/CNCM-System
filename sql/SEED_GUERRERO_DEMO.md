@@ -8,9 +8,13 @@ Genera datos falsos **solo en Guerrero** para que dirección, recepción, asesor
 php scripts/seed_guerrero_demo.php
 ```
 
-O en el navegador (gerente / supervisor / admin):
+O en el navegador (gerente / supervisor / admin), abra **este archivo** (no el de `scripts/`):
 
-`php/seed_guerrero_demo_run.php?confirm=1`
+`…/php/seed_guerrero_demo_run.php`
+
+Pulse **Ejecutar seed Guerrero**. Si necesita la URL directa:
+
+`…/php/seed_guerrero_demo_run.php?confirm=1`
 
 **Contraseña de todos los usuarios demo:** `1234`
 
