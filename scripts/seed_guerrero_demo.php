@@ -87,6 +87,161 @@ function seed_g_especialidad_id(PDO $pdo, string ...$claves): int
     return 0;
 }
 
+/**
+ * Busca por clave aunque esté inactiva; si no existe, la crea; si está inactiva, la reactiva.
+ * También asegura fases del catálogo cuando faltan.
+ *
+ * @param array{nombre:string,modalidad?:string,costo_inscripcion?:float,costo_mensualidad?:float,costo_pronto_pago?:float,costo_semanal?:float,duracion_meses?:int,duracion_semanas?:?int,duracion_fase_semanas?:int} $meta
+ */
+function seed_g_ensure_especialidad(PDO $pdo, string $clave, array $meta): int
+{
+    $st = $pdo->prepare('SELECT id_especialidad, activo, visible FROM especialidades WHERE clave = ? LIMIT 1');
+    $st->execute([$clave]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+
+    if ($row) {
+        $id = (int) $row['id_especialidad'];
+        if ((int) ($row['activo'] ?? 0) !== 1 || (int) ($row['visible'] ?? 0) !== 1) {
+            try {
+                $pdo->prepare('UPDATE especialidades SET activo = 1, visible = 1 WHERE id_especialidad = ?')
+                    ->execute([$id]);
+                seed_g_log("  · Especialidad {$clave} reactivada (#{$id})");
+            } catch (PDOException $e) {
+                seed_g_log("  (aviso reactivar {$clave}: " . $e->getMessage() . ')');
+            }
+        }
+        seed_g_ensure_fases_especialidad($pdo, $id, $clave, $meta);
+        return $id;
+    }
+
+    $nombre = (string) ($meta['nombre'] ?? $clave);
+    $modalidad = (string) ($meta['modalidad'] ?? 'regular');
+    $ci = (float) ($meta['costo_inscripcion'] ?? 500);
+    $cm = (float) ($meta['costo_mensualidad'] ?? 1200);
+    $cpp = (float) ($meta['costo_pronto_pago'] ?? 1100);
+    $cs = (float) ($meta['costo_semanal'] ?? 350);
+    $dm = (int) ($meta['duracion_meses'] ?? 12);
+    $ds = $meta['duracion_semanas'] ?? 48;
+    $durFase = (int) ($meta['duracion_fase_semanas'] ?? 4);
+
+    try {
+        $pdo->prepare(
+            'INSERT INTO especialidades (
+                clave, nombre, descripcion, modalidad, duracion_fase_semanas,
+                costo_inscripcion, costo_mensualidad, costo_pronto_pago, costo_semanal,
+                duracion_meses, duracion_semanas, es_fija, visible, activo, orden
+             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,1,1,1,?)'
+        )->execute([
+            $clave,
+            $nombre,
+            'Creada por seed demo Guerrero',
+            $modalidad,
+            $durFase,
+            $ci,
+            $cm,
+            $cpp,
+            $cs,
+            $dm,
+            $ds,
+            20,
+        ]);
+    } catch (PDOException $e) {
+        // Esquema antiguo sin algunas columnas
+        try {
+            $pdo->prepare(
+                'INSERT INTO especialidades (
+                    clave, nombre, descripcion, costo_inscripcion, costo_mensualidad,
+                    costo_pronto_pago, costo_semanal, duracion_meses, duracion_semanas,
+                    es_fija, visible, orden
+                 ) VALUES (?,?,?,?,?,?,?,?,?,1,1,?)'
+            )->execute([$clave, $nombre, 'Creada por seed demo Guerrero', $ci, $cm, $cpp, $cs, $dm, $ds, 20]);
+            try {
+                $pdo->prepare('UPDATE especialidades SET activo = 1 WHERE clave = ?')->execute([$clave]);
+            } catch (PDOException $e2) {
+                // ignore
+            }
+        } catch (PDOException $e3) {
+            seed_g_log("  ERROR creando {$clave}: " . $e3->getMessage());
+            return 0;
+        }
+    }
+
+    $id = (int) $pdo->lastInsertId();
+    if ($id <= 0) {
+        $st->execute([$clave]);
+        $id = (int) ($st->fetchColumn() ?: 0);
+    }
+    if ($id > 0) {
+        seed_g_log("  + Especialidad {$clave} (#{$id})");
+        seed_g_ensure_fases_especialidad($pdo, $id, $clave, $meta);
+    }
+    return $id;
+}
+
+function seed_g_ensure_fases_especialidad(PDO $pdo, int $idEsp, string $clave, array $meta): void
+{
+    if ($idEsp <= 0) {
+        return;
+    }
+    $cnt = $pdo->prepare('SELECT COUNT(*) FROM especialidad_fases WHERE id_especialidad = ? AND activo = 1');
+    $cnt->execute([$idEsp]);
+    if ((int) $cnt->fetchColumn() > 0) {
+        return;
+    }
+
+    $dur = (int) ($meta['duracion_fase_semanas'] ?? 4);
+
+    if ($clave === 'ING' && function_exists('fase_catalogo_ingles_estructurado') && function_exists('fase_insertar_catalogo')) {
+        try {
+            fase_insertar_catalogo($pdo, $idEsp, fase_catalogo_ingles_estructurado('ING'), $dur);
+            seed_g_log("  + Fases ING (catálogo estructurado)");
+            return;
+        } catch (Throwable $e) {
+            seed_g_log('  (aviso fases ING: ' . $e->getMessage() . ')');
+        }
+    }
+
+    if (function_exists('fase_seed_fases_desde_catalogo')) {
+        try {
+            fase_seed_fases_desde_catalogo($pdo);
+            $cnt->execute([$idEsp]);
+            if ((int) $cnt->fetchColumn() > 0) {
+                seed_g_log("  + Fases {$clave} (catálogo)");
+                return;
+            }
+        } catch (Throwable $e) {
+            // fallback abajo
+        }
+    }
+
+    if (function_exists('fase_catalogo_por_clave') && function_exists('fase_insertar_catalogo')) {
+        $map = fase_catalogo_por_clave();
+        if (!empty($map[$clave])) {
+            try {
+                fase_insertar_catalogo($pdo, $idEsp, $map[$clave], $dur);
+                seed_g_log("  + Fases {$clave}");
+                return;
+            } catch (Throwable $e) {
+                seed_g_log('  (aviso fases: ' . $e->getMessage() . ')');
+            }
+        }
+    }
+
+    // Mínimo: 4 fases genéricas para poder cargar calificaciones
+    try {
+        $ins = $pdo->prepare(
+            'INSERT INTO especialidad_fases (id_especialidad, nombre_fase, clave_fase, orden, duracion_semanas, activo)
+             VALUES (?,?,?,?,?,1)'
+        );
+        for ($i = 1; $i <= 4; $i++) {
+            $ins->execute([$idEsp, "Fase {$i}", "F{$i}", $i, $dur]);
+        }
+        seed_g_log("  + Fases genéricas {$clave} (F1–F4)");
+    } catch (PDOException $e) {
+        seed_g_log('  (aviso fases genéricas: ' . $e->getMessage() . ')');
+    }
+}
+
 /** @return list<array<string, mixed>> */
 function seed_g_fases(PDO $pdo, int $idEsp): array
 {
@@ -817,17 +972,76 @@ $idPlantel = (int) $plantel['id_plantel'];
 $_SESSION['plantel_id'] = $idPlantel;
 seed_g_log('Plantel: ' . $plantel['nombre'] . " (#{$idPlantel})");
 
-$idIng = seed_g_especialidad_id($pdo, 'ING');
-$idComp = seed_g_especialidad_id($pdo, 'COMP25', 'COMP', 'COMP24');
-$idPrep = seed_g_especialidad_id($pdo, 'PREP-AB', 'PREP-ESC');
-if ($idIng <= 0) {
-    seed_g_fail('Falta especialidad ING activa');
+seed_g_log('');
+seed_g_log('--- Especialidades (asegurar catálogo) ---');
+if (function_exists('fase_ensure_schema')) {
+    try {
+        fase_ensure_schema($pdo);
+    } catch (Throwable $e) {
+        seed_g_log('Aviso fase_ensure_schema: ' . $e->getMessage());
+    }
 }
-seed_g_log("Especialidades: ING={$idIng}, COMP={$idComp}, PREP={$idPrep}");
+
+$idIng = seed_g_ensure_especialidad($pdo, 'ING', [
+    'nombre' => 'Inglés',
+    'modalidad' => 'regular',
+    'costo_inscripcion' => 500,
+    'costo_mensualidad' => 1200,
+    'costo_pronto_pago' => 1100,
+    'costo_semanal' => 350,
+    'duracion_meses' => 12,
+    'duracion_semanas' => 48,
+    'duracion_fase_semanas' => 4,
+]);
+$idComp = seed_g_especialidad_id($pdo, 'COMP25', 'COMP', 'COMP24');
+if ($idComp <= 0) {
+    $idComp = seed_g_ensure_especialidad($pdo, 'COMP25', [
+        'nombre' => 'Informática 2025',
+        'modalidad' => 'regular',
+        'costo_inscripcion' => 500,
+        'costo_mensualidad' => 1300,
+        'costo_pronto_pago' => 1200,
+        'costo_semanal' => 380,
+        'duracion_meses' => 12,
+        'duracion_semanas' => 48,
+        'duracion_fase_semanas' => 4,
+    ]);
+} else {
+    // Asegurar fases si el registro ya existía
+    $stClave = $pdo->prepare('SELECT clave FROM especialidades WHERE id_especialidad = ?');
+    $stClave->execute([$idComp]);
+    $claveComp = (string) ($stClave->fetchColumn() ?: 'COMP25');
+    seed_g_ensure_fases_especialidad($pdo, $idComp, $claveComp, ['duracion_fase_semanas' => 4]);
+}
+$idPrep = seed_g_especialidad_id($pdo, 'PREP-AB', 'PREP-ESC');
+if ($idPrep <= 0) {
+    $idPrep = seed_g_ensure_especialidad($pdo, 'PREP-AB', [
+        'nombre' => 'Preparatoria Abierta',
+        'modalidad' => 'prep_abierta',
+        'costo_inscripcion' => 600,
+        'costo_mensualidad' => 1400,
+        'costo_pronto_pago' => 1300,
+        'costo_semanal' => 0,
+        'duracion_meses' => 24,
+        'duracion_semanas' => null,
+        'duracion_fase_semanas' => 2,
+    ]);
+} else {
+    $stClave = $pdo->prepare('SELECT clave FROM especialidades WHERE id_especialidad = ?');
+    $stClave->execute([$idPrep]);
+    $clavePrep = (string) ($stClave->fetchColumn() ?: 'PREP-AB');
+    seed_g_ensure_fases_especialidad($pdo, $idPrep, $clavePrep, ['duracion_fase_semanas' => 2]);
+}
+
+if ($idIng <= 0) {
+    seed_g_fail('No se pudo crear/activar la especialidad ING');
+}
+seed_g_log("Especialidades listas: ING={$idIng}, COMP={$idComp}, PREP={$idPrep}");
 
 $fasesIng = seed_g_fases($pdo, $idIng);
 $fasesComp = $idComp > 0 ? seed_g_fases($pdo, $idComp) : [];
 $fasesPrep = $idPrep > 0 ? seed_g_fases($pdo, $idPrep) : [];
+seed_g_log('Fases: ING=' . count($fasesIng) . ', COMP=' . count($fasesComp) . ', PREP=' . count($fasesPrep));
 
 // ——— Personal ———
 seed_g_log('');
