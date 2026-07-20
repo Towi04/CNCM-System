@@ -91,3 +91,15 @@ Etiqueta en conceptos: `seed_operativo_2025` (no duplica si ya existen pagos con
 5. **Pre-registro** — prospectos demo.
 6. **Evaluación 360** / **Mi portal docente** (profesor).
 7. **Reportes → Resumen académico por grupo**.
+
+---
+
+## Paso 3 — Demo completo Guerrero (recomendado para recorridos)
+
+Para un dataset amplio **solo en Guerrero** (aulas, varias especialidades, calificaciones por fase, preregistros demográficos, cortes de caja, reporte semanal y rol de aulas):
+
+```bash
+php scripts/seed_guerrero_demo.php
+```
+
+Detalle: [SEED_GUERRERO_DEMO.md](SEED_GUERRERO_DEMO.md).
