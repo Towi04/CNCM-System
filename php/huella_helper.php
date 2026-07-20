@@ -9,9 +9,11 @@ define('HUELLA_FORMATO_INTERMEDIATE', 'intermediate');
 
 function huella_ensure_schema(PDO $pdo): void
 {
+    plantel_ensure_column($pdo, 'alumnos', 'codigo_huella', 'VARCHAR(40) NULL', 'foto');
     plantel_ensure_column($pdo, 'alumnos', 'huella_registrada', 'TINYINT(1) NOT NULL DEFAULT 0', 'codigo_huella');
     plantel_ensure_column($pdo, 'alumnos', 'huella_registrada_en', 'DATETIME NULL', 'huella_registrada');
     plantel_ensure_column($pdo, 'alumnos', 'huella_dispositivo', 'VARCHAR(60) NULL', 'huella_registrada_en');
+    plantel_ensure_column($pdo, 'usuarios', 'codigo_huella', 'VARCHAR(40) NULL', 'id_usuario');
     plantel_ensure_column($pdo, 'usuarios', 'huella_registrada', 'TINYINT(1) NOT NULL DEFAULT 0', 'codigo_huella');
     plantel_ensure_column($pdo, 'usuarios', 'huella_registrada_en', 'DATETIME NULL', 'huella_registrada');
     plantel_ensure_column($pdo, 'usuarios', 'huella_dispositivo', 'VARCHAR(60) NULL', 'huella_registrada_en');

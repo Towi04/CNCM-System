@@ -4,15 +4,73 @@ require_once __DIR__ . '/../php/auth_helpers.php';
 global $pdo;
 
 auth_ensure_email_column($pdo);
+if (function_exists('usuario_ensure_schema')) {
+    usuario_ensure_schema($pdo);
+}
+if (function_exists('usuario_suspension_ensure_schema')) {
+    usuario_suspension_ensure_schema($pdo);
+}
+if (function_exists('asistencia_ensure_schema')) {
+    asistencia_ensure_schema($pdo);
+}
+if (function_exists('huella_ensure_schema')) {
+    huella_ensure_schema($pdo);
+}
+if (function_exists('rbac_db_ensure_schema')) {
+    rbac_db_ensure_schema($pdo);
+}
+plantel_ensure_column($pdo, 'usuarios', 'id_rol', 'INT UNSIGNED NULL', 'rol');
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($id <= 0) { echo "<div class='alert'>ID inválido.</div>"; return; }
 
 $idPlantel = plantel_scope_id($pdo);
-$stmt = $pdo->prepare("SELECT id_usuario, nombre, apellido, username, email, rol, id_rol, departamento, id_plantel, codigo_huella, huella_registrada, huella_registrada_en, suspendido, suspension_tipo, suspension_motivo, suspension_en FROM usuarios WHERE id_usuario = ? LIMIT 1");
-$rolesForm = rbac_roles_para_formulario($pdo);
-$stmt->execute([$id]);
-$u = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$colsBase = 'id_usuario, nombre, apellido, username, email, rol, id_rol, departamento, id_plantel';
+$colsExtra = [
+    'codigo_huella',
+    'huella_registrada',
+    'huella_registrada_en',
+    'suspendido',
+    'suspension_tipo',
+    'suspension_motivo',
+    'suspension_en',
+];
+$colsSql = $colsBase;
+foreach ($colsExtra as $col) {
+    if (function_exists('plantel_column_exists') && plantel_column_exists($pdo, 'usuarios', $col)) {
+        $colsSql .= ', ' . $col;
+    } elseif (!function_exists('plantel_column_exists')) {
+        $colsSql .= ', ' . $col;
+    }
+}
+
+try {
+    $stmt = $pdo->prepare("SELECT {$colsSql} FROM usuarios WHERE id_usuario = ? LIMIT 1");
+    $stmt->execute([$id]);
+    $u = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Fallback mínimo si alguna columna aún no existe en el hosting
+    error_log('usuario_editar SELECT: ' . $e->getMessage());
+    $stmt = $pdo->prepare(
+        'SELECT id_usuario, nombre, apellido, username, email, rol, departamento, id_plantel
+         FROM usuarios WHERE id_usuario = ? LIMIT 1'
+    );
+    $stmt->execute([$id]);
+    $u = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($u) {
+        $u['id_rol'] = $u['id_rol'] ?? null;
+        $u['codigo_huella'] = $u['codigo_huella'] ?? null;
+        $u['huella_registrada'] = $u['huella_registrada'] ?? 0;
+        $u['huella_registrada_en'] = $u['huella_registrada_en'] ?? null;
+        $u['suspendido'] = $u['suspendido'] ?? 0;
+        $u['suspension_tipo'] = $u['suspension_tipo'] ?? null;
+        $u['suspension_motivo'] = $u['suspension_motivo'] ?? null;
+        $u['suspension_en'] = $u['suspension_en'] ?? null;
+    }
+}
+
+$rolesForm = function_exists('rbac_roles_para_formulario') ? rbac_roles_para_formulario($pdo) : [];
 if (!$u) { echo "<div class='alert'>Usuario no existe.</div>"; return; }
 $esAdminGlobal = function_exists('plantel_es_admin') && plantel_es_admin();
 if (!$esAdminGlobal && (int)($u['id_plantel'] ?? 0) !== $idPlantel) {
@@ -21,13 +79,14 @@ if (!$esAdminGlobal && (int)($u['id_plantel'] ?? 0) !== $idPlantel) {
 }
 
 $listaPlanteles = plantel_list_accesibles($pdo, true);
-$puedePrivilegios = rbac_usuario_puede_gestionar_privilegios();
+$puedePrivilegios = function_exists('rbac_usuario_puede_gestionar_privilegios') && rbac_usuario_puede_gestionar_privilegios();
 $privApi = hay_asset_url('php/usuario_privilegios_api.php');
 $uplApi = hay_asset_url('php/usuario_planteles_api.php');
 $rolUsuarioEdit = strtolower(trim((string) ($u['rol'] ?? '')));
 $puedeAsesoriaMaterias = in_array($rolUsuarioEdit, ['profesor', 'docente', 'coordinador', 'coordinacion', 'director'], true)
     || (function_exists('asesoria_puede_administrar') && asesoria_puede_administrar());
-$puedePlantelesTemp = $puedePrivilegios && in_array($rolUsuarioEdit, plantel_roles_con_apoyo_temporal(), true);
+$puedePlantelesTemp = $puedePrivilegios && function_exists('plantel_roles_con_apoyo_temporal')
+    && in_array($rolUsuarioEdit, plantel_roles_con_apoyo_temporal(), true);
 $puedeCuentasDigitales = function_exists('cuenta_digital_puede_gestionar_staff') && cuenta_digital_puede_gestionar_staff();
 $puedeSuspenderStaff = function_exists('usuario_suspension_puede_gestionar_staff') && usuario_suspension_puede_gestionar_staff()
     && ($u['rol'] ?? '') !== 'alumno';
@@ -117,7 +176,7 @@ $etiquetaSusp = function_exists('usuario_suspension_etiqueta') ? usuario_suspens
           <label><strong>Reset password (opcional)</strong></label><br>
           <input type="password" name="password" placeholder="Dejar vacío para no cambiar" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:10px;">
         </div>
-        <?php if (huella_puede_enrolar_usuario()): ?>
+        <?php if (function_exists('huella_puede_enrolar_usuario') && huella_puede_enrolar_usuario()): ?>
         <div class="full-width" style="grid-column:1/-1; padding:16px; background:#e8f4fd; border:1px solid #90caf9; border-radius:10px;">
           <h3 style="margin:0 0 8px; font-size:1rem;"><i class="fas fa-fingerprint"></i> Huella digital (U.areU 5300)</h3>
           <?php if ((int)($u['huella_registrada'] ?? 0)): ?>

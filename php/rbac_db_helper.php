@@ -1022,10 +1022,21 @@ function rbac_roles_para_formulario(PDO $pdo): array
     }
     if ($rows === []) {
         rbac_db_ensure_schema($pdo);
-        $st = $pdo->query(
-            "SELECT id_rol, clave, nombre, es_sistema, departamento_default FROM roles WHERE activo = 1 AND clave != 'alumno' ORDER BY orden, nombre"
-        );
-        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $st = $pdo->query(
+                "SELECT id_rol, clave, nombre, es_sistema, departamento_default FROM roles WHERE activo = 1 AND clave != 'alumno' ORDER BY orden, nombre"
+            );
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            try {
+                $st = $pdo->query(
+                    "SELECT id_rol, clave, nombre, es_sistema FROM roles WHERE activo = 1 AND clave != 'alumno' ORDER BY nombre"
+                );
+                $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $e2) {
+                $rows = [];
+            }
+        }
     }
     if (rbac_rol_real() !== 'supervisor') {
         $rows = array_values(array_filter($rows, static fn ($r) => ($r['clave'] ?? '') !== 'supervisor'));
