@@ -257,20 +257,38 @@ function planeacion_reenviar(
         return ['ok' => false, 'message' => 'Planeación no encontrada'];
     }
 
-    $titulo = trim((string) ($data['titulo'] ?? $plan['titulo']));
     $contenido = trim((string) ($data['contenido'] ?? $plan['contenido']));
     $fecha = trim((string) ($data['fecha'] ?? $plan['fecha']));
     $idFase = (int) ($data['id_fase'] ?? $plan['id_fase']);
     $nota = trim((string) ($data['nota'] ?? ''));
 
-    if ($titulo === '' || $contenido === '' || $fecha === '' || $idFase <= 0) {
-        return ['ok' => false, 'message' => 'Complete título, contenido, fecha y fase'];
+    if ($contenido === '' || $fecha === '' || $idFase <= 0) {
+        return ['ok' => false, 'message' => 'Complete contenido, fecha y fase'];
     }
 
     $fases = planeacion_fases_grupo($pdo, (int) $plan['id_grupo']);
     $idsFase = array_map(static fn ($f) => (int) $f['id_fase'], $fases);
     if (!in_array($idFase, $idsFase, true)) {
         return ['ok' => false, 'message' => 'Fase inválida para este grupo'];
+    }
+
+    // Título automático desde el temario de la fase (el profesor no lo define).
+    $faseDetalle = function_exists('planeacion_prompt_fase_detalle')
+        ? (planeacion_prompt_fase_detalle($pdo, $idFase) ?: [])
+        : [];
+    if ($faseDetalle === []) {
+        foreach ($fases as $f) {
+            if ((int) ($f['id_fase'] ?? 0) === $idFase) {
+                $faseDetalle = $f;
+                break;
+            }
+        }
+    }
+    $titulo = function_exists('planeacion_titulo_desde_fase')
+        ? planeacion_titulo_desde_fase($pdo, $faseDetalle)
+        : trim((string) ($data['titulo'] ?? $plan['titulo']));
+    if ($titulo === '') {
+        $titulo = trim((string) ($plan['titulo'] ?? '')) ?: 'Planeación de clase';
     }
 
     $stmt = $pdo->prepare('SELECT YEAR(?), WEEK(?, 0)');

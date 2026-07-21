@@ -22,9 +22,9 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
     <h2>Planeaciones de clase</h2>
     <p style="color:#666; margin:8px 0 0;">
       <?php if ($esProfesor): ?>
-        Registre la planeación por grupo y el parcial (fase) que va a impartir.
+        El tema sale del temario de la fase. Usted solo indica actividades extra o refuerzos y genera la planeación.
       <?php else: ?>
-        Registro de planeaciones por grupo y fase.
+        El contenido temático se toma del temario de la fase; el profesor puede añadir instrucciones adicionales.
       <?php endif; ?>
     </p>
     <div class="disc-actions" style="margin-top:12px;">
@@ -78,9 +78,21 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
       </div>
 
       <div style="margin-top:10px;">
-        <label><strong>Tema / título de la clase</strong></label><br>
-        <input name="titulo" id="plan-tema" required maxlength="160" placeholder="Ej. Present perfect vs past simple"
-          style="width:100%; padding:10px; border:1px solid #ddd; border-radius:10px;">
+        <label><strong>Temario de la fase</strong> <span style="font-weight:400; color:#888;">(automático)</span></label>
+        <div id="plan-temario-fase" style="margin-top:6px; padding:12px; background:#f7f9fc; border:1px solid #e0e6ed; border-radius:10px; color:#555; font-size:0.92rem; min-height:48px;">
+          Elija un grupo y una fase para ver los temas del temario.
+        </div>
+        <input type="hidden" name="titulo" id="plan-titulo" value="">
+      </div>
+
+      <div style="margin-top:10px;">
+        <label><strong>Instrucciones adicionales para la IA</strong> <span style="font-weight:400; color:#888;">(opcional)</span></label><br>
+        <textarea name="instrucciones_adicionales" id="plan-instrucciones" rows="3" maxlength="800"
+          placeholder="Ej. Incluir una actividad alusiva a San Valentín; dedicar 10 min a reforzar el Past Simple porque el grupo tuvo dificultades; preparar un repaso corto antes del examen…"
+          style="width:100%; padding:10px; border:1px solid #ddd; border-radius:10px;"></textarea>
+        <p style="margin:6px 0 0; font-size:0.82rem; color:#888;">
+          No escriba el tema: ya está en el temario. Use este espacio solo para actividades extra, refuerzos o contexto especial de la sesión.
+        </p>
       </div>
 
       <div style="margin-top:10px;">
@@ -104,7 +116,7 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
         </button>
       </div>
       <p id="btn-plan-ia-hint" style="font-size:0.82rem; color:#888; margin-top:8px;">
-        Elija un <strong>grupo</strong> para habilitar la sugerencia con IA. También necesita fase y tema antes de generar.
+        Elija un <strong>grupo</strong> y una <strong>fase</strong> para habilitar la sugerencia con IA. El temario se toma solo; puede añadir instrucciones adicionales.
       </p>
     </form>
   </div>
@@ -149,8 +161,10 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
           <select id="edit-plan-fase" style="width:100%; padding:8px;"></select>
         </div>
       </div>
-      <label>Título</label>
-      <input type="text" id="edit-plan-titulo" maxlength="160" style="width:100%; padding:8px; margin-bottom:8px;">
+      <label>Temario / título (desde la fase)</label>
+      <input type="text" id="edit-plan-titulo" maxlength="160" readonly
+        style="width:100%; padding:8px; margin-bottom:8px; background:#f5f5f5; color:#555;">
+      <p style="margin:-4px 0 8px; font-size:0.8rem; color:#888;">Se actualiza automáticamente según la fase seleccionada.</p>
       <label>Planeación</label>
       <textarea id="edit-plan-contenido" rows="10" style="width:100%; padding:8px; margin-bottom:8px;"></textarea>
       <label>Nota al reenviar (opcional)</label>
@@ -176,11 +190,14 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
   const selFase = document.getElementById('plan-fase');
   const infoGrupo = document.getElementById('plan-grupo-info');
   const gustosGrupo = document.getElementById('plan-gustos-grupo');
+  const temarioBox = document.getElementById('plan-temario-fase');
+  const tituloHidden = document.getElementById('plan-titulo');
   const conteos = document.getElementById('plan-conteos');
   const btnIa = document.getElementById('btn-plan-ia');
   const btnIaHint = document.getElementById('btn-plan-ia-hint');
   const msg = document.getElementById('plan-msg');
   const form = document.getElementById('form-planeacion');
+  let fasesCache = [];
 
   function setIaHint(text) {
     if (btnIaHint) btnIaHint.innerHTML = text;
@@ -198,14 +215,66 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
     msg.textContent = text || '';
   }
 
+  function escHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function faseSeleccionada() {
+    const id = parseInt(selFase?.value || '0', 10);
+    return fasesCache.find((f) => Number(f.id_fase) === id) || null;
+  }
+
+  function pintarTemario() {
+    const f = faseSeleccionada();
+    if (!temarioBox) return;
+    if (!f) {
+      temarioBox.innerHTML = 'Elija un grupo y una fase para ver los temas del temario.';
+      if (tituloHidden) tituloHidden.value = '';
+      return;
+    }
+    let html = '';
+    if (f.objetivo_parcial) {
+      html += '<div style="margin-bottom:6px;"><strong>Objetivo:</strong> ' + escHtml(f.objetivo_parcial) + '</div>';
+    }
+    if (f.temas) {
+      html += '<div style="margin-bottom:6px;"><strong>Temas:</strong> ' + escHtml(f.temas) + '</div>';
+    }
+    if (f.vocabulario_resumen) {
+      html += '<div style="margin-bottom:6px;"><strong>Vocabulario:</strong> ' + escHtml(f.vocabulario_resumen) + '</div>';
+    }
+    if (f.gramatica_resumen) {
+      html += '<div style="margin-bottom:6px;"><strong>Gramática:</strong> ' + escHtml(f.gramatica_resumen) + '</div>';
+    }
+    if (f.semanas && f.semanas.length) {
+      html += '<div><strong>Temario semanal:</strong><ul style="margin:4px 0 0 18px; padding:0;">';
+      f.semanas.forEach((s) => {
+        html += '<li>Semana ' + escHtml(String(s.semana || '')) + ': ' + escHtml(s.titulo_leccion) + '</li>';
+      });
+      html += '</ul></div>';
+    }
+    if (!html) {
+      html = 'Esta fase aún no tiene temario cargado. Configure el temario en Especialidades → Fases.';
+    }
+    temarioBox.innerHTML = html;
+    if (tituloHidden) tituloHidden.value = f.titulo_sugerido || f.temas || ((f.clave_fase || '') + ' ' + (f.nombre_fase || '')).trim();
+  }
+
+  function syncIaPorFase() {
+    if (selGrupo?.value && selFase?.value && !selFase.disabled) {
+      setIaEnabled(true, 'Listo: el temario ya está tomado de la fase. Puede añadir <strong>instrucciones adicionales</strong> y pulsar Sugerir con IA.');
+    }
+  }
+
   async function cargarFases() {
     const gid = selGrupo?.value;
     if (!selFase) return;
+    fasesCache = [];
     selFase.innerHTML = '<option value="">Cargando fases…</option>';
     setIaEnabled(false, 'Cargando fases del grupo…');
     infoGrupo.textContent = '';
     if (gustosGrupo) { gustosGrupo.style.display = 'none'; gustosGrupo.innerHTML = ''; }
     conteos.textContent = '';
+    pintarTemario();
     if (!gid) {
       selFase.innerHTML = '<option value="">Primero elija un grupo…</option>';
       selFase.disabled = true;
@@ -232,6 +301,7 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
         setIaEnabled(false, 'Este grupo no tiene fases/parciales configurados; no se puede usar IA.');
         return;
       }
+      fasesCache = d.fases;
       selFase.innerHTML = d.fases.map((f) =>
         '<option value="' + f.id_fase + '"' + (f.sugerida ? ' selected' : '') + '>' +
         (f.clave_fase || f.nombre_fase || ('Fase ' + f.id_fase)) +
@@ -239,7 +309,8 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
         '</option>'
       ).join('');
       selFase.disabled = false;
-      setIaEnabled(true, 'Listo: escriba el <strong>tema</strong> y pulse Sugerir con IA. Revise y adapte antes de guardar.');
+      pintarTemario();
+      syncIaPorFase();
       refrescarConteos();
     } catch (e) {
       selFase.innerHTML = '<option value="">Error al cargar fases</option>';
@@ -261,14 +332,18 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
   }
 
   selGrupo?.addEventListener('change', cargarFases);
+  selFase?.addEventListener('change', () => {
+    pintarTemario();
+    syncIaPorFase();
+  });
 
   btnIa?.addEventListener('click', async () => {
     const gid = selGrupo?.value;
-    const tema = document.getElementById('plan-tema')?.value?.trim();
     const idFase = selFase?.value;
+    const instrucciones = document.getElementById('plan-instrucciones')?.value?.trim() || '';
     const out = document.getElementById('plan-contenido');
-    if (!gid || !tema || !idFase) {
-      alert('Seleccione grupo, fase y escriba el tema.');
+    if (!gid || !idFase) {
+      alert('Seleccione grupo y fase. El temario se toma automáticamente.');
       return;
     }
     btnIa.disabled = true;
@@ -277,7 +352,7 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
     const fd = new FormData();
     fd.append('id_grupo', gid);
     fd.append('id_fase', idFase);
-    fd.append('tema', tema);
+    fd.append('instrucciones_adicionales', instrucciones);
     fd.append('duracion', '50');
     try {
       const r = await fetch('php/gemini_sugerir_planeacion.php', {
@@ -294,19 +369,22 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
         throw new Error(errMsg);
       }
       out.value = d.sugerencia;
-      showMsg('Sugerencia generada. Revise y edite antes de guardar.', true);
+      if (tituloHidden && d.titulo_sugerido) tituloHidden.value = d.titulo_sugerido;
+      showMsg('Sugerencia generada con el temario de la fase. Revise y edite antes de guardar.', true);
     } catch (err) {
       showMsg('No se pudo generar sugerencia: ' + err.message, false);
     }
     btnIa.disabled = false;
     btnIa.innerHTML = iaBtnHtml;
-    if (selGrupo?.value && selFase?.value) {
-      setIaEnabled(true, 'Listo: escriba el <strong>tema</strong> y pulse Sugerir con IA. Revise y adapte antes de guardar.');
-    }
+    syncIaPorFase();
   });
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const f = faseSeleccionada();
+    if (tituloHidden && f && !tituloHidden.value) {
+      tituloHidden.value = f.titulo_sugerido || f.temas || ((f.clave_fase || '') + ' ' + (f.nombre_fase || '')).trim();
+    }
     showMsg('Guardando…', true);
     try {
       const fd = new FormData(form);
@@ -319,7 +397,8 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
       if (d.status !== 'ok') throw new Error(d.message || 'Error al guardar');
       showMsg('Planeación guardada.', true);
       document.getElementById('plan-contenido').value = '';
-      document.getElementById('plan-tema').value = '';
+      const inst = document.getElementById('plan-instrucciones');
+      if (inst) inst.value = '';
       <?php if ($esProfesor): ?>if (typeof cargarMisPlaneaciones === 'function') cargarMisPlaneaciones();<?php endif; ?>
     } catch (err) {
       showMsg(err.message || 'Error al guardar', false);
@@ -330,10 +409,7 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
   const apiPlan = 'php/planeacion_revision_api.php';
   const modalProf = document.getElementById('modal-plan-prof');
   let planProfActual = null;
-
-  function escHtml(s) {
-    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  let editFasesCache = [];
 
   function renderHilo(obs) {
     const box = document.getElementById('modal-plan-prof-hilo');
@@ -352,6 +428,19 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
     });
     html += '</div>';
     box.innerHTML = html;
+  }
+
+  function syncEditTituloDesdeFase() {
+    const sel = document.getElementById('edit-plan-fase');
+    const tit = document.getElementById('edit-plan-titulo');
+    if (!sel || !tit) return;
+    const id = parseInt(sel.value || '0', 10);
+    const f = editFasesCache.find((x) => Number(x.id_fase) === id);
+    if (f && f.titulo_sugerido) {
+      tit.value = f.titulo_sugerido;
+    } else if (f) {
+      tit.value = f.temas || ((f.clave_fase || '') + ' — ' + (f.nombre_fase || '')).trim();
+    }
   }
 
   async function abrirPlaneacionProf(id, editar) {
@@ -376,10 +465,19 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
       document.getElementById('edit-plan-contenido').value = planProfActual.contenido || '';
       document.getElementById('edit-plan-nota').value = '';
       const sel = document.getElementById('edit-plan-fase');
-      sel.innerHTML = (d.fases || []).map((f) =>
+      editFasesCache = d.fases || [];
+      // Enriquecer fases con temario si hace falta
+      try {
+        const fr = await fetch('php/planeacion_fases_api.php?id_grupo=' + encodeURIComponent(planProfActual.id_grupo));
+        const fd = await fr.json();
+        if (fd.status === 'ok' && fd.fases) editFasesCache = fd.fases;
+      } catch (_e) { /* keep detalle fases */ }
+      sel.innerHTML = editFasesCache.map((f) =>
         '<option value="' + f.id_fase + '"' + (String(f.id_fase) === String(planProfActual.id_fase) ? ' selected' : '') + '>' +
         escHtml(f.clave_fase || f.nombre_fase) + '</option>'
       ).join('');
+      sel.onchange = syncEditTituloDesdeFase;
+      syncEditTituloDesdeFase();
     } else {
       edicion.style.display = 'none';
       lectura.style.display = 'block';
@@ -399,7 +497,7 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
         return;
       }
       const est = d.estados || {};
-      let html = '<table class="catalog-table"><thead><tr><th>Fecha</th><th>Grupo</th><th>Fase</th><th>Tema</th><th>Estado</th><th>Obs.</th><th></th></tr></thead><tbody>';
+      let html = '<table class="catalog-table"><thead><tr><th>Fecha</th><th>Grupo</th><th>Fase</th><th>Temario</th><th>Estado</th><th>Obs.</th><th></th></tr></thead><tbody>';
       d.items.forEach((p) => {
         html += '<tr><td>' + escHtml(p.fecha) + '</td><td>' + escHtml(p.grupo_clave) + '</td>' +
           '<td>' + escHtml(p.clave_fase) + '</td><td>' + escHtml(p.titulo) + '</td>' +
@@ -423,6 +521,7 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
 
   document.getElementById('btn-plan-reenviar')?.addEventListener('click', async () => {
     if (!planProfActual) return;
+    syncEditTituloDesdeFase();
     const fd = new FormData();
     fd.append('action', 'reenviar');
     fd.append('id_planeacion', planProfActual.id_planeacion);
