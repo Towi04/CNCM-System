@@ -316,18 +316,26 @@ function cuenta_externa_provisionar_staff(
     }
 
     $msgs = [(string) ($google['message'] ?? '')];
+    $moodleOk = true;
+    $moodleError = null;
 
     if (function_exists('moodle_user_ensure_staff')) {
         $moodle = moodle_user_ensure_staff($pdo, $idUsuario);
         if (empty($moodle['ok'])) {
-            return ['ok' => false, 'message' => (string) ($moodle['message'] ?? 'Error en Moodle')];
+            // No bloquear el alta en HAY: Moodle puede fallar por política/duplicado.
+            $moodleOk = false;
+            $moodleError = $moodle;
+            $msgs[] = 'Moodle pendiente: ' . (string) ($moodle['message'] ?? 'No se pudo crear usuario');
+        } else {
+            $msgs[] = (string) ($moodle['message'] ?? 'Moodle OK');
         }
-        $msgs[] = (string) ($moodle['message'] ?? 'Moodle OK');
     }
 
     return [
         'ok' => true,
         'message' => implode(' · ', array_filter($msgs)),
         'email' => $email,
+        'moodle_ok' => $moodleOk,
+        'moodle_error' => $moodleError,
     ];
 }

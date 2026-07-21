@@ -175,6 +175,8 @@ try {
         }
 
         $ext = cuenta_externa_provisionar_staff($pdo, $idNuevo, $yaTieneGoogle, $email);
+        // Solo Google bloquea el alta (sin correo institucional no hay acceso).
+        // Moodle puede quedar pendiente sin borrar el usuario HAY.
         if (empty($ext['ok'])) {
             $pdo->prepare('DELETE FROM usuarios WHERE id_usuario = ?')->execute([$idNuevo]);
             echo json_encode([
@@ -189,11 +191,17 @@ try {
     if ($idNuevo > 0 && !empty($ext['message'])) {
         $msgExtra = ' · ' . $ext['message'];
     }
+    $avisoMoodle = '';
+    if ($idNuevo > 0 && isset($ext['moodle_ok']) && empty($ext['moodle_ok'])) {
+        $avisoMoodle = ' El usuario quedó registrado en HAY; sincronice Moodle después si hace falta.';
+    }
 
     echo json_encode([
         'status' => 'success',
         'message' => 'Usuario registrado. Correo: ' . $email . ' · Contraseña inicial: ' . $pass . $msgExtra
-            . ' · Número de control (huella): ' . ($idNuevo > 0 ? $idNuevo : '—'),
+            . ' · Número de control (huella): ' . ($idNuevo > 0 ? $idNuevo : '—')
+            . $avisoMoodle,
+        'moodle_ok' => $ext['moodle_ok'] ?? true,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     error_log('process_registro: ' . $e->getMessage());
