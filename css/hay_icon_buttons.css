@@ -56,6 +56,55 @@
     color: #78909c;
 }
 
+/* Tooltip visible al pasar el mouse / foco (útil en botones solo-ícono) */
+.fase-acciones .btn-icon-only,
+.catalog-actions--icons .btn-icon-only {
+    position: relative;
+    overflow: visible;
+}
+
+.fase-acciones .btn-icon-only[data-tip]::after,
+.catalog-actions--icons .btn-icon-only[data-tip]::after,
+.fase-acciones .btn-icon-only[title]:not([data-tip])::after,
+.catalog-actions--icons .btn-icon-only[title]:not([data-tip])::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #263238;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.25;
+    padding: 6px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    max-width: 220px;
+    white-space: normal;
+    width: max-content;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+    z-index: 40;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.fase-acciones .btn-icon-only[title]:not([data-tip])::after,
+.catalog-actions--icons .btn-icon-only[title]:not([data-tip])::after {
+    content: attr(title);
+}
+
+.fase-acciones .btn-icon-only:hover::after,
+.fase-acciones .btn-icon-only:focus-visible::after,
+.catalog-actions--icons .btn-icon-only:hover::after,
+.catalog-actions--icons .btn-icon-only:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
 .catalog-actions--icons,
 .fase-acciones {
     display: inline-flex;
