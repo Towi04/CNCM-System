@@ -992,7 +992,7 @@ try {
     seed_g_log('Aviso bootstrap: ' . $e->getMessage());
 }
 
-foreach (['aula_ensure_schema', 'rol_aula_ensure_schema', 'preregistro_ensure_schema', 'asesor_ensure_schema', 'reporte_semanal_ensure_schema'] as $fn) {
+foreach (['aula_ensure_schema', 'rol_aula_ensure_schema', 'preregistro_ensure_schema', 'asesor_ensure_schema', 'reporte_semanal_ensure_schema', 'alumno_ensure_schema', 'pago_ensure_schema', 'academico_ensure_schema', 'asistencia_ensure_schema'] as $fn) {
     if (function_exists($fn)) {
         try {
             $fn($pdo);

@@ -3,6 +3,32 @@ require_once __DIR__ . '/../config.php';
 $id = (int) ($_GET['id'] ?? 0);
 $idPlantel = plantel_scope_id($pdo);
 
+try {
+    if (function_exists('alumno_ensure_schema')) {
+        alumno_ensure_schema($pdo);
+    }
+    if (function_exists('pago_migrate_alumno_pagos_columns')) {
+        pago_migrate_alumno_pagos_columns($pdo);
+    }
+    if (function_exists('pago_migrate_pago_auditoria')) {
+        pago_migrate_pago_auditoria($pdo);
+    }
+    if (function_exists('pago_migrate_alumno_inscripcion_global')) {
+        pago_migrate_alumno_inscripcion_global($pdo);
+    }
+    if (function_exists('academico_ensure_schema')) {
+        academico_ensure_schema($pdo);
+    }
+    if (function_exists('asistencia_ensure_schema')) {
+        asistencia_ensure_schema($pdo);
+    }
+    if (function_exists('usuario_suspension_ensure_schema')) {
+        usuario_suspension_ensure_schema($pdo);
+    }
+} catch (Throwable $e) {
+    error_log('alumno_detalle schema: ' . $e->getMessage());
+}
+
 if (alumno_portal_es_alumno()) {
     $idPropio = alumno_portal_id_sesion();
     if ($idPropio <= 0 || ($id > 0 && $id !== $idPropio)) {
@@ -14,52 +40,114 @@ if (alumno_portal_es_alumno()) {
     }
 }
 
-$a = alumno_obtener($pdo, $id, $idPlantel);
+try {
+    $a = alumno_obtener($pdo, $id, $idPlantel);
+} catch (Throwable $e) {
+    error_log('alumno_detalle obtener: ' . $e->getMessage());
+    echo '<div class="alert">Error al cargar el alumno. Intente de nuevo o contacte a soporte.</div>';
+    echo '<p style="color:#666;font-size:0.85rem;">' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>';
+    return;
+}
 
 if (!$a) {
     echo '<div class="alert">Alumno no encontrado.</div>';
     return;
 }
 
-$gruposHist = alumno_grupos_historial($pdo, $id);
+try {
+    $gruposHist = alumno_grupos_historial($pdo, $id);
+} catch (Throwable $e) {
+    $gruposHist = [];
+}
 $gruposActivos = array_filter($gruposHist, fn($g) => (int)$g['activo'] === 1);
-$pagos = function_exists('pago_supervisor_puede') && pago_supervisor_puede()
-    ? pago_listar_alumno_todos($pdo, $id)
-    : alumno_pagos_lista($pdo, $id, (int)($a['id_especialidad'] ?? 0) ?: null);
+try {
+    $pagos = function_exists('pago_supervisor_puede') && pago_supervisor_puede()
+        ? pago_listar_alumno_todos($pdo, $id)
+        : alumno_pagos_lista($pdo, $id, (int)($a['id_especialidad'] ?? 0) ?: null);
+} catch (Throwable $e) {
+    error_log('alumno_detalle pagos: ' . $e->getMessage());
+    $pagos = [];
+}
 $puedeEditarPagos = function_exists('pago_supervisor_puede') && pago_supervisor_puede();
-$calificaciones = alumno_calificaciones_fase($pdo, $id);
-$especialidadesAlumno = $pdo->prepare(
-    'SELECT DISTINCT e.id_especialidad, e.nombre FROM alumno_grupos ag
-     INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
-     INNER JOIN especialidades e ON e.id_especialidad = g.id_especialidad
-     WHERE ag.id_alumno = ? AND e.id_especialidad IS NOT NULL'
-);
-$especialidadesAlumno->execute([$id]);
-$espList = $especialidadesAlumno->fetchAll(PDO::FETCH_ASSOC);
-$inscripcionesColeg = pago_inscripciones_alumno($pdo, $id);
-$certSolicitudes = function_exists('certificacion_solicitudes_alumno')
-    ? certificacion_solicitudes_alumno($pdo, $id)
-    : [];
+try {
+    $calificaciones = alumno_calificaciones_fase($pdo, $id);
+} catch (Throwable $e) {
+    $calificaciones = [];
+}
+$espList = [];
+try {
+    $especialidadesAlumno = $pdo->prepare(
+        'SELECT DISTINCT e.id_especialidad, e.nombre FROM alumno_grupos ag
+         INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
+         INNER JOIN especialidades e ON e.id_especialidad = g.id_especialidad
+         WHERE ag.id_alumno = ? AND e.id_especialidad IS NOT NULL'
+    );
+    $especialidadesAlumno->execute([$id]);
+    $espList = $especialidadesAlumno->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $espList = [];
+}
+try {
+    $inscripcionesColeg = pago_inscripciones_alumno($pdo, $id);
+} catch (Throwable $e) {
+    $inscripcionesColeg = [];
+}
+$certSolicitudes = [];
+try {
+    $certSolicitudes = function_exists('certificacion_solicitudes_alumno')
+        ? certificacion_solicitudes_alumno($pdo, $id)
+        : [];
+} catch (Throwable $e) {
+    $certSolicitudes = [];
+}
 $pagosProductos = array_filter($pagos, static fn($p) => ($p['tipo'] ?? '') === 'producto');
 $certEstados = function_exists('certificacion_estados_etiquetas') ? certificacion_estados_etiquetas() : [];
-$kidsIds = combo_ids_kids($pdo);
+$kidsIds = ['ingles' => 0, 'computacion' => 0];
+try {
+    $kidsIds = combo_ids_kids($pdo);
+} catch (Throwable $e) {
+    // ignore
+}
 $gruposKidsIng = [];
 $gruposKidsComp = [];
 if ($kidsIds['ingles'] > 0) {
-    $st = $pdo->prepare('SELECT id_grupo, clave FROM grupos WHERE id_plantel = ? AND id_especialidad = ? ORDER BY clave');
-    $st->execute([$idPlantel, $kidsIds['ingles']]);
-    $gruposKidsIng = $st->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $st = $pdo->prepare('SELECT id_grupo, clave FROM grupos WHERE id_plantel = ? AND id_especialidad = ? ORDER BY clave');
+        $st->execute([$idPlantel, $kidsIds['ingles']]);
+        $gruposKidsIng = $st->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $gruposKidsIng = [];
+    }
 }
 if ($kidsIds['computacion'] > 0) {
-    $st = $pdo->prepare('SELECT id_grupo, clave FROM grupos WHERE id_plantel = ? AND id_especialidad = ? ORDER BY clave');
-    $st->execute([$idPlantel, $kidsIds['computacion']]);
-    $gruposKidsComp = $st->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $st = $pdo->prepare('SELECT id_grupo, clave FROM grupos WHERE id_plantel = ? AND id_especialidad = ? ORDER BY clave');
+        $st->execute([$idPlantel, $kidsIds['computacion']]);
+        $gruposKidsComp = $st->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $gruposKidsComp = [];
+    }
 }
-$todasEsp = $pdo->query('SELECT id_especialidad, clave, nombre FROM especialidades WHERE activo = 1 ORDER BY nombre')->fetchAll(PDO::FETCH_ASSOC);
-$gruposTodos = $pdo->prepare('SELECT g.id_grupo, g.clave, e.nombre AS esp FROM grupos g LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad WHERE g.id_plantel = ? ORDER BY g.clave');
-$gruposTodos->execute([$idPlantel]);
-$gruposTodosList = $gruposTodos->fetchAll(PDO::FETCH_ASSOC);
-$ubicacionesHist = function_exists('ubicacion_resumen_alumno') ? ubicacion_resumen_alumno($pdo, $id) : [];
+$todasEsp = [];
+try {
+    $todasEsp = $pdo->query('SELECT id_especialidad, clave, nombre FROM especialidades WHERE activo = 1 ORDER BY nombre')->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $todasEsp = [];
+}
+$gruposTodosList = [];
+try {
+    $gruposTodos = $pdo->prepare('SELECT g.id_grupo, g.clave, e.nombre AS esp FROM grupos g LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad WHERE g.id_plantel = ? ORDER BY g.clave');
+    $gruposTodos->execute([$idPlantel]);
+    $gruposTodosList = $gruposTodos->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $gruposTodosList = [];
+}
+$ubicacionesHist = [];
+try {
+    $ubicacionesHist = function_exists('ubicacion_resumen_alumno') ? ubicacion_resumen_alumno($pdo, $id) : [];
+} catch (Throwable $e) {
+    $ubicacionesHist = [];
+}
 $ubicacionActivaPorEsp = [];
 foreach ($ubicacionesHist as $ub) {
     if (in_array($ub['estado'], ['pendiente', 'autorizado'], true)) {
@@ -173,7 +261,7 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
       <button type="button" class="primary" style="margin-top:14px; width:100%;" onclick="cargarSeccion('alumno_estado_cuenta', 'id=<?php echo (int)$id; ?>')">
         Estado de cuenta / Adeudo
       </button>
-      <?php if (usuario_puede_gestionar_alumnos() && !empty($a['id_usuario'])): ?>
+      <?php if (function_exists('usuario_puede_gestionar_alumnos') && usuario_puede_gestionar_alumnos() && !empty($a['id_usuario'])): ?>
         <button type="button" class="secondary" style="margin-top:8px; width:100%;" id="btn-reset-pass-alumno">
           Restablecer contraseña portal (Cncm*<?php echo htmlspecialchars((string) $control); ?>)
         </button>
@@ -233,9 +321,14 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
     <div class="alumno-tabs__panel is-active" id="tab-documentos">
       <p style="color:#666;">Documentación del expediente (contratos, identificación, etc.).</p>
       <?php
-      $docs = $pdo->prepare('SELECT * FROM alumno_documentos WHERE id_alumno = ? ORDER BY creado_en DESC');
-      $docs->execute([$id]);
-      $docRows = $docs->fetchAll(PDO::FETCH_ASSOC);
+      $docRows = [];
+      try {
+          $docs = $pdo->prepare('SELECT * FROM alumno_documentos WHERE id_alumno = ? ORDER BY creado_en DESC');
+          $docs->execute([$id]);
+          $docRows = $docs->fetchAll(PDO::FETCH_ASSOC);
+      } catch (Throwable $e) {
+          $docRows = [];
+      }
       ?>
       <?php if (empty($docRows)): ?>
         <p>No hay documentos registrados.</p>
@@ -555,13 +648,18 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
     <div class="alumno-tabs__panel" id="tab-asistencias">
       <p>Resumen de asistencias del alumno.</p>
       <?php
-      $asi = $pdo->prepare(
-        'SELECT asi.fecha, asi.presente, g.clave FROM asistencias asi
-         INNER JOIN grupos g ON g.id_grupo = asi.id_grupo
-         WHERE asi.id_alumno = ? ORDER BY asi.fecha DESC LIMIT 40'
-      );
-      $asi->execute([$id]);
-      $asiRows = $asi->fetchAll(PDO::FETCH_ASSOC);
+      $asiRows = [];
+      try {
+          $asi = $pdo->prepare(
+            'SELECT asi.fecha, asi.presente, g.clave FROM asistencias asi
+             INNER JOIN grupos g ON g.id_grupo = asi.id_grupo
+             WHERE asi.id_alumno = ? ORDER BY asi.fecha DESC LIMIT 40'
+          );
+          $asi->execute([$id]);
+          $asiRows = $asi->fetchAll(PDO::FETCH_ASSOC);
+      } catch (Throwable $e) {
+          $asiRows = [];
+      }
       ?>
       <?php if (empty($asiRows)): ?>
         <p>Sin registros de asistencia.</p>
@@ -633,13 +731,18 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
 
     <div class="alumno-tabs__panel" id="tab-notas">
       <?php
-      $notas = $pdo->prepare(
-        'SELECT n.*, CONCAT(u.nombre, " ", u.apellido) AS autor FROM alumno_notas n
-         LEFT JOIN usuarios u ON u.id_usuario = n.id_usuario
-         WHERE n.id_alumno = ? ORDER BY n.creado_en DESC'
-      );
-      $notas->execute([$id]);
-      $notaRows = $notas->fetchAll(PDO::FETCH_ASSOC);
+      $notaRows = [];
+      try {
+          $notas = $pdo->prepare(
+            'SELECT n.*, CONCAT(u.nombre, " ", u.apellido) AS autor FROM alumno_notas n
+             LEFT JOIN usuarios u ON u.id_usuario = n.id_usuario
+             WHERE n.id_alumno = ? ORDER BY n.creado_en DESC'
+          );
+          $notas->execute([$id]);
+          $notaRows = $notas->fetchAll(PDO::FETCH_ASSOC);
+      } catch (Throwable $e) {
+          $notaRows = [];
+      }
       ?>
       <?php if (empty($notaRows)): ?>
         <p>Sin notas internas.</p>

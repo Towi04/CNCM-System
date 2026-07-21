@@ -206,8 +206,10 @@ function pago_migrate_alumno_pagos_columns(PDO $pdo): void
     plantel_ensure_column($pdo, 'alumno_pagos', 'id_plantel', 'INT UNSIGNED NULL AFTER id_alumno', 'id_alumno');
     plantel_ensure_column($pdo, 'alumno_pagos', 'cuenta_contable', "CHAR(1) NULL COMMENT 'A=tarjeta/transfer/factura B=efectivo sin factura' AFTER forma_pago", 'forma_pago');
     plantel_ensure_column($pdo, 'alumno_pagos', 'cliente_nombre', "VARCHAR(160) NULL COMMENT 'Comprador si no es alumno' AFTER concepto", 'concepto');
+    plantel_ensure_column($pdo, 'alumno_pagos', 'cubrio', 'TEXT NULL', 'cliente_nombre');
     plantel_ensure_column($pdo, 'alumno_pagos', 'id_solicitud_cert', 'INT UNSIGNED NULL COMMENT \'Certificación cobrada en PV\'', 'id_producto');
     plantel_ensure_column($pdo, 'alumno_pagos', 'fecha_pago', 'DATE NULL AFTER creado_en', 'creado_en');
+    plantel_ensure_column($pdo, 'alumno_pagos', 'estado', "ENUM('activo','anulado') NOT NULL DEFAULT 'activo'", 'creado_en');
 
     $pdo->exec(
         'CREATE TABLE IF NOT EXISTS corte_caja (
@@ -332,15 +334,43 @@ function pago_sync_inscripciones_desde_alumnos(PDO $pdo): void
 /** @return array<int, array<string, mixed>> */
 function pago_inscripciones_alumno(PDO $pdo, int $idAlumno): array
 {
-    $stmt = $pdo->prepare(
-        'SELECT ae.*, e.nombre AS especialidad_nombre, e.clave AS especialidad_clave
-         FROM alumno_especialidades ae
-         INNER JOIN especialidades e ON e.id_especialidad = ae.id_especialidad
-         WHERE ae.id_alumno = ? AND ae.activo = 1
-         ORDER BY ae.fecha_inscripcion ASC'
-    );
-    $stmt->execute([$idAlumno]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        if (function_exists('pago_ensure_schema')) {
+            // Crear tabla si falta sin bloquear
+            $pdo->exec(
+                'CREATE TABLE IF NOT EXISTS alumno_especialidades (
+                    id_alumno_especialidad INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    id_alumno INT UNSIGNED NOT NULL,
+                    id_especialidad INT UNSIGNED NOT NULL,
+                    forma_pago ENUM(\'mensual\',\'semanal\') NOT NULL DEFAULT \'mensual\',
+                    fecha_inscripcion DATE NOT NULL,
+                    costo_inscripcion DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    costo_mensualidad DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    costo_pronto_pago DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    costo_semanal DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    duracion_meses SMALLINT UNSIGNED NOT NULL DEFAULT 12,
+                    duracion_semanas SMALLINT UNSIGNED NULL,
+                    inscripcion_cubierta TINYINT(1) NOT NULL DEFAULT 0,
+                    activo TINYINT(1) NOT NULL DEFAULT 1,
+                    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id_alumno_especialidad),
+                    UNIQUE KEY uq_alumno_esp (id_alumno, id_especialidad)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+            );
+        }
+        $stmt = $pdo->prepare(
+            'SELECT ae.*, e.nombre AS especialidad_nombre, e.clave AS especialidad_clave
+             FROM alumno_especialidades ae
+             INNER JOIN especialidades e ON e.id_especialidad = ae.id_especialidad
+             WHERE ae.id_alumno = ? AND ae.activo = 1
+             ORDER BY ae.fecha_inscripcion ASC'
+        );
+        $stmt->execute([$idAlumno]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('pago_inscripciones_alumno: ' . $e->getMessage());
+        return [];
+    }
 }
 
 function pago_es_colegiatura(string $tipo): bool

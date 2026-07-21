@@ -457,6 +457,18 @@ function alumno_listar(PDO $pdo, int $idPlantel, array $filtros = []): array
 
 function alumno_obtener(PDO $pdo, int $idAlumno, int $idPlantel): ?array
 {
+    alumno_ensure_schema($pdo);
+    if (function_exists('pago_migrate_alumno_pagos_columns')) {
+        try {
+            pago_migrate_alumno_pagos_columns($pdo);
+            if (function_exists('pago_migrate_pago_auditoria')) {
+                pago_migrate_pago_auditoria($pdo);
+            }
+        } catch (Throwable $e) {
+            error_log('alumno_obtener migrate pagos: ' . $e->getMessage());
+        }
+    }
+
     $stmt = $pdo->prepare(
         "SELECT a.*, CONCAT(u.nombre, ' ', u.apellido) AS asesor_nombre, e.nombre AS especialidad_nombre,
                 e.duracion_meses, e.duracion_semanas
@@ -475,54 +487,111 @@ function alumno_obtener(PDO $pdo, int $idAlumno, int $idPlantel): ?array
         'duracion_meses' => $row['duracion_meses'],
         'duracion_semanas' => $row['duracion_semanas'],
     ]);
-    $pg = $pdo->prepare('SELECT COUNT(*) FROM alumno_pagos WHERE id_alumno = ?' . pago_sql_filtro_activos());
-    $pg->execute([$idAlumno]);
-    $row['pagos_hechos'] = (int) $pg->fetchColumn();
+    try {
+        $pg = $pdo->prepare('SELECT COUNT(*) FROM alumno_pagos WHERE id_alumno = ?' . pago_sql_filtro_activos());
+        $pg->execute([$idAlumno]);
+        $row['pagos_hechos'] = (int) $pg->fetchColumn();
+    } catch (PDOException $e) {
+        $pg = $pdo->prepare('SELECT COUNT(*) FROM alumno_pagos WHERE id_alumno = ?');
+        $pg->execute([$idAlumno]);
+        $row['pagos_hechos'] = (int) $pg->fetchColumn();
+    }
     return $row;
 }
 
 /** @return array<int, array<string, mixed>> */
 function alumno_grupos_historial(PDO $pdo, int $idAlumno): array
 {
-    $stmt = $pdo->prepare(
-        'SELECT ag.*, g.clave, g.fecha_inicio, e.nombre AS especialidad_nombre
-         FROM alumno_grupos ag
-         INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
-         LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad
-         WHERE ag.id_alumno = ?
-         ORDER BY ag.fecha_inicio DESC'
-    );
-    $stmt->execute([$idAlumno]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    alumno_ensure_schema($pdo);
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT ag.*, g.clave, g.fecha_inicio, e.nombre AS especialidad_nombre
+             FROM alumno_grupos ag
+             INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
+             LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad
+             WHERE ag.id_alumno = ?
+             ORDER BY ag.fecha_inicio DESC'
+        );
+        $stmt->execute([$idAlumno]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $stmt = $pdo->prepare(
+            'SELECT ag.*, g.clave, g.fecha_inicio, e.nombre AS especialidad_nombre
+             FROM alumno_grupos ag
+             INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
+             LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad
+             WHERE ag.id_alumno = ?
+             ORDER BY ag.id_alumno_grupo DESC'
+        );
+        $stmt->execute([$idAlumno]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 /** @return array<int, array<string, mixed>> */
 function alumno_pagos_lista(PDO $pdo, int $idAlumno, ?int $idEspecialidad = null): array
 {
-    $sql = 'SELECT ap.*,
-            CASE
-                WHEN TRIM(COALESCE(ap.cubrio, \'\')) <> \'\' THEN ap.cubrio
-                WHEN COALESCE(ap.tipo, \'\') = \'inscripcion\' THEN \'Inscripción\'
-                WHEN COALESCE(ap.tipo, \'\') = \'mensualidad\' THEN \'Colegiatura\'
-                WHEN COALESCE(ap.tipo, \'\') = \'abono\' THEN \'Abono\'
-                WHEN COALESCE(ap.tipo, \'\') = \'producto\' THEN \'Producto\'
+    if (function_exists('pago_migrate_alumno_pagos_columns')) {
+        try {
+            pago_migrate_alumno_pagos_columns($pdo);
+            if (function_exists('pago_migrate_pago_auditoria')) {
+                pago_migrate_pago_auditoria($pdo);
+            }
+        } catch (Throwable $e) {
+            // continue
+        }
+    }
+
+    $hasCubrio = function_exists('plantel_column_exists')
+        ? plantel_column_exists($pdo, 'alumno_pagos', 'cubrio')
+        : true;
+    $cubrioExpr = $hasCubrio
+        ? "CASE
+                WHEN TRIM(COALESCE(ap.cubrio, '')) <> '' THEN ap.cubrio
+                WHEN COALESCE(ap.tipo, '') = 'inscripcion' THEN 'Inscripción'
+                WHEN COALESCE(ap.tipo, '') = 'mensualidad' THEN 'Colegiatura'
+                WHEN COALESCE(ap.tipo, '') = 'abono' THEN 'Abono'
+                WHEN COALESCE(ap.tipo, '') = 'producto' THEN 'Producto'
                 ELSE ap.concepto
-            END AS cubrio_calc,
+            END"
+        : "CASE
+                WHEN COALESCE(ap.tipo, '') = 'inscripcion' THEN 'Inscripción'
+                WHEN COALESCE(ap.tipo, '') = 'mensualidad' THEN 'Colegiatura'
+                WHEN COALESCE(ap.tipo, '') = 'abono' THEN 'Abono'
+                WHEN COALESCE(ap.tipo, '') = 'producto' THEN 'Producto'
+                ELSE ap.concepto
+            END";
+
+    $sql = "SELECT ap.*,
+            {$cubrioExpr} AS cubrio_calc,
             e.nombre AS especialidad_nombre,
-            CONCAT(u.nombre, " ", u.apellido) AS recibio_nombre
+            CONCAT(u.nombre, ' ', u.apellido) AS recibio_nombre
             FROM alumno_pagos ap
             LEFT JOIN especialidades e ON e.id_especialidad = ap.id_especialidad
             LEFT JOIN usuarios u ON u.id_usuario = ap.id_usuario
-            WHERE ap.id_alumno = ?' . pago_sql_filtro_activos('ap');
+            WHERE ap.id_alumno = ?" . pago_sql_filtro_activos('ap');
     $params = [$idAlumno];
     if ($idEspecialidad > 0) {
         $sql .= ' AND ap.id_especialidad = ?';
         $params[] = $idEspecialidad;
     }
     $sql .= ' ORDER BY ap.creado_en DESC';
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $sqlFb = 'SELECT ap.*, e.nombre AS especialidad_nombre,
+                CONCAT(u.nombre, \' \', u.apellido) AS recibio_nombre
+                FROM alumno_pagos ap
+                LEFT JOIN especialidades e ON e.id_especialidad = ap.id_especialidad
+                LEFT JOIN usuarios u ON u.id_usuario = ap.id_usuario
+                WHERE ap.id_alumno = ?
+                ORDER BY ap.creado_en DESC';
+        $stmt = $pdo->prepare($sqlFb);
+        $stmt->execute([$idAlumno]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
     foreach ($rows as &$r) {
         if (array_key_exists('cubrio_calc', $r)) {
             $r['cubrio'] = $r['cubrio_calc'];
@@ -535,24 +604,57 @@ function alumno_pagos_lista(PDO $pdo, int $idAlumno, ?int $idEspecialidad = null
 
 function alumno_calificaciones_fase(PDO $pdo, int $idAlumno): array
 {
-    $stmt = $pdo->prepare(
-        'SELECT ef.id_fase, ef.nombre_fase, ef.id_especialidad, e.nombre AS especialidad_nombre,
-                ac.calificacion, ac.observaciones
-         FROM especialidad_fases ef
-         INNER JOIN especialidades e ON e.id_especialidad = ef.id_especialidad
-         LEFT JOIN alumno_calificaciones_fase ac ON ac.id_fase = ef.id_fase AND ac.id_alumno = ?
-         WHERE ef.activo = 1
-           AND ef.id_especialidad IN (
-               SELECT id_especialidad FROM alumno_especialidades WHERE id_alumno = ? AND activo = 1
-               UNION
-               SELECT DISTINCT g.id_especialidad FROM alumno_grupos ag
-               INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
-               WHERE ag.id_alumno = ? AND g.id_especialidad IS NOT NULL
-           )
-         ORDER BY e.nombre, ef.orden'
-    );
-    $stmt->execute([$idAlumno, $idAlumno, $idAlumno]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    alumno_ensure_schema($pdo);
+    if (function_exists('pago_ensure_schema')) {
+        try {
+            // Solo asegura tablas/columnas necesarias sin correr todo el bootstrap pesado
+            $pdo->exec(
+                'CREATE TABLE IF NOT EXISTS alumno_especialidades (
+                    id_alumno_especialidad INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    id_alumno INT UNSIGNED NOT NULL,
+                    id_especialidad INT UNSIGNED NOT NULL,
+                    forma_pago ENUM(\'mensual\',\'semanal\') NOT NULL DEFAULT \'mensual\',
+                    fecha_inscripcion DATE NOT NULL,
+                    costo_inscripcion DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    costo_mensualidad DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    costo_pronto_pago DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    costo_semanal DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    duracion_meses SMALLINT UNSIGNED NOT NULL DEFAULT 12,
+                    duracion_semanas SMALLINT UNSIGNED NULL,
+                    inscripcion_cubierta TINYINT(1) NOT NULL DEFAULT 0,
+                    activo TINYINT(1) NOT NULL DEFAULT 1,
+                    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id_alumno_especialidad),
+                    UNIQUE KEY uq_alumno_esp (id_alumno, id_especialidad)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+            );
+        } catch (Throwable $e) {
+            // ignore
+        }
+    }
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT ef.id_fase, ef.nombre_fase, ef.id_especialidad, e.nombre AS especialidad_nombre,
+                    ac.calificacion, ac.observaciones
+             FROM especialidad_fases ef
+             INNER JOIN especialidades e ON e.id_especialidad = ef.id_especialidad
+             LEFT JOIN alumno_calificaciones_fase ac ON ac.id_fase = ef.id_fase AND ac.id_alumno = ?
+             WHERE ef.activo = 1
+               AND ef.id_especialidad IN (
+                   SELECT id_especialidad FROM alumno_especialidades WHERE id_alumno = ? AND activo = 1
+                   UNION
+                   SELECT DISTINCT g.id_especialidad FROM alumno_grupos ag
+                   INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
+                   WHERE ag.id_alumno = ? AND g.id_especialidad IS NOT NULL
+               )
+             ORDER BY e.nombre, ef.orden'
+        );
+        $stmt->execute([$idAlumno, $idAlumno, $idAlumno]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('alumno_calificaciones_fase: ' . $e->getMessage());
+        return [];
+    }
 }
 
 function alumno_estado_label(string $estado): string

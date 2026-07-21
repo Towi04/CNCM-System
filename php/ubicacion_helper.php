@@ -516,20 +516,30 @@ function ubicacion_grupos_para_autorizar(PDO $pdo, int $idEspecialidad, ?int $id
 /** Resumen para ficha alumno. */
 function ubicacion_resumen_alumno(PDO $pdo, int $idAlumno): array
 {
-    $st = $pdo->prepare(
-        'SELECT u.*, e.nombre AS esp_nombre
-         FROM alumno_ubicacion u
-         INNER JOIN especialidades e ON e.id_especialidad = u.id_especialidad
-         WHERE u.id_alumno = ?
-         ORDER BY u.creado_en DESC LIMIT 10'
-    );
-    $st->execute([$idAlumno]);
-    $rows = $st->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($rows as &$r) {
-        $r['grupos_autorizados'] = ubicacion_grupos_autorizados_detalle($pdo, (int) $r['id_ubicacion']);
-    }
+    try {
+        if (function_exists('academico_ensure_schema')) {
+            academico_ensure_schema($pdo);
+        }
+        $st = $pdo->prepare(
+            'SELECT u.*, e.nombre AS esp_nombre
+             FROM alumno_ubicacion u
+             INNER JOIN especialidades e ON e.id_especialidad = u.id_especialidad
+             WHERE u.id_alumno = ?
+             ORDER BY u.creado_en DESC LIMIT 10'
+        );
+        $st->execute([$idAlumno]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$r) {
+            $r['grupos_autorizados'] = ubicacion_grupos_autorizados_detalle($pdo, (int) $r['id_ubicacion']);
+        }
+        unset($r);
 
-    return $rows;
+        return $rows;
+    } catch (Throwable $e) {
+        error_log('ubicacion_resumen_alumno: ' . $e->getMessage());
+
+        return [];
+    }
 }
 
 /** IDs de grupo permitidos para selects (null = sin restricción). */
