@@ -174,7 +174,7 @@ try {
             // columna ausente en instalaciones antiguas
         }
 
-        $ext = cuenta_externa_provisionar_staff($pdo, $idNuevo, $yaTieneGoogle, $email);
+        $ext = cuenta_externa_provisionar_staff($pdo, $idNuevo, $yaTieneGoogle, $email, $pass);
         // Solo Google bloquea el alta (sin correo institucional no hay acceso).
         // Moodle puede quedar pendiente sin borrar el usuario HAY.
         if (empty($ext['ok'])) {

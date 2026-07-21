@@ -289,7 +289,8 @@ function cuenta_externa_provisionar_staff(
     PDO $pdo,
     int $idUsuario,
     bool $yaTieneGoogle,
-    ?string $emailOverride = null
+    ?string $emailOverride = null,
+    ?string $passwordPlain = null
 ): array {
     $st = $pdo->prepare(
         'SELECT id_usuario, nombre, apellido, username, email FROM usuarios WHERE id_usuario = ? LIMIT 1'
@@ -318,9 +319,12 @@ function cuenta_externa_provisionar_staff(
     $msgs = [(string) ($google['message'] ?? '')];
     $moodleOk = true;
     $moodleError = null;
+    $pass = ($passwordPlain !== null && $passwordPlain !== '')
+        ? $passwordPlain
+        : cuenta_password_inicial();
 
     if (function_exists('moodle_user_ensure_staff')) {
-        $moodle = moodle_user_ensure_staff($pdo, $idUsuario);
+        $moodle = moodle_user_ensure_staff($pdo, $idUsuario, $pass);
         if (empty($moodle['ok'])) {
             // No bloquear el alta en HAY: Moodle puede fallar por política/duplicado.
             $moodleOk = false;
