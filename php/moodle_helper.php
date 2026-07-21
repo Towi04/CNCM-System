@@ -229,6 +229,35 @@ function moodle_username_candidates_for_payload(array $payload): array
     return $candidates;
 }
 
+/**
+ * Asegura una contraseña aceptable para la política típica de Moodle
+ * (mayúscula, minúscula, dígito y carácter especial; mínimo 8).
+ */
+function moodle_password_fortalecer(string $password): string
+{
+    $p = trim($password);
+    if ($p === '') {
+        $p = moodle_password_inicial();
+    }
+    if (strlen($p) < 8) {
+        $p .= 'Aa1*xxxx';
+    }
+    if (!preg_match('/[A-Z]/', $p)) {
+        $p .= 'A';
+    }
+    if (!preg_match('/[a-z]/', $p)) {
+        $p .= 'a';
+    }
+    if (!preg_match('/[0-9]/', $p)) {
+        $p .= '1';
+    }
+    if (!preg_match('/[^A-Za-z0-9]/', $p)) {
+        $p .= '*';
+    }
+
+    return $p;
+}
+
 /** Normaliza campos de texto para la API de Moodle. */
 function moodle_user_payload_normalize(array $payload): array
 {
@@ -236,14 +265,35 @@ function moodle_user_payload_normalize(array $payload): array
     $payload['firstname'] = mb_substr(trim((string) ($payload['firstname'] ?? 'Usuario')), 0, 100);
     $payload['lastname'] = mb_substr(trim((string) ($payload['lastname'] ?? 'Alumno')), 0, 100);
     $payload['email'] = strtolower(trim((string) ($payload['email'] ?? '')));
+    $payload['password'] = moodle_password_fortalecer((string) ($payload['password'] ?? ''));
+    // Moodle a veces rechaza saltos/control chars en nombres.
+    $payload['firstname'] = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $payload['firstname']) ?? $payload['firstname'];
+    $payload['lastname'] = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $payload['lastname']) ?? $payload['lastname'];
+    $payload['firstname'] = trim(preg_replace('/\s+/u', ' ', $payload['firstname']) ?? $payload['firstname']);
+    $payload['lastname'] = trim(preg_replace('/\s+/u', ' ', $payload['lastname']) ?? $payload['lastname']);
     if ($payload['firstname'] === '') {
         $payload['firstname'] = $payload['username'] !== '' ? $payload['username'] : 'Usuario';
     }
     if ($payload['lastname'] === '') {
-        $payload['lastname'] = 'Alumno';
+        $payload['lastname'] = 'Personal';
     }
 
     return $payload;
+}
+
+/** Hint cuando Moodle responde invalidparameter al crear usuario. */
+function moodle_hint_create_invalidparameter(array $payload): string
+{
+    $user = (string) ($payload['username'] ?? '');
+    $email = (string) ($payload['email'] ?? '');
+
+    return 'Moodle rechazó el alta (Invalid parameter). Causas frecuentes: '
+        . '1) el usuario o correo ya existe en Moodle pero la búsqueda no lo ve '
+        . '(revise permisos core_user_get_users_by_field / viewalldetails); '
+        . '2) política de contraseñas más estricta en Moodle; '
+        . '3) campos de perfil obligatorios personalizados. '
+        . 'Revise en Moodle el username «' . $user . '» y el correo «' . $email . '». '
+        . 'El usuario puede quedar creado en HAY y sincronizarse a Moodle después.';
 }
 
 function moodle_username_from_email(string $email, string $fallback = ''): string
@@ -328,57 +378,86 @@ function moodle_hint_error_bd(): string
 function moodle_user_create_api(array $payload, int $index = 0): array
 {
     $payload = moodle_user_payload_normalize($payload);
-    $pfx = 'users[' . $index . ']';
-    $base = [
-        $pfx . '[username]' => $payload['username'],
-        $pfx . '[password]' => $payload['password'],
-        $pfx . '[firstname]' => $payload['firstname'],
-        $pfx . '[lastname]' => $payload['lastname'],
-        $pfx . '[email]' => $payload['email'],
-        $pfx . '[auth]' => $payload['auth'] ?? 'manual',
-    ];
-    if (!empty($payload['idnumber'])) {
-        $base[$pfx . '[idnumber]'] = (string) $payload['idnumber'];
+    $usernames = moodle_username_candidates_for_payload($payload);
+    if ($usernames === []) {
+        $usernames = [$payload['username'] !== '' ? $payload['username'] : 'user' . substr(md5($payload['email'] ?: uniqid('m', true)), 0, 8)];
     }
 
-    $sinAuth = $base;
-    unset($sinAuth[$pfx . '[auth]']);
+    $passwords = array_values(array_unique(array_filter([
+        moodle_password_fortalecer((string) ($payload['password'] ?? '')),
+        moodle_password_fortalecer(moodle_password_inicial()),
+        'Cncm#Moodle2026!',
+    ])));
 
-    $soloCreatePassword = [
-        $pfx . '[username]' => $payload['username'],
-        $pfx . '[firstname]' => $payload['firstname'],
-        $pfx . '[lastname]' => $payload['lastname'],
-        $pfx . '[email]' => $payload['email'],
-        $pfx . '[createpassword]' => 1,
-    ];
-
-    $intentos = [
-        ['params' => $sinAuth, 'label' => 'sin_auth'],
-        ['params' => $base, 'label' => 'con_auth_manual'],
-        ['params' => $soloCreatePassword, 'label' => 'solo_createpassword'],
-        ['params' => array_merge($sinAuth, moodle_force_password_change_prefs($index)), 'label' => 'sin_auth_y_cambio_password'],
-    ];
-
+    $pfx = 'users[' . $index . ']';
     $ultimo = ['ok' => false, 'message' => 'No se pudo crear usuario en Moodle', 'intentos_log' => []];
-    foreach ($intentos as $intento) {
-        $create = moodle_api_call('core_user_create_users', $intento['params']);
-        $ultimo['intentos_log'][] = [
-            'label' => $intento['label'],
-            'ok' => !empty($create['ok']),
-            'message' => $create['message'] ?? null,
-            'raw' => $create['raw'] ?? null,
-        ];
-        if (!empty($create['ok'])) {
-            $create['intento'] = $intento['label'];
 
-            return $create;
+    foreach ($usernames as $uname) {
+        foreach ($passwords as $pass) {
+            $base = [
+                $pfx . '[username]' => $uname,
+                $pfx . '[password]' => $pass,
+                $pfx . '[firstname]' => $payload['firstname'],
+                $pfx . '[lastname]' => $payload['lastname'],
+                $pfx . '[email]' => $payload['email'],
+                $pfx . '[auth]' => $payload['auth'] ?? 'manual',
+            ];
+            if (!empty($payload['idnumber'])) {
+                $base[$pfx . '[idnumber]'] = (string) $payload['idnumber'];
+            }
+
+            $sinAuth = $base;
+            unset($sinAuth[$pfx . '[auth]']);
+
+            $soloCreatePassword = [
+                $pfx . '[username]' => $uname,
+                $pfx . '[firstname]' => $payload['firstname'],
+                $pfx . '[lastname]' => $payload['lastname'],
+                $pfx . '[email]' => $payload['email'],
+                $pfx . '[createpassword]' => 1,
+            ];
+
+            $intentos = [
+                ['params' => $sinAuth, 'label' => 'sin_auth:' . $uname],
+                ['params' => $base, 'label' => 'con_auth_manual:' . $uname],
+                ['params' => $soloCreatePassword, 'label' => 'solo_createpassword:' . $uname],
+                ['params' => array_merge($sinAuth, moodle_force_password_change_prefs($index)), 'label' => 'sin_auth_pref:' . $uname],
+            ];
+
+            foreach ($intentos as $intento) {
+                $create = moodle_api_call('core_user_create_users', $intento['params']);
+                $ultimo['intentos_log'][] = [
+                    'label' => $intento['label'],
+                    'ok' => !empty($create['ok']),
+                    'message' => $create['message'] ?? null,
+                    'raw' => $create['raw'] ?? null,
+                ];
+                if (!empty($create['ok'])) {
+                    $create['intento'] = $intento['label'];
+                    $create['username_usado'] = $uname;
+
+                    return $create;
+                }
+                $create['intento'] = $intento['label'];
+                $ultimo = array_merge($ultimo, $create);
+
+                // Si el email ya está en uso, no tiene sentido seguir con más passwords.
+                $msg = strtolower((string) ($create['message'] ?? ''));
+                if (str_contains($msg, 'email address already exists')
+                    || str_contains($msg, 'email already')
+                    || (str_contains($msg, 'correo') && str_contains($msg, 'existe'))) {
+                    break 3;
+                }
+            }
         }
-        $create['intento'] = $intento['label'];
-        $ultimo = array_merge($ultimo, $create);
     }
 
     if (moodle_es_error_bd($ultimo)) {
         $ultimo['message'] = (string) ($ultimo['message'] ?? 'Error en Moodle') . ' — ' . moodle_hint_error_bd();
+    } elseif (moodle_es_invalidparameter($ultimo)) {
+        $ultimo['message'] = (string) ($ultimo['message'] ?? 'Invalid parameter value detected')
+            . ' — ' . moodle_hint_create_invalidparameter($payload);
+        $ultimo['hint'] = moodle_hint_create_invalidparameter($payload);
     }
 
     return $ultimo;
@@ -1194,34 +1273,64 @@ function moodle_user_ensure_alumno(PDO $pdo, int $idAlumno, int $idPlantel): arr
     ]);
 }
 
-/** @return array{ok:bool,message:string} */
-function moodle_user_reset_password(string $username, string $password): array
+/**
+ * Actualiza la contraseña de un usuario Moodle por id (preferido) o username.
+ *
+ * @return array{ok:bool,message:string}
+ */
+function moodle_user_set_password(int $moodleUserId, string $password, string $usernameFallback = ''): array
 {
     if (!moodle_enabled()) {
         return ['ok' => false, 'message' => 'Moodle no configurado'];
     }
 
-    $find = moodle_api_call('core_user_get_users', [
-        'criteria[0][key]' => 'username',
-        'criteria[0][value]' => $username,
-    ]);
-    if (empty($find['ok'])) {
-        return ['ok' => false, 'message' => (string) ($find['message'] ?? 'No se pudo consultar usuario en Moodle')];
+    $password = moodle_password_fortalecer($password);
+    $idM = $moodleUserId;
+
+    if ($idM <= 0 && $usernameFallback !== '') {
+        $find = moodle_api_call('core_user_get_users', [
+            'criteria[0][key]' => 'username',
+            'criteria[0][value]' => moodle_sanitize_username($usernameFallback),
+        ]);
+        if (empty($find['ok'])) {
+            return ['ok' => false, 'message' => (string) ($find['message'] ?? 'No se pudo consultar usuario en Moodle')];
+        }
+        $users = (array) (($find['data']['users'] ?? []) ?: []);
+        $idM = (int) (($users[0]['id'] ?? 0) ?: 0);
     }
-    $users = (array) (($find['data']['users'] ?? []) ?: []);
-    if (empty($users) || empty($users[0]['id'])) {
+
+    if ($idM <= 0) {
         return ['ok' => false, 'message' => 'Usuario no existe en Moodle'];
     }
-    $idM = (int) $users[0]['id'];
 
     $upd = moodle_api_call('core_user_update_users', array_merge([
         'users[0][id]' => $idM,
         'users[0][password]' => $password,
     ], moodle_force_password_change_prefs(0)));
-    if (empty($upd['ok'])) {
-        return ['ok' => false, 'message' => (string) ($upd['message'] ?? 'No se pudo restablecer password en Moodle')];
+    if (!empty($upd['ok'])) {
+        return ['ok' => true, 'message' => 'Password Moodle actualizado', 'id_moodle' => $idM];
     }
-    return ['ok' => true, 'message' => 'Password Moodle actualizado'];
+
+    // Algunas instalaciones rechazan preferences; reintentar solo password.
+    $upd2 = moodle_api_call('core_user_update_users', [
+        'users[0][id]' => $idM,
+        'users[0][password]' => $password,
+    ]);
+    if (!empty($upd2['ok'])) {
+        return ['ok' => true, 'message' => 'Password Moodle actualizado', 'id_moodle' => $idM];
+    }
+
+    return [
+        'ok' => false,
+        'message' => (string) ($upd2['message'] ?? $upd['message'] ?? 'No se pudo restablecer password en Moodle'),
+        'id_moodle' => $idM,
+    ];
+}
+
+/** @return array{ok:bool,message:string} */
+function moodle_user_reset_password(string $username, string $password): array
+{
+    return moodle_user_set_password(0, $password, $username);
 }
 
 /** @return array{ok:bool,message:string} */
@@ -1484,25 +1593,65 @@ function moodle_user_payload_from_staff(array $u): array
         $email = 'staff' . (int) ($u['id_usuario'] ?? 0) . '@' . INSTITUTIONAL_EMAIL_DOMAIN;
     }
 
-    return [
+    return moodle_user_payload_normalize([
         'username' => moodle_username_from_email($email, 'staff' . (int) ($u['id_usuario'] ?? 0)),
         'password' => moodle_password_inicial(),
         'firstname' => trim((string) ($u['nombre'] ?? 'Staff')),
         'lastname' => trim((string) ($u['apellido'] ?? '')),
         'email' => $email,
         'auth' => 'manual',
+    ]);
+}
+
+/**
+ * Vincula un usuario Moodle existente al personal HAY y sincroniza contraseña.
+ *
+ * @return array{ok:bool,message:string,id_moodle:int,password_updated?:bool}
+ */
+function moodle_user_link_staff_existing(
+    PDO $pdo,
+    int $idUsuario,
+    int $idMoodle,
+    string $password,
+    string $usernameFallback = '',
+    string $baseMessage = 'Usuario Moodle existente'
+): array {
+    if ($idMoodle > 0) {
+        $pdo->prepare('UPDATE usuarios SET moodle_user_id = ? WHERE id_usuario = ?')
+            ->execute([$idMoodle, $idUsuario]);
+    }
+
+    $pwdRes = moodle_user_set_password($idMoodle, $password, $usernameFallback);
+    $msg = $baseMessage;
+    if (!empty($pwdRes['ok'])) {
+        $msg .= '; contraseña actualizada en Moodle';
+    } else {
+        $msg .= '; no se pudo actualizar la contraseña'
+            . (!empty($pwdRes['message']) ? ' (' . $pwdRes['message'] . ')' : '');
+    }
+
+    return [
+        'ok' => true,
+        'message' => $msg,
+        'id_moodle' => $idMoodle,
+        'password_updated' => !empty($pwdRes['ok']),
+        'password_error' => empty($pwdRes['ok']) ? ($pwdRes['message'] ?? null) : null,
     ];
 }
 
 /** @return array{ok:bool,message:string,id_moodle?:int} */
-function moodle_user_ensure_staff(PDO $pdo, int $idUsuario): array
+function moodle_user_ensure_staff(PDO $pdo, int $idUsuario, ?string $passwordPlain = null): array
 {
     if (!moodle_enabled()) {
         return ['ok' => true, 'message' => 'Moodle no configurado (omitido)'];
     }
 
+    if (function_exists('cuenta_digital_ensure_schema')) {
+        cuenta_digital_ensure_schema($pdo);
+    }
+
     $st = $pdo->prepare(
-        'SELECT id_usuario, nombre, apellido, email FROM usuarios WHERE id_usuario = ? LIMIT 1'
+        'SELECT id_usuario, nombre, apellido, email, username, moodle_user_id FROM usuarios WHERE id_usuario = ? LIMIT 1'
     );
     $st->execute([$idUsuario]);
     $u = $st->fetch(PDO::FETCH_ASSOC);
@@ -1510,30 +1659,87 @@ function moodle_user_ensure_staff(PDO $pdo, int $idUsuario): array
         return ['ok' => false, 'message' => 'Usuario no encontrado'];
     }
 
+    $pass = moodle_password_fortalecer(
+        ($passwordPlain !== null && $passwordPlain !== '')
+            ? $passwordPlain
+            : moodle_password_inicial()
+    );
+
+    $idStored = (int) ($u['moodle_user_id'] ?? 0);
+    if ($idStored > 0) {
+        // Ya vinculado: si nos pasan contraseña (alta/reprovision), la sincronizamos.
+        if ($passwordPlain !== null && $passwordPlain !== '') {
+            return moodle_user_link_staff_existing(
+                $pdo,
+                $idUsuario,
+                $idStored,
+                $pass,
+                moodle_sanitize_username((string) ($u['username'] ?? '')),
+                'Usuario Moodle ya vinculado'
+            );
+        }
+
+        return ['ok' => true, 'message' => 'Usuario Moodle desde registro HAY', 'id_moodle' => $idStored];
+    }
+
     $payload = moodle_user_payload_from_staff($u);
-    $users = moodle_user_find_by_username_or_email($payload['username'], $payload['email']);
+    $payload['password'] = $pass;
+
+    $findDiag = moodle_user_find_for_payload($payload);
+    $users = (array) ($findDiag['users'] ?? []);
+    if ($users === []) {
+        $users = moodle_user_find_by_username_or_email($payload['username'], $payload['email']);
+    }
     if (!empty($users)) {
         $idM = (int) ($users[0]['id'] ?? 0);
         if ($idM > 0) {
-            cuenta_digital_ensure_schema($pdo);
-            $pdo->prepare('UPDATE usuarios SET moodle_user_id = ? WHERE id_usuario = ?')->execute([$idM, $idUsuario]);
-
-            return ['ok' => true, 'message' => 'Usuario Moodle existente', 'id_moodle' => $idM];
+            return moodle_user_link_staff_existing(
+                $pdo,
+                $idUsuario,
+                $idM,
+                $pass,
+                (string) ($payload['username'] ?? ''),
+                'Usuario Moodle existente (mismo correo/usuario)'
+            );
         }
     }
 
     $create = moodle_user_create_api($payload, 0);
     if (empty($create['ok'])) {
+        // Reintento de búsqueda: a menudo invalidparameter = ya existía.
+        $findRetry = moodle_user_find_for_payload($payload);
+        $idRetry = (int) ($findRetry['id_moodle'] ?? 0);
+        if ($idRetry <= 0) {
+            $retryUsers = moodle_user_find_by_username_or_email($payload['username'], $payload['email']);
+            $idRetry = (int) (($retryUsers[0]['id'] ?? 0) ?: 0);
+        }
+        if ($idRetry > 0) {
+            return moodle_user_link_staff_existing(
+                $pdo,
+                $idUsuario,
+                $idRetry,
+                $pass,
+                (string) ($payload['username'] ?? ''),
+                'Usuario Moodle ya existía; se vinculó'
+            );
+        }
+
+        $msg = (string) ($create['message'] ?? 'No se pudo crear usuario en Moodle');
+        if (empty($create['hint']) && moodle_es_invalidparameter($create)) {
+            $msg .= ' — ' . moodle_hint_create_invalidparameter($payload);
+        }
+
         return [
             'ok' => false,
-            'message' => (string) ($create['message'] ?? 'No se pudo crear usuario en Moodle'),
+            'message' => $msg,
             'moodle_raw' => $create['raw'] ?? null,
+            'hint' => $create['hint'] ?? null,
+            'intentos_log' => $create['intentos_log'] ?? null,
         ];
     }
     $created = (array) ($create['data'] ?? []);
     $idM = (int) (($created[0]['id'] ?? 0) ?: 0);
     if ($idM > 0) {
-        cuenta_digital_ensure_schema($pdo);
         $pdo->prepare('UPDATE usuarios SET moodle_user_id = ? WHERE id_usuario = ?')->execute([$idM, $idUsuario]);
     }
 
