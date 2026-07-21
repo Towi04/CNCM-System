@@ -112,7 +112,7 @@
       row += '<td class="cron-col-fija cron-col-fija-3 ' + alumnosClass(g.total_alumnos) + '">' + g.total_alumnos + '</td>';
       row += '<td class="cron-col-fija cron-col-fija-4">' + esc(g.aula) + '</td>';
       row += '<td class="cron-col-fija cron-col-fija-5">' + esc(g.dia) + '</td>';
-      row += '<td class="cron-col-fija cron-col-fija-6 cron-col-fija-7">' + esc(g.profesor_nombre) + '</td>';
+      row += '<td class="cron-col-fija cron-col-fija-6" title="' + esc(g.profesor_nombre) + '">' + esc(g.profesor_nombre) + '</td>';
 
       semanas.forEach((s) => {
         const c = (g.celdas && g.celdas[s.key]) || {};

@@ -18,13 +18,15 @@
   border: 1px solid #ccc;
   border-radius: 8px;
   background: #fff;
+  /* Evita que celdas sticky “fuguen” el stacking del scroll */
   isolation: isolate;
 }
 
 .cron-planilla { min-width: max-content; }
 
 .cron-table {
-  border-collapse: collapse;
+  border-collapse: separate; /* separate + sticky evita solapes raros con collapse */
+  border-spacing: 0;
   font-size: 0.72rem;
   width: max-content;
 }
@@ -32,9 +34,19 @@
 .cron-table th,
 .cron-table td {
   border: 1px solid #bbb;
+  border-top-width: 0;
+  border-left-width: 0;
   padding: 3px 5px;
   vertical-align: middle;
   white-space: nowrap;
+  background-clip: padding-box;
+}
+
+.cron-table thead tr:first-child th {
+  border-top-width: 1px;
+}
+.cron-table tr > *:first-child {
+  border-left-width: 1px;
 }
 
 .cron-table thead th {
@@ -50,7 +62,7 @@
 }
 
 .cron-table thead tr:nth-child(2) th {
-  top: 22px;
+  top: 24px;
   background: #e0e0e0;
   color: #222;
   font-size: 0.7rem;
@@ -70,46 +82,93 @@
   font-weight: 800;
 }
 
+/*
+ * Columnas fijas a la izquierda.
+ * Anchos fijos + left acumulado deben coincidir para que no quede hueco
+ * por donde pasen las fases al hacer scroll horizontal.
+ *  Horario 56 | Grupo 68 | Alumnos 48 | Aula 52 | Día 44 | Profesor 132  = 400
+ */
 .cron-col-fija {
   position: sticky;
   left: 0;
-  z-index: 4;
+  z-index: 5;
   background-color: #fff;
   background-clip: padding-box;
-  min-width: 52px;
+  width: 56px;
+  min-width: 56px;
+  max-width: 56px;
+  box-sizing: border-box;
 }
-.cron-col-fija-2 { left: 52px; }
-.cron-col-fija-3 { left: 112px; }
-.cron-col-fija-4 { left: 152px; }
-.cron-col-fija-5 { left: 212px; }
-.cron-col-fija-6 { left: 252px; }
-.cron-col-fija-7 { left: 372px; min-width: 140px; }
+
+.cron-col-fija-2 {
+  left: 56px;
+  width: 68px;
+  min-width: 68px;
+  max-width: 68px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cron-col-fija-3 {
+  left: 124px;
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  text-align: center;
+}
+
+.cron-col-fija-4 {
+  left: 172px;
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cron-col-fija-5 {
+  left: 224px;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  text-align: center;
+}
+
+/* Última columna fija: Profesor (antes tenía left:372 por error con -7) */
+.cron-col-fija-6 {
+  left: 268px;
+  width: 132px;
+  min-width: 132px;
+  max-width: 132px;
+  text-align: left !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 6px 0 8px -4px rgba(0, 0, 0, 0.22);
+}
 
 .cron-table thead th.cron-col-fija {
-  z-index: 10;
+  z-index: 12;
   background-color: #c62828 !important;
   color: #fff;
 }
 .cron-table thead tr:nth-child(2) th.cron-col-fija {
-  z-index: 9;
+  z-index: 11;
   background-color: #e0e0e0 !important;
   color: #222;
 }
 
 .cron-table tbody td.cron-col-fija {
-  z-index: 4;
+  z-index: 5;
   background-color: #fff;
-}
-
-.cron-table tbody td.cron-col-fija-7,
-.cron-table tbody td.cron-col-fija.cron-col-fija-7 {
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.12);
 }
 
 .cron-esp-bar-fija {
   position: sticky;
   left: 0;
-  z-index: 6;
+  z-index: 7;
   background: #11458B !important;
   color: #fff !important;
   font-weight: 700;
@@ -118,10 +177,14 @@
   letter-spacing: 0.5px;
   padding: 5px 8px !important;
   border-color: #0d3570 !important;
-  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 6px 0 8px -4px rgba(0, 0, 0, 0.22);
+  /* Cubre el ancho de las 6 columnas fijas */
+  min-width: 400px;
 }
 
 .cron-esp-bar-fill {
+  position: relative;
+  z-index: 1;
   background: #11458B !important;
   padding: 5px 8px !important;
   border-color: #0d3570 !important;
@@ -145,8 +208,7 @@
   text-align: center;
   vertical-align: middle;
   writing-mode: horizontal-tb;
-  min-width: 52px;
-  z-index: 5;
+  z-index: 6;
 }
 
 .cron-alumnos-bajo { background-color: #ffcdd2 !important; font-weight: 700; }
@@ -154,9 +216,12 @@
 .cron-alumnos-ok { background-color: #fff; }
 
 .cron-fin-curso td { opacity: 0.55; }
-.cron-fin-curso .cron-col-fija { background-color: #f5f5f5 !important; }
+.cron-fin-curso .cron-col-fija { background-color: #f5f5f5 !important; opacity: 1; }
 
+/* Celdas de fase: debajo de las columnas fijas al hacer scroll */
 .cron-celda-fase {
+  position: relative;
+  z-index: 1;
   min-width: 72px;
   max-width: 110px;
   white-space: normal;
@@ -164,6 +229,7 @@
   line-height: 1.2;
   text-align: center;
   vertical-align: middle;
+  background-color: #fff;
 }
 
 .cron-celda-fase.actual {
@@ -173,6 +239,12 @@
 
 .cron-celda-fase.inicio-parcial {
   background: #e3f2fd;
+}
+
+.cron-table thead th.cron-th-mes,
+.cron-table thead th.cron-th-semana {
+  position: sticky;
+  z-index: 3;
 }
 
 .cron-grupo-card {
