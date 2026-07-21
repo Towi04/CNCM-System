@@ -12,11 +12,36 @@ $grupo = planeacion_grupo_detalle($pdo, $idGrupo);
 $fases = planeacion_fases_grupo($pdo, $idGrupo);
 $out = [];
 foreach ($fases as $f) {
+    $idFase = (int) ($f['id_fase'] ?? 0);
+    $detalle = function_exists('planeacion_prompt_fase_detalle')
+        ? (planeacion_prompt_fase_detalle($pdo, $idFase) ?: $f)
+        : $f;
+    $semanas = [];
+    if (function_exists('fase_temario_semanas')) {
+        foreach (fase_temario_semanas($pdo, $idFase) as $s) {
+            $tit = trim((string) ($s['titulo_leccion'] ?? ''));
+            if ($tit === '') {
+                continue;
+            }
+            $semanas[] = [
+                'semana' => (int) ($s['semana'] ?? 0),
+                'titulo_leccion' => $tit,
+            ];
+        }
+    }
     $out[] = [
-        'id_fase' => (int) $f['id_fase'],
-        'clave_fase' => $f['clave_fase'] ?? '',
-        'nombre_fase' => $f['nombre_fase'] ?? '',
-        'sugerida' => (int) ($f['id_fase'] ?? 0) === (int) ($grupo['id_fase_actual'] ?? 0),
+        'id_fase' => $idFase,
+        'clave_fase' => $detalle['clave_fase'] ?? ($f['clave_fase'] ?? ''),
+        'nombre_fase' => $detalle['nombre_fase'] ?? ($f['nombre_fase'] ?? ''),
+        'temas' => trim((string) ($detalle['temas'] ?? '')),
+        'objetivo_parcial' => trim((string) ($detalle['objetivo_parcial'] ?? '')),
+        'vocabulario_resumen' => trim((string) ($detalle['vocabulario_resumen'] ?? '')),
+        'gramatica_resumen' => trim((string) ($detalle['gramatica_resumen'] ?? '')),
+        'semanas' => $semanas,
+        'titulo_sugerido' => function_exists('planeacion_titulo_desde_fase')
+            ? planeacion_titulo_desde_fase($pdo, $detalle)
+            : trim((string) (($detalle['clave_fase'] ?? '') . ' ' . ($detalle['nombre_fase'] ?? ''))),
+        'sugerida' => $idFase === (int) ($grupo['id_fase_actual'] ?? 0),
     ];
 }
 

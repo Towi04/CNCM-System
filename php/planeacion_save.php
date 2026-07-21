@@ -17,6 +17,7 @@ $idFase = (int) ($_POST['id_fase'] ?? 0);
 $fecha = trim($_POST['fecha'] ?? '');
 $titulo = trim($_POST['titulo'] ?? '');
 $contenido = trim($_POST['contenido'] ?? '');
+$instrucciones = trim((string) ($_POST['instrucciones_adicionales'] ?? ''));
 $profesorId = (int) ($_SESSION['user_id'] ?? 0);
 
 $json = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'fetch';
@@ -31,8 +32,8 @@ function planeacion_save_respond(bool $ok, string $message, bool $json): void
     exit;
 }
 
-if ($gid <= 0 || $idFase <= 0 || $fecha === '' || $titulo === '' || $contenido === '') {
-    planeacion_save_respond(false, 'Complete grupo, fase, fecha, tema y planeación.', $json);
+if ($gid <= 0 || $idFase <= 0 || $fecha === '' || $contenido === '') {
+    planeacion_save_respond(false, 'Complete grupo, fase, fecha y planeación.', $json);
 }
 
 if (!planeacion_puede_grupo($pdo, $gid)) {
@@ -43,6 +44,28 @@ $fases = planeacion_fases_grupo($pdo, $gid);
 $idsFase = array_map(static fn ($f) => (int) $f['id_fase'], $fases);
 if (!in_array($idFase, $idsFase, true)) {
     planeacion_save_respond(false, 'La fase seleccionada no corresponde a la especialidad del grupo.', $json);
+}
+
+$faseDetalle = function_exists('planeacion_prompt_fase_detalle')
+    ? (planeacion_prompt_fase_detalle($pdo, $idFase) ?: [])
+    : [];
+if ($faseDetalle === []) {
+    foreach ($fases as $f) {
+        if ((int) ($f['id_fase'] ?? 0) === $idFase) {
+            $faseDetalle = $f;
+            break;
+        }
+    }
+}
+
+// El título se toma del temario de la fase; el profesor ya no lo escribe.
+if ($titulo === '' && function_exists('planeacion_titulo_desde_fase')) {
+    $titulo = planeacion_titulo_desde_fase($pdo, $faseDetalle);
+}
+if ($titulo === '') {
+    $clave = trim((string) ($faseDetalle['clave_fase'] ?? ''));
+    $nombre = trim((string) ($faseDetalle['nombre_fase'] ?? ''));
+    $titulo = trim($clave . ($clave !== '' && $nombre !== '' ? ' — ' : '') . $nombre) ?: 'Planeación de clase';
 }
 
 try {
@@ -57,10 +80,15 @@ try {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'enviada\')'
     );
     $stmt->execute([$gid, $profesorId ?: null, $idFase, $fecha, $anio, $semana, $titulo, $contenido]);
+    $idPlaneacion = (int) $pdo->lastInsertId();
     $idPlantel = plantel_scope_id($pdo);
     $notaInicial = trim((string) ($_POST['nota_profesor'] ?? ''));
+    if ($instrucciones !== '') {
+        $bloqueInstr = 'Instrucciones adicionales para la sesión: ' . $instrucciones;
+        $notaInicial = $notaInicial !== '' ? ($bloqueInstr . "\n\n" . $notaInicial) : $bloqueInstr;
+    }
     if ($notaInicial !== '') {
-        planeacion_observacion_agregar($pdo, (int) $pdo->lastInsertId(), $profesorId, 'profesor', $notaInicial);
+        planeacion_observacion_agregar($pdo, $idPlaneacion, $profesorId, 'profesor', $notaInicial);
     }
     planeacion_notificar_coordinacion_nueva($pdo, $idPlantel, $gid, $titulo, $fecha, $profesorId);
 

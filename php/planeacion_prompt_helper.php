@@ -25,7 +25,7 @@ function planeacion_prompt_puede_configurar(): bool
 function planeacion_prompt_placeholders(): array
 {
     return [
-        'Tema' => 'Tema de la sesión indicado por el profesor',
+        'Tema' => 'Temario de la fase (automático; no lo escribe el profesor)',
         'Nivel' => 'Nivel CEFR de la fase (ej. A1, B2)',
         'Fase' => 'Clave y nombre del parcial / fase',
         'Grupo' => 'Clave del grupo',
@@ -37,10 +37,82 @@ function planeacion_prompt_placeholders(): array
         'Profesor' => 'Nombre del profesor del grupo',
         'Objetivo parcial' => 'Objetivo del parcial según la fase',
         'Temas fase' => 'Temas programados de la fase',
+        'Temario semanal' => 'Lecciones semanales del temario de la fase',
         'Vocabulario fase' => 'Vocabulario de la fase',
         'Gramática fase' => 'Gramática de la fase',
         'Prácticas sugeridas' => 'Prácticas sugeridas de la fase',
+        'Instrucciones adicionales' => 'Indicaciones del profesor: actividades extra, refuerzo o contexto (p. ej. San Valentín, repaso previo a examen)',
     ];
+}
+
+/**
+ * Tema / título derivado del temario de la fase (no lo escribe el profesor).
+ */
+function planeacion_prompt_tema_desde_fase(PDO $pdo, array $fase): string
+{
+    $temas = trim((string) ($fase['temas'] ?? ''));
+    if ($temas !== '') {
+        return $temas;
+    }
+
+    $idFase = (int) ($fase['id_fase'] ?? 0);
+    if ($idFase > 0 && function_exists('fase_temario_semanas')) {
+        $lineas = [];
+        foreach (fase_temario_semanas($pdo, $idFase) as $s) {
+            $titulo = trim((string) ($s['titulo_leccion'] ?? ''));
+            if ($titulo === '') {
+                continue;
+            }
+            $sem = (int) ($s['semana'] ?? 0);
+            $lineas[] = ($sem > 0 ? 'Semana ' . $sem . ': ' : '') . $titulo;
+        }
+        if ($lineas !== []) {
+            return implode('; ', $lineas);
+        }
+    }
+
+    $clave = trim((string) ($fase['clave_fase'] ?? ''));
+    $nombre = trim((string) ($fase['nombre_fase'] ?? ''));
+    $label = trim(($clave !== '' ? $clave : '') . ($clave !== '' && $nombre !== '' ? ' — ' : '') . $nombre);
+
+    return $label !== '' ? $label : 'Planeación de clase';
+}
+
+/** Título corto para guardar en planeaciones.titulo (máx. 160). */
+function planeacion_titulo_desde_fase(PDO $pdo, array $fase): string
+{
+    $tema = planeacion_prompt_tema_desde_fase($pdo, $fase);
+    if (mb_strlen($tema) <= 160) {
+        return $tema;
+    }
+
+    return rtrim(mb_substr($tema, 0, 157)) . '...';
+}
+
+/** Texto del temario semanal para el prompt. */
+function planeacion_prompt_temario_semanal(PDO $pdo, array $fase): string
+{
+    $idFase = (int) ($fase['id_fase'] ?? 0);
+    if ($idFase <= 0 || !function_exists('fase_temario_semanas')) {
+        return '—';
+    }
+    $lineas = [];
+    foreach (fase_temario_semanas($pdo, $idFase) as $s) {
+        $titulo = trim((string) ($s['titulo_leccion'] ?? ''));
+        $objetivo = trim((string) ($s['objetivo'] ?? ''));
+        if ($titulo === '' && $objetivo === '') {
+            continue;
+        }
+        $sem = (int) ($s['semana'] ?? 0);
+        $linea = ($sem > 0 ? 'Semana ' . $sem . ': ' : '');
+        $linea .= $titulo !== '' ? $titulo : $objetivo;
+        if ($titulo !== '' && $objetivo !== '' && $objetivo !== $titulo) {
+            $linea .= ' — ' . $objetivo;
+        }
+        $lineas[] = $linea;
+    }
+
+    return $lineas !== [] ? implode("\n", $lineas) : '—';
 }
 
 function planeacion_prompt_plantilla_generica(): string
@@ -53,7 +125,7 @@ CONTEXTO DE LA SESIÓN
 - Grupo: <<Grupo>>
 - Especialidad: <<Especialidad>> (modalidad: <<Modalidad>>)
 - Parcial / fase: <<Fase>> (nivel: <<Nivel>>)
-- Tema de la sesión: <<Tema>>
+- Temario de la fase (contenido oficial a cubrir): <<Tema>>
 - Duración: <<Duración>> minutos
 - Alumnos activos: <<Cantidad de alumnos>>
 - Profesor: <<Profesor>>
@@ -63,9 +135,14 @@ OBJETIVO DEL PARCIAL
 
 CONTENIDO DE LA FASE
 - Temas: <<Temas fase>>
+- Temario semanal: <<Temario semanal>>
 - Vocabulario: <<Vocabulario fase>>
 - Gramática: <<Gramática fase>>
 - Prácticas sugeridas: <<Prácticas sugeridas>>
+
+INSTRUCCIONES ADICIONALES DEL PROFESOR
+<<Instrucciones adicionales>>
+Incorpore estas indicaciones (actividades extra, alusiones a fechas, refuerzo de temas previos, etc.) SIN sustituir el temario oficial de la fase. Si no hay instrucciones adicionales, céntrese solo en el temario.
 
 <<Intereses>>
 
@@ -92,7 +169,7 @@ CONTEXTO
 - Parcial / fase: <<Fase>>
 - Cantidad de alumnos: <<Cantidad de alumnos>>
 - Gustos de los alumnos: <<Intereses>>
-- Tema principal de la clase: <<Tema>>
+- Temario oficial de la fase (debe cubrirse): <<Tema>>
 - Duración: <<Duración>> minutos
 - Profesor: <<Profesor>>
 
@@ -103,6 +180,11 @@ CONTENIDO PROGRAMADO DE LA FASE
 - Vocabulario: <<Vocabulario fase>>
 - Gramática: <<Gramática fase>>
 - Temas: <<Temas fase>>
+- Temario semanal: <<Temario semanal>>
+
+INSTRUCCIONES ADICIONALES DEL PROFESOR
+<<Instrucciones adicionales>>
+Integre estas indicaciones (actividad alusiva, refuerzo de un tema anterior, preparación para examen, etc.) como complemento del temario, sin reemplazarlo. Si no hay instrucciones, use solo el temario de la fase.
 
 METODOLOGÍA Y SECUENCIA DE EXPLICACIÓN
 Debes estructurar la clase siguiendo el constructivismo y aplicar estrictamente el siguiente orden secuencial para las explicaciones de gramática o vocabulario:
@@ -223,7 +305,7 @@ function planeacion_prompt_aplicar(string $plantilla, array $vars): string
 function planeacion_prompt_vars_ejemplo(): array
 {
     return [
-        'Tema' => 'Present Perfect vs Past Simple',
+        'Tema' => 'Narración de experiencias; Present Perfect vs Past Simple',
         'Nivel' => 'B1',
         'Fase' => 'P3 — Tercer parcial',
         'Grupo' => 'ING-M-V-01',
@@ -235,9 +317,11 @@ function planeacion_prompt_vars_ejemplo(): array
         'Profesor' => 'María García',
         'Objetivo parcial' => 'Usar tiempos verbales para narrar experiencias pasadas y hechos recientes.',
         'Temas fase' => 'Narración de experiencias, marcadores temporales',
+        'Temario semanal' => "Semana 1: Experiencias recientes\nSemana 2: Present Perfect vs Past Simple",
         'Vocabulario fase' => 'already, yet, just, ever, never',
         'Gramática fase' => 'Present Perfect vs Past Simple',
         'Prácticas sugeridas' => 'Role-play, línea de tiempo personal, juego de preguntas',
+        'Instrucciones adicionales' => 'Incluir una actividad alusiva a San Valentín al cierre (5-8 min).',
     ];
 }
 
@@ -252,7 +336,8 @@ function planeacion_prompt_vars_contexto(
     array $fase,
     string $tema,
     string $duracion,
-    int $alumnosActivos
+    int $alumnosActivos,
+    string $instruccionesAdicionales = ''
 ): array {
     $modalidades = function_exists('catalog_modalidades_etiquetas')
         ? catalog_modalidades_etiquetas()
@@ -283,8 +368,18 @@ function planeacion_prompt_vars_contexto(
         $nivel = 'No especificado';
     }
 
+    $temaAuto = trim($tema);
+    if ($temaAuto === '') {
+        $temaAuto = planeacion_prompt_tema_desde_fase($pdo, $fase);
+    }
+
+    $instrucciones = trim($instruccionesAdicionales);
+    if ($instrucciones === '') {
+        $instrucciones = '(Ninguna. Cubrir únicamente el temario de la fase.)';
+    }
+
     return [
-        'Tema' => $tema,
+        'Tema' => $temaAuto,
         'Nivel' => $nivel,
         'Fase' => $faseTxt !== '' ? $faseTxt : '—',
         'Grupo' => trim((string) ($grupo['clave'] ?? '')),
@@ -296,9 +391,11 @@ function planeacion_prompt_vars_contexto(
         'Profesor' => trim((string) ($grupo['profesor_nombre'] ?? '')),
         'Objetivo parcial' => trim((string) ($fase['objetivo_parcial'] ?? '')) ?: '—',
         'Temas fase' => trim((string) ($fase['temas'] ?? '')) ?: '—',
+        'Temario semanal' => planeacion_prompt_temario_semanal($pdo, $fase),
         'Vocabulario fase' => trim((string) ($fase['vocabulario_resumen'] ?? '')) ?: '—',
         'Gramática fase' => trim((string) ($fase['gramatica_resumen'] ?? '')) ?: '—',
         'Prácticas sugeridas' => trim((string) ($fase['practicas_sugeridas'] ?? '')) ?: '—',
+        'Instrucciones adicionales' => $instrucciones,
     ];
 }
 
@@ -327,10 +424,27 @@ function planeacion_prompt_resolver(
     array $fase,
     string $tema,
     string $duracion,
-    int $alumnosActivos
+    int $alumnosActivos,
+    string $instruccionesAdicionales = ''
 ): string {
     $plantilla = planeacion_prompt_obtener($pdo, $idEspecialidad);
-    $vars = planeacion_prompt_vars_contexto($pdo, $grupo, $fase, $tema, $duracion, $alumnosActivos);
+    // Plantillas antiguas personalizadas pueden no tener el placeholder nuevo.
+    if (!preg_match('/<<\s*Instrucciones adicionales\s*>>/iu', $plantilla)) {
+        $plantilla .= "\n\nINSTRUCCIONES ADICIONALES DEL PROFESOR\n<<Instrucciones adicionales>>\n"
+            . "Incorpore estas indicaciones como complemento del temario oficial, sin sustituirlo.\n";
+    }
+    if (!preg_match('/<<\s*Temario semanal\s*>>/iu', $plantilla)) {
+        $plantilla .= "\nTEMARIO SEMANAL DE LA FASE\n<<Temario semanal>>\n";
+    }
+    $vars = planeacion_prompt_vars_contexto(
+        $pdo,
+        $grupo,
+        $fase,
+        $tema,
+        $duracion,
+        $alumnosActivos,
+        $instruccionesAdicionales
+    );
 
     return planeacion_prompt_aplicar($plantilla, $vars);
 }

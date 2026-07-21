@@ -24,7 +24,9 @@ $placeholders = planeacion_prompt_placeholders();
 
   <p style="color:#666; margin-top:0; max-width:920px;">
     Defina el prompt que la IA usará al generar planeaciones para cada especialidad.
-    Use etiquetas como <code>&lt;&lt;Tema&gt;&gt;</code> o <code>&lt;&lt;Intereses&gt;&gt;</code> para insertar datos del grupo,
+    Use etiquetas como <code>&lt;&lt;Tema&gt;&gt;</code> (temario de la fase),
+    <code>&lt;&lt;Instrucciones adicionales&gt;&gt;</code> o <code>&lt;&lt;Intereses&gt;&gt;</code>
+    para insertar datos del grupo,
     la fase y el perfil de los alumnos. Cada especialidad puede tener su propia metodología pedagógica.
   </p>
 
