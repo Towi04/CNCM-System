@@ -61,7 +61,7 @@ $gradPendientes = $puedeGraduacion ? count(graduacion_listar_alertas($pdo, $idPl
 ?>
 <link rel="stylesheet" href="css/resultados.css">
 <link rel="stylesheet" href="css/admin_catalogo.css">
-<link rel="stylesheet" href="css/hay_icon_buttons.css">
+<link rel="stylesheet" href="css/hay_icon_buttons.css?v=20260721">
 
 <div class="result-container">
   <div class="result-header">
