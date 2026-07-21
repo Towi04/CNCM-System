@@ -16,7 +16,7 @@ $profesores->execute([$idPlantel]);
 $listaProf = $profesores->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/admin_catalogo.css'), ENT_QUOTES, 'UTF-8'); ?>">
-<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/cronologia.css?v=20260612'), ENT_QUOTES, 'UTF-8'); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/cronologia.css?v=20260721'), ENT_QUOTES, 'UTF-8'); ?>">
 
 <div class="catalog-wrap cron-wrap">
   <div class="catalog-header">
@@ -91,4 +91,4 @@ window.HAY_CRONOLOGIA_CONFIG = <?php echo json_encode([
     'pdf' => hay_asset_url('php/cronologia_pdf.php'),
 ], JSON_UNESCAPED_UNICODE); ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/cronologia.js?v=20260612'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/cronologia.js?v=20260721'), ENT_QUOTES, 'UTF-8'); ?>"></script>
