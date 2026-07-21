@@ -30,8 +30,9 @@ $api = hay_asset_url('php/grupo_docente_api.php');
   </div>
 
   <p style="color:#666; max-width:720px;">
-    Asigne uno o varios profesores por materia. El selector incluye <strong>todos los docentes del plantel</strong>
-    (sin filtrar por área HAY). Marque quién es el titular para compatibilidad con reportes y nómina.
+    Aquí se asignan los <strong>profesores que imparten este grupo</strong> (titular y, si aplica, por materia).
+    No es un historial de suplencias: es la plantilla actual de docentes del grupo para reportes, nómina y planeación.
+    El selector incluye <strong>todos los docentes del plantel</strong> (sin filtrar por área HAY).
   </p>
 
   <form id="form-grupo-docentes" style="margin-top:16px;">
@@ -47,5 +48,5 @@ $api = hay_asset_url('php/grupo_docente_api.php');
 <script>
 window.HAY_GRUPO_DOCENTES = <?php echo json_encode(['api' => $api, 'id_grupo' => $idGrupo], JSON_UNESCAPED_UNICODE); ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/grupo_docentes.js?v=20260623'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/grupo_docentes.js?v=20260721'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <script>if (window.hayGrupoDocentesInit) window.hayGrupoDocentesInit();</script>

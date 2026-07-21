@@ -31,12 +31,10 @@ asistencia_ensure_schema($pdo);
 
 $stGrupo = $pdo->prepare(
     'SELECT g.*, e.nombre AS especialidad_nombre, e.clave AS especialidad_clave,
-            f.clave_fase, f.nombre_fase,
             CONCAT(u.nombre, " ", u.apellido) AS profesor_nombre,
             p.nombre AS plantel_nombre, p.razon_social, p.direccion AS plantel_direccion
      FROM grupos g
      LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad
-     LEFT JOIN especialidad_fases f ON f.id_fase = g.id_fase_actual
      LEFT JOIN usuarios u ON u.id_usuario = g.id_profesor
      LEFT JOIN planteles p ON p.id_plantel = g.id_plantel
      WHERE g.id_grupo = ? AND g.id_plantel = ?
@@ -53,7 +51,8 @@ if (!$grupo) {
 $dias = asistencia_lista_pdf_dias_grupo($pdo, $grupo);
 $semanas = asistencia_lista_pdf_semanas($semanaInicio, $totalSemanas);
 $alumnos = asistencia_lista_pdf_alumnos($pdo, $idGrupo);
-$html = asistencia_lista_pdf_html($grupo, $alumnos, $dias, $semanas, $incluirTelefonos);
+$logoDataUri = asistencia_lista_pdf_logo_data_uri($pdo, $idPlantel, $grupo);
+$html = asistencia_lista_pdf_html($grupo, $alumnos, $dias, $semanas, $incluirTelefonos, $logoDataUri);
 $filename = 'lista_asistencia_' . preg_replace('/[^A-Za-z0-9_-]+/', '_', (string) ($grupo['clave'] ?? $idGrupo)) . '.pdf';
 
 $autoload = dirname(__DIR__) . '/vendor/autoload.php';
@@ -62,9 +61,14 @@ if (is_file($autoload)) {
     if (class_exists('Dompdf\\Dompdf') && class_exists('Dompdf\\Options')) {
         $options = new Dompdf\Options();
         $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
         $options->set('defaultFont', 'DejaVu Sans');
+        if (defined('HAY_ROOT') && is_dir(HAY_ROOT)) {
+            $options->setChroot(HAY_ROOT);
+        }
         $dompdf = new Dompdf\Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');
+        // Siempre horizontal (carta apaisada)
         $dompdf->setPaper('letter', 'landscape');
         $dompdf->render();
         header('Content-Type: application/pdf');
@@ -171,17 +175,119 @@ function asistencia_lista_pdf_tel(array $alumno): string
     return $tel;
 }
 
-function asistencia_lista_pdf_html(array $grupo, array $alumnos, array $dias, array $semanas, bool $incluirTelefonos): string
+/** Logo del plantel embebido (data URI) para Dompdf / impresión. */
+function asistencia_lista_pdf_logo_data_uri(PDO $pdo, int $idPlantel, array $grupo = []): string
 {
+    $candidatos = [];
+    $logoRel = '';
+    try {
+        $st = $pdo->prepare('SELECT logo_url FROM planteles WHERE id_plantel = ? LIMIT 1');
+        $st->execute([$idPlantel > 0 ? $idPlantel : (int) ($grupo['id_plantel'] ?? 0)]);
+        $logoRel = trim((string) ($st->fetchColumn() ?: ''));
+    } catch (Throwable $e) {
+        $logoRel = '';
+    }
+    if ($logoRel !== '') {
+        $candidatos[] = $logoRel;
+    }
+    $candidatos = array_merge($candidatos, [
+        'src/logo.png',
+        'src/logo.jpg',
+        'uploads/logo.png',
+        'uploads/planteles/logo.png',
+        'default_avatar.png',
+    ]);
+
+    $root = defined('HAY_ROOT') ? HAY_ROOT : dirname(__DIR__);
+    foreach ($candidatos as $rel) {
+        $rel = ltrim(str_replace('\\', '/', (string) $rel), '/');
+        if ($rel === '' || str_contains($rel, '..')) {
+            continue;
+        }
+        if (preg_match('#^https?://#i', $rel)) {
+            $bin = @file_get_contents($rel);
+            if ($bin !== false && strlen($bin) > 40) {
+                $mime = 'image/png';
+                if (preg_match('/\.jpe?g($|\?)/i', $rel)) {
+                    $mime = 'image/jpeg';
+                } elseif (preg_match('/\.webp($|\?)/i', $rel)) {
+                    $mime = 'image/webp';
+                } elseif (preg_match('/\.gif($|\?)/i', $rel)) {
+                    $mime = 'image/gif';
+                }
+                return 'data:' . $mime . ';base64,' . base64_encode($bin);
+            }
+            continue;
+        }
+        $abs = $root . '/' . $rel;
+        if (!is_file($abs)) {
+            continue;
+        }
+        $bin = @file_get_contents($abs);
+        if ($bin === false || strlen($bin) < 40) {
+            continue;
+        }
+        $ext = strtolower(pathinfo($abs, PATHINFO_EXTENSION));
+        // Reducir logos muy grandes para Dompdf (p. ej. src/logo.png original).
+        if (function_exists('imagecreatefromstring') && in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp'], true)) {
+            $img = @imagecreatefromstring($bin);
+            if ($img !== false) {
+                $w = imagesx($img);
+                $h = imagesy($img);
+                $maxW = 160;
+                if ($w > $maxW && $w > 0) {
+                    $nw = $maxW;
+                    $nh = max(1, (int) round($h * ($maxW / $w)));
+                    $scaled = imagecreatetruecolor($nw, $nh);
+                    if ($scaled !== false) {
+                        imagealphablending($scaled, false);
+                        imagesavealpha($scaled, true);
+                        $transparent = imagecolorallocatealpha($scaled, 0, 0, 0, 127);
+                        imagefilledrectangle($scaled, 0, 0, $nw, $nh, $transparent);
+                        imagecopyresampled($scaled, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                        ob_start();
+                        imagepng($scaled, null, 6);
+                        $resized = ob_get_clean();
+                        imagedestroy($scaled);
+                        imagedestroy($img);
+                        if (is_string($resized) && strlen($resized) > 40) {
+                            return 'data:image/png;base64,' . base64_encode($resized);
+                        }
+                    }
+                }
+                imagedestroy($img);
+            }
+        }
+        $mime = match ($ext) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'svg' => 'image/svg+xml',
+            default => 'image/png',
+        };
+        return 'data:' . $mime . ';base64,' . base64_encode($bin);
+    }
+
+    return '';
+}
+
+function asistencia_lista_pdf_html(
+    array $grupo,
+    array $alumnos,
+    array $dias,
+    array $semanas,
+    bool $incluirTelefonos,
+    string $logoDataUri = ''
+): string {
     $numCols = count($dias) * count($semanas);
     $minRows = max(14, count($alumnos));
     $especialidad = mb_strtoupper((string) ($grupo['especialidad_nombre'] ?? $grupo['especialidad_clave'] ?? ''), 'UTF-8');
-    $fase = trim((string) (($grupo['clave_fase'] ?? '') ?: ($grupo['nombre_fase'] ?? '')));
     $profesor = trim((string) ($grupo['profesor_nombre'] ?? ''));
     $plantel = trim((string) ($grupo['razon_social'] ?? 'GRUPO EDUCATIVO CNCM')) ?: 'GRUPO EDUCATIVO CNCM';
+    $nombrePlantel = trim((string) ($grupo['plantel_nombre'] ?? ''));
     $direccion = trim((string) ($grupo['plantel_direccion'] ?? ''));
-    $cellWidth = max(8, min(24, (int) floor(590 / max(1, $numCols))));
-    $telHeader = $incluirTelefonos ? '<th class="tel" rowspan="2">Tel</th>' : '';
+    $cellWidth = max(8, min(24, (int) floor(620 / max(1, $numCols))));
+    $nombreWidth = $incluirTelefonos ? 170 : 210;
 
     ob_start();
     ?>
@@ -191,50 +297,82 @@ function asistencia_lista_pdf_html(array $grupo, array $alumnos, array $dias, ar
   <meta charset="UTF-8">
   <title>Lista de asistencia <?php echo htmlspecialchars((string) ($grupo['clave'] ?? '')); ?></title>
   <style>
-    @page { size: letter landscape; margin: 8mm; }
+    @page { size: Letter landscape; margin: 8mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color:#111; margin:0; font-size:9.5px; }
+    html, body { width: 100%; }
+    body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; color:#111; margin:0; font-size:9.5px; }
     .no-print { text-align:center; margin: 0 0 10px; }
     .no-print button { padding:8px 14px; cursor:pointer; }
     .sheet { width:100%; }
-    .head { display:grid; grid-template-columns: 1fr 1fr; gap:4px 18px; font-size:12px; margin-bottom:4px; }
+    .brand { display:table; width:100%; margin-bottom:6px; }
+    .brand-logo, .brand-meta { display:table-cell; vertical-align:middle; }
+    .brand-logo { width:78px; }
+    .brand-logo img { width:70px; height:auto; max-height:54px; object-fit:contain; }
+    .brand-meta { padding-left:10px; }
+    .brand-meta .org { font-size:13px; font-weight:700; line-height:1.2; }
+    .brand-meta .sub { font-size:10px; color:#333; margin-top:2px; }
+    .head { display:table; width:100%; font-size:11px; margin: 2px 0 4px; }
+    .head-left, .head-right { display:table-cell; width:50%; vertical-align:top; }
     .head strong { font-weight:700; }
-    .materia { margin: 2px 0 3px; font-size:12px; }
-    .fase { text-align:center; font-weight:700; margin: 0 0 2px; font-size:11px; }
+    .materia { margin: 2px 0 5px; font-size:11px; }
     table.lista { width:100%; border-collapse:collapse; table-layout:fixed; }
     table.lista th, table.lista td { border:1px solid #222; padding:2px 3px; vertical-align:middle; }
-    table.lista th { font-weight:700; text-align:center; }
-    table.lista td { height:19px; }
+    table.lista th { font-weight:700; text-align:center; background:#f7f7f7; }
+    table.lista td { height:18px; }
     th.num, td.num { width:22px; text-align:center; }
-    th.ctrl, td.ctrl { width:42px; text-align:center; }
-    th.tel, td.tel { width:64px; }
-    th.nombre, td.nombre { width:190px; }
+    th.ctrl, td.ctrl { width:48px; text-align:center; }
+    th.tel, td.tel { width:68px; }
+    th.nombre, td.nombre { width: <?php echo (int) $nombreWidth; ?>px; text-align:left; }
     th.asist, td.asist { width: <?php echo $cellWidth; ?>px; text-align:center; padding:0; }
     .obs { margin-top:8px; font-size:11px; }
-    .obs-line { border-bottom:1px solid #111; height:17px; }
+    .obs-line { border-bottom:1px solid #111; height:16px; }
     .foot { margin-top:8px; text-align:center; font-size:10px; line-height:1.25; }
     .title { text-align:right; font-size:10px; margin-top:2px; }
-    @media print { .no-print { display:none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    @media print {
+      .no-print { display:none !important; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      @page { size: Letter landscape; margin: 8mm; }
+    }
   </style>
 </head>
 <body>
   <div class="no-print">
+    <p style="margin:0 0 8px;color:#555;">Orientación: <strong>horizontal (apaisada)</strong>. Si el diálogo de impresión muestra vertical, cámbielo a horizontal.</p>
     <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
   </div>
   <div class="sheet">
+    <div class="brand">
+      <div class="brand-logo">
+        <?php if ($logoDataUri !== ''): ?>
+          <img src="<?php echo htmlspecialchars($logoDataUri, ENT_QUOTES, 'UTF-8'); ?>" alt="Logo">
+        <?php endif; ?>
+      </div>
+      <div class="brand-meta">
+        <div class="org"><?php echo htmlspecialchars($plantel); ?></div>
+        <div class="sub">
+          Lista de asistencia
+          <?php if ($nombrePlantel !== ''): ?> · <?php echo htmlspecialchars($nombrePlantel); ?><?php endif; ?>
+        </div>
+      </div>
+    </div>
     <div class="head">
-      <div><strong>Horario:</strong> <?php echo htmlspecialchars(asistencia_lista_pdf_horario_label($grupo)); ?> <strong>Especialidad:</strong> <?php echo htmlspecialchars($especialidad); ?></div>
-      <div><strong>Grupo:</strong> <?php echo htmlspecialchars((string) ($grupo['clave'] ?? '')); ?> <strong>Profesor:</strong> <?php echo htmlspecialchars($profesor !== '' ? $profesor : '________________________'); ?></div>
+      <div class="head-left">
+        <strong>Horario:</strong> <?php echo htmlspecialchars(asistencia_lista_pdf_horario_label($grupo)); ?>
+        &nbsp; <strong>Especialidad:</strong> <?php echo htmlspecialchars($especialidad !== '' ? $especialidad : '—'); ?>
+      </div>
+      <div class="head-right">
+        <strong>Grupo:</strong> <?php echo htmlspecialchars((string) ($grupo['clave'] ?? '')); ?>
+        &nbsp; <strong>Profesor:</strong> <?php echo htmlspecialchars($profesor !== '' ? $profesor : '________________________'); ?>
+      </div>
     </div>
     <div class="materia"><strong>Materia:</strong> ________________________</div>
-    <div class="fase">Fase <?php echo htmlspecialchars($fase); ?></div>
     <table class="lista">
       <thead>
         <tr>
           <th class="num" rowspan="2">N°</th>
           <th class="nombre" rowspan="2">Nombre</th>
           <th class="ctrl" rowspan="2">N° Ctrl</th>
-          <?php echo $telHeader; ?>
+          <?php if ($incluirTelefonos): ?><th class="tel" rowspan="2">Tel</th><?php endif; ?>
           <?php foreach ($semanas as $semana): ?>
             <th class="asist" colspan="<?php echo count($dias); ?>"><?php echo (int) $semana; ?></th>
           <?php endforeach; ?>
@@ -269,7 +407,6 @@ function asistencia_lista_pdf_html(array $grupo, array $alumnos, array $dias, ar
       <strong><?php echo htmlspecialchars($plantel); ?></strong><br>
       <?php echo htmlspecialchars($direccion); ?>
     </div>
-    <div class="title">Lista de asistencia</div>
   </div>
 </body>
 </html>

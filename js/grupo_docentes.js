@@ -1,7 +1,15 @@
 (function () {
-  const cfg = window.HAY_GRUPO_DOCENTES || {};
-  const api = cfg.api || 'php/grupo_docente_api.php';
-  const idGrupo = cfg.id_grupo || 0;
+  function cfg() {
+    return window.HAY_GRUPO_DOCENTES || {};
+  }
+
+  function apiUrl() {
+    return cfg().api || 'php/grupo_docente_api.php';
+  }
+
+  function idGrupoActual() {
+    return parseInt(String(cfg().id_grupo || 0), 10) || 0;
+  }
 
   let data = { profesores: [], docentes: [], materias_sugeridas: [], multi_materia: false };
 
@@ -50,13 +58,27 @@
   }
 
   async function cargar() {
-    const { data: res } = await hayFetchJson(api + '?action=listar&id_grupo=' + encodeURIComponent(idGrupo));
+    const idGrupo = idGrupoActual();
+    if (idGrupo <= 0) {
+      throw new Error('Grupo no válido: falta el identificador del grupo. Vuelva a Grupos y abra docentes de nuevo.');
+    }
+    const { data: res } = await hayFetchJson(apiUrl() + '?action=listar&id_grupo=' + encodeURIComponent(idGrupo));
     if (res.status !== 'ok') throw new Error(res.message || 'Error al cargar');
     data = res;
     renderTabla();
   }
 
   window.hayGrupoDocentesInit = function () {
+    const wrap = document.getElementById('grupo-docentes-wrap');
+    if (!wrap || wrap.dataset.gdInit === '1') {
+      if (wrap && wrap.dataset.gdInit === '1') {
+        // Reabrir la sección: recargar datos con el id_grupo actual
+        cargar().catch((e) => alert(e.message));
+      }
+      return;
+    }
+    wrap.dataset.gdInit = '1';
+
     document.getElementById('gd-btn-add')?.addEventListener('click', () => {
       const tabla = document.getElementById('gd-tabla');
       const idx = tabla ? tabla.querySelectorAll('.gd-row').length : 0;
@@ -65,10 +87,16 @@
 
     document.getElementById('form-grupo-docentes')?.addEventListener('submit', async (ev) => {
       ev.preventDefault();
+      const idGrupo = idGrupoActual();
+      if (idGrupo <= 0) {
+        alert('Grupo no válido');
+        return;
+      }
       const fd = new FormData(ev.target);
+      fd.set('id_grupo', String(idGrupo));
       fd.append('action', 'guardar');
       try {
-        const { data: res } = await hayFetchJson(api, { method: 'POST', body: fd });
+        const { data: res } = await hayFetchJson(apiUrl(), { method: 'POST', body: fd });
         alert(res.message || (res.status === 'ok' ? 'Guardado' : 'Error'));
         if (res.status === 'ok') cargarSeccion('grupos');
       } catch (e) {

@@ -61,7 +61,7 @@ $gradPendientes = $puedeGraduacion ? count(graduacion_listar_alertas($pdo, $idPl
 ?>
 <link rel="stylesheet" href="css/resultados.css">
 <link rel="stylesheet" href="css/admin_catalogo.css">
-<link rel="stylesheet" href="css/hay_icon_buttons.css">
+<link rel="stylesheet" href="css/hay_icon_buttons.css?v=20260721">
 
 <div class="result-container">
   <div class="result-header">
@@ -149,41 +149,54 @@ $gradPendientes = $puedeGraduacion ? count(graduacion_listar_alertas($pdo, $idPl
             </div>
             <div class="fase-acciones">
               <?php if ($puedeDocentes): ?>
-                <button type="button" class="btn-icon-only btn-icon-only--edit" title="Docentes del grupo"
+                <button type="button" class="btn-icon-only btn-icon-only--edit"
+                  title="Asignar docentes del grupo"
+                  data-tip="Asignar docentes del grupo (titular / por materia)"
+                  aria-label="Asignar docentes del grupo"
                   onclick="cargarSeccion('grupo_docentes', 'id_grupo=<?php echo (int)$g['id_grupo']; ?>')">
                   <i class="fas fa-chalkboard-teacher"></i>
                 </button>
               <?php endif; ?>
               <?php if ($puedeCal && calificaciones_puede_capturar_grupo($pdo, (int) $g['id_grupo'])): ?>
-                <button type="button" class="btn-icon-only btn-icon-only--edit" title="Calificaciones del parcial"
+                <button type="button" class="btn-icon-only btn-icon-only--edit"
+                  title="Calificaciones del parcial"
+                  data-tip="Capturar calificaciones del parcial actual"
+                  aria-label="Calificaciones del parcial"
                   onclick="cargarSeccion('grupo_calificaciones', 'id_grupo=<?php echo (int)$g['id_grupo']; ?>')">
                   <i class="fas fa-clipboard-list"></i>
                 </button>
               <?php endif; ?>
               <?php if ($puedePlan): ?>
-                <button type="button" class="btn-icon-only btn-icon-only--edit" title="Plan de parciales"
+                <button type="button" class="btn-icon-only btn-icon-only--edit"
+                  title="Plan de parciales"
+                  data-tip="Ver o editar el plan de parciales del grupo"
+                  aria-label="Plan de parciales"
                   onclick="cargarSeccion('grupo_plan', 'id_grupo=<?php echo (int)$g['id_grupo']; ?>')">
                   <i class="fas fa-calendar-check"></i>
                 </button>
               <?php endif; ?>
               <button type="button" class="btn-icon-only btn-icon-only--muted btn-lista-asistencia-pdf"
                 title="Imprimir lista de asistencia"
+                data-tip="Imprimir lista de asistencia (horizontal)"
+                aria-label="Imprimir lista de asistencia"
                 data-id="<?php echo (int)$g['id_grupo']; ?>"
                 data-clave="<?php echo htmlspecialchars((string)$g['clave'], ENT_QUOTES, 'UTF-8'); ?>">
                 <i class="fas fa-print"></i>
               </button>
               <?php if ($puedeAvance): ?>
-                <button type="button" class="btn-icon-only btn-icon-only--ok btn-avanzar-grupo" title="Avanzar al siguiente parcial"
+                <button type="button" class="btn-icon-only btn-icon-only--ok btn-avanzar-grupo"
+                  title="Avanzar al siguiente parcial"
+                  data-tip="Avanzar el grupo al siguiente parcial"
+                  aria-label="Avanzar al siguiente parcial"
                   data-id="<?php echo (int)$g['id_grupo']; ?>">
                   <i class="fas fa-forward"></i>
                 </button>
               <?php endif; ?>
-              <button type="button" class="btn-icon-only btn-icon-only--muted" title="Ver alumnos"
-                onclick="cargarSeccion('alumnos'); window.__grupoSeleccionado=<?php echo (int)$g['id_grupo']; ?>;">
-                <i class="fas fa-users"></i>
-              </button>
               <?php if ($puedeMoodle): ?>
-                <button type="button" class="btn-icon-only btn-icon-only--edit btn-moodle-grupo" title="Inscribir grupo en Moodle"
+                <button type="button" class="btn-icon-only btn-icon-only--edit btn-moodle-grupo"
+                  title="Inscribir grupo en Moodle"
+                  data-tip="Inscribir alumnos activos del grupo en Moodle"
+                  aria-label="Inscribir grupo en Moodle"
                   data-id="<?php echo (int)$g['id_grupo']; ?>"
                   data-clave="<?php echo htmlspecialchars((string)$g['clave'], ENT_QUOTES, 'UTF-8'); ?>">
                   <i class="fas fa-chalkboard"></i>
