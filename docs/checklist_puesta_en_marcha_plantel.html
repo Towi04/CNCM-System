@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checklist de puesta en marcha — Plantel CNCM</title>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --muted: #555;
+      --line: #222;
+      --accent: #8b0000;
+      --soft: #f4f4f4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 11.5pt;
+      line-height: 1.35;
+      background: #e8e8e8;
+    }
+    .sheet {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 12px auto;
+      padding: 14mm 14mm 16mm;
+      background: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,.12);
+    }
+    .sheet + .sheet { page-break-before: always; }
+    header {
+      border-bottom: 2.5px solid var(--accent);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .org {
+      font-size: 10pt;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 2px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 16pt;
+      line-height: 1.2;
+    }
+    .meta {
+      margin-top: 6px;
+      font-size: 9.5pt;
+      color: var(--muted);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 16px;
+    }
+    .meta strong { color: var(--ink); }
+    .rol-tag {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 9.5pt;
+      font-weight: 700;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+    .intro {
+      margin: 10px 0 12px;
+      font-size: 10pt;
+      color: var(--muted);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 5px 6px;
+      vertical-align: top;
+      font-size: 9.5pt;
+    }
+    th {
+      background: var(--soft);
+      text-align: left;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    .col-check { width: 22px; text-align: center; }
+    .col-paso { width: 38px; text-align: center; }
+    .col-hecho { width: 52px; }
+    .col-fecha { width: 70px; }
+    .check {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 1.4px solid #333;
+      vertical-align: middle;
+    }
+    .bloque {
+      margin-top: 14px;
+    }
+    .bloque h2 {
+      margin: 0 0 6px;
+      font-size: 11.5pt;
+      border-left: 4px solid var(--accent);
+      padding-left: 8px;
+    }
+    .nota {
+      margin-top: 12px;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      background: #fafafa;
+      font-size: 9.5pt;
+    }
+    .nota strong { display: block; margin-bottom: 3px; }
+    .firma {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      font-size: 9.5pt;
+    }
+    .firma .linea {
+      border-top: 1px solid #333;
+      margin-top: 36px;
+      padding-top: 4px;
+    }
+    .foot {
+      margin-top: 14px;
+      font-size: 8.5pt;
+      color: #777;
+      text-align: right;
+    }
+    .no-print {
+      max-width: 210mm;
+      margin: 16px auto 0;
+      padding: 0 8px;
+      text-align: center;
+    }
+    .no-print button {
+      padding: 10px 18px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    @media print {
+      body { background: #fff; }
+      .sheet {
+        margin: 0;
+        box-shadow: none;
+        width: auto;
+        min-height: auto;
+        padding: 10mm 12mm;
+      }
+      .no-print { display: none !important; }
+      @page { size: Letter; margin: 10mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <p>Abra este archivo en el navegador y use <strong>Imprimir</strong> (o Ctrl+P). Cada responsable sale en una hoja.</p>
+    <button type="button" onclick="window.print()">Imprimir checklist</button>
+  </div>
+
+  <!-- ========== HOJA 1: DIRECCIÓN GENERAL ========== -->
+  <section class="sheet">
+    <header>
+      <p class="org">Grupo Educativo CNCM · Sistema HAY</p>
+      <h1>Checklist de puesta en marcha del plantel</h1>
+      <span class="rol-tag">Hoja 1 · Dirección general / Supervisión</span>
+      <div class="meta">
+        <div><strong>Plantel:</strong> _______________________________</div>
+        <div><strong>Fecha objetivo go-live:</strong> _______________</div>
+        <div><strong>Responsable DG:</strong> _________________________</div>
+        <div><strong>Fecha de revisión:</strong> ___________________</div>
+      </div>
+    </header>
+    <p class="intro">Cargar primero la base del sistema. Sin estos puntos, el director no puede operar la sede.</p>
+
+    <div class="bloque">
+      <h2>A. Sistema y sede</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">1</td><td>Plantel creado (nombre, dirección, contacto, logo) y <strong>activo</strong></td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">2</td><td>Usuario <strong>Director</strong> creado y asignado a ese plantel</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">3</td><td>Roles del sistema verificados (director, coordinador, recepción, ventas, profesor…)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">4</td><td>Correo institucional / Google / Moodle configurados (si se usan)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">5</td><td>Director inicia sesión y ve solo su sede</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bloque">
+      <h2>B. Catálogo global (costos y reglas)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">6</td><td>Especialidades activas para la sede</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">7</td><td>Costos de <strong>lista</strong> y <strong>apoyo</strong> cargados (solo DG edita costos)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">8</td><td>Acuerdo escolar publicado / vigente</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">9</td><td>Requisitos documentales globales definidos (si usa expediente)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">10</td><td>Política de comisiones / cartas revisada (si aplica)</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bloque">
+      <h2>C. Entrega a operación</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">11</td><td>Entregar checklist al Director con fechas objetivo</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">12</td><td>Confirmar con Coordinación el temario/fases a usar</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">13</td><td>Autorizar go-live cuando las hojas 2–4 estén completas</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="nota">
+      <strong>No avanzan a operación si falta:</strong>
+      plantel inactivo · director sin plantel · costos vacíos · acuerdo escolar no publicado (si es obligatorio en la sede).
+    </div>
+
+    <div class="firma">
+      <div class="linea">Firma Dirección general</div>
+      <div class="linea">Vo. Bo. / fecha</div>
+    </div>
+    <p class="foot">CNCM · Checklist puesta en marcha · Hoja 1/4 · Dirección general</p>
+  </section>
+
+  <!-- ========== HOJA 2: DIRECTOR ========== -->
+  <section class="sheet">
+    <header>
+      <p class="org">Grupo Educativo CNCM · Sistema HAY</p>
+      <h1>Checklist de puesta en marcha del plantel</h1>
+      <span class="rol-tag">Hoja 2 · Director de plantel</span>
+      <div class="meta">
+        <div><strong>Plantel:</strong> _______________________________</div>
+        <div><strong>Fecha objetivo go-live:</strong> _______________</div>
+        <div><strong>Director:</strong> ________________________________</div>
+        <div><strong>Fecha de revisión:</strong> ___________________</div>
+      </div>
+    </header>
+    <p class="intro">Operación local: personal, espacios, caja, aprobaciones y ensayo general. Depende de que la hoja 1 esté lista.</p>
+
+    <div class="bloque">
+      <h2>A. Espacios, tiempo y documentos</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">1</td><td>Catálogo de aulas del plantel cargado</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">2</td><td>Calendario escolar cargado</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">3</td><td>Calendario administrativo cargado</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">4</td><td>Plantillas de constancias / diplomas listas</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">5</td><td>Productos / combos de mostrador revisados (sin editar costos globales)</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bloque">
+      <h2>B. Personal del plantel</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">6</td><td>Coordinador académico creado y con acceso</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">7</td><td>Recepción / caja creada y con acceso</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">8</td><td>Gerente / asesores de ventas (si aplica)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">9</td><td>Docentes dados de alta (rol profesor)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">10</td><td>Cuentas Google / Moodle del personal OK o vinculadas</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">11</td><td>Huella / checada configurada (si usan puntualidad)</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bloque">
+      <h2>C. Caja, bandeja y ensayo</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">12</td><td>POS: cobro de prueba exitoso</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">13</td><td>Corte de caja de prueba / flujo del día claro</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">14</td><td>Bandeja de aprobaciones revisada (en cero o solo casos reales)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">15</td><td>Personal visible en nómina del periodo</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">16</td><td>Ensayo: Inicio → Bandeja → Adeudo → POS → Corte</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">17</td><td>Autorizar aperturas / posponer grupos sin mínimo</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="nota">
+      <strong>El director NO debe:</strong>
+      editar costos globales · crear planteles · editar roles del sistema · publicar acuerdo escolar · anular pagos de supervisión.
+      Eso lo hace Dirección general.
+    </div>
+
+    <div class="firma">
+      <div class="linea">Firma Director de plantel</div>
+      <div class="linea">Vo. Bo. Dirección general</div>
+    </div>
+    <p class="foot">CNCM · Checklist puesta en marcha · Hoja 2/4 · Director</p>
+  </section>
+
+  <!-- ========== HOJA 3: COORDINACIÓN ========== -->
+  <section class="sheet">
+    <header>
+      <p class="org">Grupo Educativo CNCM · Sistema HAY</p>
+      <h1>Checklist de puesta en marcha del plantel</h1>
+      <span class="rol-tag">Hoja 3 · Coordinación académica</span>
+      <div class="meta">
+        <div><strong>Plantel:</strong> _______________________________</div>
+        <div><strong>Fecha objetivo go-live:</strong> _______________</div>
+        <div><strong>Coordinador(a):</strong> __________________________</div>
+        <div><strong>Fecha de revisión:</strong> ___________________</div>
+      </div>
+    </header>
+    <p class="intro">Base académica: fases, temario, grupos, docentes y operación de aula. Depende de catálogo (hoja 1) y personal/aulas (hoja 2).</p>
+
+    <div class="bloque">
+      <h2>A. Fases y temario</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">1</td><td>Fases / parciales cargados por especialidad</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">2</td><td>Temario por fase (temas, vocabulario, gramática, semanas)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">3</td><td>Objetivos / prácticas sugeridas revisados</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">4</td><td>Validar que la planeación con IA toma el temario (sin pedir tema a mano)</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bloque">
+      <h2>B. Grupos del ciclo (repetir por cada grupo)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">5</td><td>Clave de grupo única + especialidad + fase inicial</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">6</td><td>Fecha de inicio, horario y aula asignados</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">7</td><td>Docente titular (y por materia si aplica)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">8</td><td>Capacidad / mínimo de apertura definido</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">9</td><td>Grupo visible en cronología de fases</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">10</td><td>Plan de parciales / Moodle del grupo (si aplica)</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bloque">
+      <h2>C. Operación académica lista</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">11</td><td>Docentes saben entrar a portal y enviar planeaciones</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">12</td><td>Lista de asistencia imprimible / capturable</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">13</td><td>Prueba: revisar una planeación en bandeja de revisión</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">14</td><td>Avisar al Director qué grupos sí/no abren</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="nota">
+      <strong>Lista de grupos a abrir (anotar):</strong><br>
+      _________________________________________________________________<br>
+      _________________________________________________________________<br>
+      _________________________________________________________________
+    </div>
+
+    <div class="firma">
+      <div class="linea">Firma Coordinación académica</div>
+      <div class="linea">Enterado Director</div>
+    </div>
+    <p class="foot">CNCM · Checklist puesta en marcha · Hoja 3/4 · Coordinación</p>
+  </section>
+
+  <!-- ========== HOJA 4: VENTAS + RECEPCIÓN ========== -->
+  <section class="sheet">
+    <header>
+      <p class="org">Grupo Educativo CNCM · Sistema HAY</p>
+      <h1>Checklist de puesta en marcha del plantel</h1>
+      <span class="rol-tag">Hoja 4 · Ventas y Recepción</span>
+      <div class="meta">
+        <div><strong>Plantel:</strong> _______________________________</div>
+        <div><strong>Fecha objetivo go-live:</strong> _______________</div>
+        <div><strong>Gerente / Asesor:</strong> ________________________</div>
+        <div><strong>Recepción:</strong> _______________________________</div>
+      </div>
+    </header>
+    <p class="intro">Captación, inscripción, cobro y documentos. Se apoya en grupos listos (hoja 3) y caja operativa (hoja 2).</p>
+
+    <div class="bloque">
+      <h2>A. Ventas / captación</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">1</td><td>Flujo de pre-registro operable de punta a punta</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">2</td><td>Entrevistas / ubicación según proceso del plantel</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">3</td><td>Escuelas / orígenes de captación (si usan reportes)</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">4</td><td>Alumnos preinscritos o inscritos en grupos correctos</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">5</td><td>Excepciones de inscripción (edad/ubicación) enviadas a bandeja del director</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bloque">
+      <h2>B. Recepción / caja</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">6</td><td>Consulta de adeudo muestra montos coherentes</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">7</td><td>Inscripción / primer colegiatura cobrada de prueba o real</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">8</td><td>Mostrador de documentos: constancia/diploma de prueba</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">9</td><td>Cola de facturación revisada</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">10</td><td>Cartera vencida: vacía o con casos conocidos documentados</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">11</td><td>Listos para corte de caja del día 1</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bloque">
+      <h2>C. Go-live conjunto</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th class="col-paso">#</th>
+            <th>Actividad</th>
+            <th class="col-hecho">Hecho por</th>
+            <th class="col-fecha">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">12</td><td>Horarios y aulas comunicados a alumnos / docentes</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">13</td><td>Recepción lista para cobros y documentos el día 1</td><td></td><td></td></tr>
+          <tr><td class="col-check"><span class="check"></span></td><td class="col-paso">14</td><td>Canal de incidencias acordado con Director / Coordinación</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="nota">
+      <strong>Señal de “listo para abrir”:</strong>
+      hay grupos con alumnos · hay quien cobre · hay quien dé clase · bandeja del director sin bloqueos · costos y temario cargados.
+    </div>
+
+    <div class="firma">
+      <div class="linea">Firma Ventas</div>
+      <div class="linea">Firma Recepción</div>
+    </div>
+    <p class="foot">CNCM · Checklist puesta en marcha · Hoja 4/4 · Ventas y Recepción</p>
+  </section>
+</body>
+</html>
