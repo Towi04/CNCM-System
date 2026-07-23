@@ -279,6 +279,30 @@ table.dataTable.alumnos-dt tbody td {
     background: #f5f5f5;
 }
 
+.btn-wa-alumno {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    margin-top: 4px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: #25d366;
+    color: #fff !important;
+    text-decoration: none !important;
+    font-size: 0.82rem;
+    font-weight: 600;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.btn-wa-alumno:hover {
+    background: #1ebe57;
+    color: #fff !important;
+}
+.btn-wa-alumno i {
+    font-size: 1rem;
+}
+
 .alumno-pagos-table .folio {
     color: #c62828;
     font-weight: 700;

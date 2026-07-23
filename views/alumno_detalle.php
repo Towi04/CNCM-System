@@ -516,8 +516,38 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
           $modoK = $a['inscripcion_kids_modo'] ?? '';
           echo $modoK === 'dual' ? 'Inglés + Computación' : ($modoK === 'solo_ingles' ? 'Solo inglés' : ($modoK === 'solo_computacion' ? 'Solo computación' : '—'));
         ?></div>
-        <div><strong>Teléfono</strong><br><?php echo htmlspecialchars($a['telefono'] ?? '—'); ?></div>
-        <div><strong>Teléfono alterno</strong><br><?php echo htmlspecialchars($a['telefono2'] ?? '—'); ?></div>
+        <div><strong>Teléfono</strong><br>
+          <?php
+            $tel1 = trim((string) ($a['telefono'] ?? ''));
+            $wa1 = (!alumno_portal_es_alumno() && function_exists('alumno_whatsapp_url'))
+                ? alumno_whatsapp_url($tel1, '', alumno_nombre_completo($a))
+                : '';
+            echo htmlspecialchars($tel1 !== '' ? $tel1 : '—');
+            if ($wa1 !== ''):
+          ?>
+            <a class="btn-wa-alumno" href="<?php echo htmlspecialchars($wa1, ENT_QUOTES, 'UTF-8'); ?>"
+               target="_blank" rel="noopener noreferrer"
+               title="Abrir WhatsApp con saludo de CNCM">
+              <i class="fab fa-whatsapp"></i> WhatsApp
+            </a>
+          <?php endif; ?>
+        </div>
+        <div><strong>Teléfono alterno</strong><br>
+          <?php
+            $tel2 = trim((string) ($a['telefono2'] ?? ''));
+            $wa2 = (!alumno_portal_es_alumno() && function_exists('alumno_whatsapp_url'))
+                ? alumno_whatsapp_url($tel2, '', alumno_nombre_completo($a))
+                : '';
+            echo htmlspecialchars($tel2 !== '' ? $tel2 : '—');
+            if ($wa2 !== ''):
+          ?>
+            <a class="btn-wa-alumno" href="<?php echo htmlspecialchars($wa2, ENT_QUOTES, 'UTF-8'); ?>"
+               target="_blank" rel="noopener noreferrer"
+               title="Abrir WhatsApp con saludo de CNCM">
+              <i class="fab fa-whatsapp"></i> WhatsApp
+            </a>
+          <?php endif; ?>
+        </div>
         <div><strong>Correo</strong><br><?php echo htmlspecialchars($a['email'] ?? '—'); ?></div>
         <div><strong>Fecha de nacimiento</strong><br><?php echo htmlspecialchars($a['fecha_nacimiento'] ?? '—'); ?></div>
         <div class="full-width"><strong>Domicilio</strong><br><?php

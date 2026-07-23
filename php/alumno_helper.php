@@ -372,6 +372,49 @@ function alumno_nombre_completo(array $a): string
     return trim($n . ' ' . $p . ' ' . $m);
 }
 
+/** Dígitos para wa.me (México: 10 dígitos → prefijo 52). */
+function alumno_whatsapp_digitos(?string $telefono): string
+{
+    $d = preg_replace('/\D+/', '', (string) $telefono) ?? '';
+    if ($d === '') {
+        return '';
+    }
+    if (strlen($d) === 10) {
+        return '52' . $d;
+    }
+    if (str_starts_with($d, '52') && strlen($d) >= 12) {
+        return $d;
+    }
+
+    return $d;
+}
+
+/**
+ * URL de WhatsApp Web/App con saludo institucional.
+ * @return string URL vacía si no hay teléfono válido
+ */
+function alumno_whatsapp_url(?string $telefono, string $nombreStaff = '', string $nombreAlumno = ''): string
+{
+    $digits = alumno_whatsapp_digitos($telefono);
+    if ($digits === '' || strlen($digits) < 10) {
+        return '';
+    }
+    $staff = trim($nombreStaff);
+    if ($staff === '') {
+        $staff = trim((string) (($_SESSION['nombre'] ?? '') . ' ' . ($_SESSION['apellido'] ?? '')));
+    }
+    if ($staff === '') {
+        $staff = trim((string) ($_SESSION['username'] ?? 'CNCM'));
+    }
+    $alumno = trim($nombreAlumno);
+    $saludo = $alumno !== ''
+        ? '¡Hola ' . $alumno . '!'
+        : '¡Hola!';
+    $msg = $saludo . ' Nos comunicamos de CNCM. Te saluda ' . $staff . '.';
+
+    return 'https://wa.me/' . $digits . '?text=' . rawurlencode($msg);
+}
+
 function alumno_pagos_totales(array $a, ?array $esp): int
 {
     if (!empty($a['pagos_programados'])) {
