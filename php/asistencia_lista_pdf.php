@@ -169,10 +169,22 @@ function asistencia_lista_pdf_nombre_alumno(array $alumno): string
 function asistencia_lista_pdf_tel(array $alumno): string
 {
     $tel = trim((string) ($alumno['telefono'] ?? ''));
-    if ($tel === '') {
-        $tel = trim((string) ($alumno['telefono2'] ?? ''));
+    $tel2 = trim((string) ($alumno['telefono2'] ?? ''));
+    if ($tel !== '' && $tel2 !== '') {
+        return $tel . ' / ' . $tel2;
     }
-    return $tel;
+
+    return $tel !== '' ? $tel : $tel2;
+}
+
+function asistencia_lista_pdf_tel_principal(array $alumno): string
+{
+    return trim((string) ($alumno['telefono'] ?? ''));
+}
+
+function asistencia_lista_pdf_tel_opcional(array $alumno): string
+{
+    return trim((string) ($alumno['telefono2'] ?? ''));
 }
 
 /** Logo del plantel embebido (data URI) para Dompdf / impresión. */
@@ -287,7 +299,7 @@ function asistencia_lista_pdf_html(
     $nombrePlantel = trim((string) ($grupo['plantel_nombre'] ?? ''));
     $direccion = trim((string) ($grupo['plantel_direccion'] ?? ''));
     $cellWidth = max(8, min(24, (int) floor(620 / max(1, $numCols))));
-    $nombreWidth = $incluirTelefonos ? 170 : 210;
+    $nombreWidth = $incluirTelefonos ? 130 : 210;
 
     ob_start();
     ?>
@@ -321,7 +333,7 @@ function asistencia_lista_pdf_html(
     table.lista td { height:18px; }
     th.num, td.num { width:22px; text-align:center; }
     th.ctrl, td.ctrl { width:48px; text-align:center; }
-    th.tel, td.tel { width:68px; }
+    th.tel, td.tel { width:58px; font-size:8px; }
     th.nombre, td.nombre { width: <?php echo (int) $nombreWidth; ?>px; text-align:left; }
     th.asist, td.asist { width: <?php echo $cellWidth; ?>px; text-align:center; padding:0; }
     .obs { margin-top:8px; font-size:11px; }
@@ -372,7 +384,10 @@ function asistencia_lista_pdf_html(
           <th class="num" rowspan="2">N°</th>
           <th class="nombre" rowspan="2">Nombre</th>
           <th class="ctrl" rowspan="2">N° Ctrl</th>
-          <?php if ($incluirTelefonos): ?><th class="tel" rowspan="2">Tel</th><?php endif; ?>
+          <?php if ($incluirTelefonos): ?>
+            <th class="tel" rowspan="2">Tel</th>
+            <th class="tel" rowspan="2">Tel 2</th>
+          <?php endif; ?>
           <?php foreach ($semanas as $semana): ?>
             <th class="asist" colspan="<?php echo count($dias); ?>"><?php echo (int) $semana; ?></th>
           <?php endforeach; ?>
@@ -392,7 +407,10 @@ function asistencia_lista_pdf_html(
             <td class="num"><?php echo $i + 1; ?></td>
             <td class="nombre"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_nombre_alumno($al)) : ''; ?></td>
             <td class="ctrl"><?php echo $al ? htmlspecialchars((string) ($al['numero_control'] ?? '')) : ''; ?></td>
-            <?php if ($incluirTelefonos): ?><td class="tel"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_tel($al)) : ''; ?></td><?php endif; ?>
+            <?php if ($incluirTelefonos): ?>
+              <td class="tel"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_tel_principal($al)) : ''; ?></td>
+              <td class="tel"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_tel_opcional($al)) : ''; ?></td>
+            <?php endif; ?>
             <?php for ($c = 0; $c < $numCols; $c++): ?><td class="asist"></td><?php endfor; ?>
           </tr>
         <?php endfor; ?>

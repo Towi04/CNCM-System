@@ -415,6 +415,51 @@ function alumno_whatsapp_url(?string $telefono, string $nombreStaff = '', string
     return 'https://wa.me/' . $digits . '?text=' . rawurlencode($msg);
 }
 
+/** Enlace tel: para llamar desde móvil/tablet. */
+function alumno_telefono_llamar_href(?string $telefono): string
+{
+    $digits = alumno_whatsapp_digitos($telefono);
+    if ($digits === '' || strlen($digits) < 10) {
+        return '';
+    }
+
+    return 'tel:+' . $digits;
+}
+
+/**
+ * Teléfonos disponibles del alumno para contactar.
+ *
+ * @return list<array{clave:string,label:string,telefono:string,wa:string,call:string}>
+ */
+function alumno_telefonos_contacto(array $a, string $nombreStaff = ''): array
+{
+    $nombreAlumno = function_exists('alumno_nombre_completo') ? alumno_nombre_completo($a) : '';
+    $out = [];
+    $pairs = [
+        ['principal', 'Principal', trim((string) ($a['telefono'] ?? ''))],
+        ['opcional', 'Opcional', trim((string) ($a['telefono2'] ?? ''))],
+    ];
+    foreach ($pairs as [$clave, $label, $tel]) {
+        if ($tel === '') {
+            continue;
+        }
+        $wa = alumno_whatsapp_url($tel, $nombreStaff, $nombreAlumno);
+        $call = alumno_telefono_llamar_href($tel);
+        if ($wa === '' && $call === '') {
+            continue;
+        }
+        $out[] = [
+            'clave' => $clave,
+            'label' => $label,
+            'telefono' => $tel,
+            'wa' => $wa,
+            'call' => $call,
+        ];
+    }
+
+    return $out;
+}
+
 function alumno_pagos_totales(array $a, ?array $esp): int
 {
     if (!empty($a['pagos_programados'])) {

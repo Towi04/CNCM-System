@@ -283,16 +283,16 @@ table.dataTable.alumnos-dt tbody td {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-left: 8px;
-    margin-top: 4px;
-    padding: 5px 10px;
+    margin: 0;
+    padding: 8px 12px;
+    border: none;
     border-radius: 8px;
     background: #25d366;
     color: #fff !important;
     text-decoration: none !important;
-    font-size: 0.82rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    vertical-align: middle;
+    cursor: pointer;
     white-space: nowrap;
 }
 .btn-wa-alumno:hover {
@@ -301,6 +301,45 @@ table.dataTable.alumnos-dt tbody td {
 }
 .btn-wa-alumno i {
     font-size: 1rem;
+}
+
+.btn-call-alumno {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background: #1565c0;
+    color: #fff !important;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-call-alumno:hover {
+    background: #0d47a1;
+}
+
+.alumno-contacto-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+}
+.alumno-contacto-hint {
+    flex: 1 1 100%;
+    font-size: 0.78rem;
+    color: #777;
+}
+
+/* Llamar solo en tablet / celular */
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
+    .btn-call-alumno.btn-solo-movil {
+        display: inline-flex;
+    }
 }
 
 .alumno-pagos-table .folio {

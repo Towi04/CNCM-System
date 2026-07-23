@@ -516,38 +516,25 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
           $modoK = $a['inscripcion_kids_modo'] ?? '';
           echo $modoK === 'dual' ? 'Inglés + Computación' : ($modoK === 'solo_ingles' ? 'Solo inglés' : ($modoK === 'solo_computacion' ? 'Solo computación' : '—'));
         ?></div>
-        <div><strong>Teléfono</strong><br>
-          <?php
-            $tel1 = trim((string) ($a['telefono'] ?? ''));
-            $wa1 = (!alumno_portal_es_alumno() && function_exists('alumno_whatsapp_url'))
-                ? alumno_whatsapp_url($tel1, '', alumno_nombre_completo($a))
-                : '';
-            echo htmlspecialchars($tel1 !== '' ? $tel1 : '—');
-            if ($wa1 !== ''):
-          ?>
-            <a class="btn-wa-alumno" href="<?php echo htmlspecialchars($wa1, ENT_QUOTES, 'UTF-8'); ?>"
-               target="_blank" rel="noopener noreferrer"
-               title="Abrir WhatsApp con saludo de CNCM">
-              <i class="fab fa-whatsapp"></i> WhatsApp
-            </a>
-          <?php endif; ?>
+        <div><strong>Teléfono</strong><br><?php echo htmlspecialchars(trim((string) ($a['telefono'] ?? '')) !== '' ? (string) $a['telefono'] : '—'); ?></div>
+        <div><strong>Teléfono alterno</strong><br><?php echo htmlspecialchars(trim((string) ($a['telefono2'] ?? '')) !== '' ? (string) $a['telefono2'] : '—'); ?></div>
+        <?php
+          $telsContacto = (!alumno_portal_es_alumno() && function_exists('alumno_telefonos_contacto'))
+              ? alumno_telefonos_contacto($a)
+              : [];
+          if ($telsContacto !== []):
+        ?>
+        <div class="full-width alumno-contacto-acciones" id="alumno-contacto-acciones"
+             data-telefonos="<?php echo htmlspecialchars(json_encode($telsContacto, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>">
+          <button type="button" class="btn-call-alumno btn-solo-movil" id="btn-alumno-llamar" title="Llamar al alumno">
+            <i class="fas fa-phone"></i> Llamar
+          </button>
+          <button type="button" class="btn-wa-alumno" id="btn-alumno-whatsapp" title="Abrir WhatsApp con saludo de CNCM">
+            <i class="fab fa-whatsapp"></i> WhatsApp
+          </button>
+          <span class="alumno-contacto-hint">Si hay dos números, se pregunta cuál usar (por defecto el principal).</span>
         </div>
-        <div><strong>Teléfono alterno</strong><br>
-          <?php
-            $tel2 = trim((string) ($a['telefono2'] ?? ''));
-            $wa2 = (!alumno_portal_es_alumno() && function_exists('alumno_whatsapp_url'))
-                ? alumno_whatsapp_url($tel2, '', alumno_nombre_completo($a))
-                : '';
-            echo htmlspecialchars($tel2 !== '' ? $tel2 : '—');
-            if ($wa2 !== ''):
-          ?>
-            <a class="btn-wa-alumno" href="<?php echo htmlspecialchars($wa2, ENT_QUOTES, 'UTF-8'); ?>"
-               target="_blank" rel="noopener noreferrer"
-               title="Abrir WhatsApp con saludo de CNCM">
-              <i class="fab fa-whatsapp"></i> WhatsApp
-            </a>
-          <?php endif; ?>
-        </div>
+        <?php endif; ?>
         <div><strong>Correo</strong><br><?php echo htmlspecialchars($a['email'] ?? '—'); ?></div>
         <div><strong>Fecha de nacimiento</strong><br><?php echo htmlspecialchars($a['fecha_nacimiento'] ?? '—'); ?></div>
         <div class="full-width"><strong>Domicilio</strong><br><?php
@@ -921,6 +908,17 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
   </div>
 </div>
 
+<div class="catalog-modal" id="modal-alumno-tel" aria-hidden="true">
+  <div class="catalog-modal__dialog" style="max-width:420px;">
+    <h3 id="modal-alumno-tel-titulo">Elegir teléfono</h3>
+    <p style="color:#666; font-size:0.9rem; margin:0 0 12px;">Por defecto se usa el <strong>principal</strong>.</p>
+    <div id="modal-alumno-tel-opciones" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <div class="catalog-modal__actions" style="margin-top:14px;">
+      <button type="button" id="modal-alumno-tel-cancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <?php require __DIR__ . '/partials/modal_inscripcion_wizard.php'; ?>
 
 <link rel="stylesheet" href="css/punto_venta.css">
@@ -931,6 +929,66 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
 </script>
 <script src="js/alumno_tarifa_supervisor.js?v=20260623"></script>
 <?php endif; ?>
+<script>
+(function () {
+  const wrap = document.getElementById('alumno-contacto-acciones');
+  if (!wrap) return;
+  let telefonos = [];
+  try {
+    telefonos = JSON.parse(wrap.getAttribute('data-telefonos') || '[]') || [];
+  } catch (_e) {
+    telefonos = [];
+  }
+  if (!telefonos.length) return;
+
+  const modal = document.getElementById('modal-alumno-tel');
+  const titulo = document.getElementById('modal-alumno-tel-titulo');
+  const optsBox = document.getElementById('modal-alumno-tel-opciones');
+  const btnCancel = document.getElementById('modal-alumno-tel-cancel');
+
+  function cerrarModal() {
+    modal?.classList.remove('is-open');
+    if (modal) modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function abrirCon(accion) {
+    const validos = telefonos.filter((t) => (accion === 'call' ? t.call : t.wa));
+    if (!validos.length) {
+      alert(accion === 'call' ? 'No hay teléfono válido para llamar.' : 'No hay teléfono válido para WhatsApp.');
+      return;
+    }
+    if (validos.length === 1) {
+      window.open(validos[0][accion === 'call' ? 'call' : 'wa'], accion === 'call' ? '_self' : '_blank', 'noopener');
+      return;
+    }
+    if (!modal || !optsBox || !titulo) return;
+    titulo.textContent = accion === 'call' ? '¿A cuál número llamar?' : '¿A cuál número enviar WhatsApp?';
+    optsBox.innerHTML = '';
+    validos.forEach((t, idx) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = idx === 0 ? 'primary' : 'secondary';
+      btn.style.cssText = 'width:100%; text-align:left; padding:10px 12px;';
+      btn.innerHTML = '<strong>' + (t.label || 'Teléfono') + (idx === 0 ? ' (predeterminado)' : '') + '</strong><br><span style="font-size:0.9rem;">' + (t.telefono || '') + '</span>';
+      btn.addEventListener('click', () => {
+        cerrarModal();
+        const href = accion === 'call' ? t.call : t.wa;
+        if (href) window.open(href, accion === 'call' ? '_self' : '_blank', 'noopener');
+      });
+      optsBox.appendChild(btn);
+    });
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  document.getElementById('btn-alumno-llamar')?.addEventListener('click', () => abrirCon('call'));
+  document.getElementById('btn-alumno-whatsapp')?.addEventListener('click', () => abrirCon('wa'));
+  btnCancel?.addEventListener('click', cerrarModal);
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) cerrarModal();
+  });
+})();
+</script>
 <script>
 (function () {
   const idAlumno = <?php echo (int)$id; ?>;
