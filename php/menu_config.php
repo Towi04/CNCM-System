@@ -112,9 +112,7 @@ function menu_cncm_secciones(): array
 
                 ['cap' => 'menu_gerente_matriz', 'seccion' => 'gerente_matriz_entrenamiento', 'icon' => 'fa-graduation-cap', 'text' => 'Matriz equipo', 'title' => 'Matriz de entrenamiento del equipo', 'breadcrumb' => 'MATRIZ EQUIPO'],
 
-                ['cap' => 'menu_gerente_cartas', 'seccion' => 'gerente_cartas_nomina', 'icon' => 'fa-envelope-open-text', 'text' => 'Cartas nómina', 'title' => 'Designación cartas', 'breadcrumb' => 'CARTAS NÓMINA'],
-
-                ['cap' => 'menu_gerente_escuelas', 'seccion' => 'gerente_escuelas', 'icon' => 'fa-school', 'text' => 'Escuelas', 'title' => 'Catálogo de escuelas', 'breadcrumb' => 'ESCUELAS'],
+                ['cap' => 'menu_gerente_escuelas', 'seccion' => 'gerente_escuelas', 'icon' => 'fa-school', 'text' => 'Escuelas y visitas', 'title' => 'Escuelas externas y visitas (cartas)', 'breadcrumb' => 'ESCUELAS'],
 
                 ['cap' => 'menu_reporte_escuelas', 'seccion' => 'reporte_escuelas', 'icon' => 'fa-chart-bar', 'text' => 'Reporte escuelas', 'title' => 'Reporte de escuelas y cartas', 'breadcrumb' => 'REPORTE ESCUELAS'],
 
@@ -441,14 +439,6 @@ function menu_cncm_usa_menu_compacto(): bool
         return false;
 
     }
-
-    if (function_exists('rbac_esta_simulando_rol') && rbac_esta_simulando_rol()) {
-
-        return false;
-
-    }
-
-
 
     return in_array(rbac_rol_efectivo(), ['profesor', 'coordinador', 'admin'], true);
 
@@ -806,9 +796,7 @@ function menu_cncm_secciones_por_rol(): array
 
                 ['seccion' => 'gerente_matriz_entrenamiento', 'icon' => 'fa-graduation-cap', 'text' => 'Matriz del equipo', 'title' => 'Matriz de entrenamiento del equipo', 'breadcrumb' => 'MATRIZ EQUIPO'],
 
-                ['seccion' => 'gerente_cartas_nomina', 'icon' => 'fa-envelope-open-text', 'text' => 'Cartas nómina', 'title' => 'Designación cartas', 'breadcrumb' => 'CARTAS NÓMINA'],
-
-                ['seccion' => 'gerente_escuelas', 'icon' => 'fa-school', 'text' => 'Escuelas', 'title' => 'Catálogo de escuelas', 'breadcrumb' => 'ESCUELAS'],
+                ['seccion' => 'gerente_escuelas', 'icon' => 'fa-school', 'text' => 'Escuelas y visitas', 'title' => 'Escuelas externas y visitas (cartas)', 'breadcrumb' => 'ESCUELAS'],
 
                 ['seccion' => 'reporte_escuelas', 'icon' => 'fa-chart-bar', 'text' => 'Reporte escuelas', 'title' => 'Reporte de escuelas', 'breadcrumb' => 'REPORTE ESCUELAS'],
 
@@ -986,7 +974,12 @@ function menu_cncm_item_visible(array $item): bool
 
     }
 
-    if (function_exists('rbac_tiene_acceso_total') && rbac_tiene_acceso_total()) {
+    // Al simular, no abrir todos los ítems por acceso_total de la cuenta real.
+    if (
+        !(function_exists('rbac_esta_simulando_rol') && rbac_esta_simulando_rol())
+        && function_exists('rbac_tiene_acceso_total')
+        && rbac_tiene_acceso_total()
+    ) {
 
         return true;
 
@@ -1028,7 +1021,11 @@ function menu_cncm_seccion_visible(array $sec): bool
 
     }
 
-    if (function_exists('rbac_tiene_acceso_total') && rbac_tiene_acceso_total()) {
+    if (
+        !(function_exists('rbac_esta_simulando_rol') && rbac_esta_simulando_rol())
+        && function_exists('rbac_tiene_acceso_total')
+        && rbac_tiene_acceso_total()
+    ) {
 
         return true;
 
@@ -1234,7 +1231,7 @@ function menu_cncm_render_items(): void
 
         || (function_exists('rbac_es_supervisor') && rbac_es_supervisor());
 
-    if ($esStaff && $esSuper) {
+    if ($esStaff && $esSuper && !(function_exists('rbac_esta_simulando_rol') && rbac_esta_simulando_rol())) {
 
         error_log('HAY menu vacío para supervisor id=' . (int) $_SESSION['user_id'] . '; usando menú de respaldo.');
 
@@ -1258,7 +1255,10 @@ function menu_cncm_render_items_safe(): void
 
 {
 
-    if (function_exists('rbac_supervisor_aplicar_sesion')) {
+    if (
+        function_exists('rbac_supervisor_aplicar_sesion')
+        && !(function_exists('rbac_esta_simulando_rol') && rbac_esta_simulando_rol())
+    ) {
 
         rbac_supervisor_aplicar_sesion();
 

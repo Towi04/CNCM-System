@@ -163,14 +163,33 @@ function rbac_esta_simulando_rol(): bool
     return !empty($_SESSION['rol_simulado']) && rbac_rol_efectivo() !== rbac_rol_real();
 }
 
+/** La cuenta real es supervisora (aunque esté simulando otro rol). */
+function rbac_es_supervisor_cuenta(): bool
+{
+    return rbac_rol_real() === 'supervisor';
+}
+
+/**
+ * ¿Opera ahora como supervisor?
+ * Si está simulando otro rol, NO: la vista debe comportarse como el rol elegido.
+ */
 function rbac_es_supervisor(): bool
 {
+    if (rbac_esta_simulando_rol()) {
+        return rbac_rol_efectivo() === 'supervisor';
+    }
+
     return rbac_rol_real() === 'supervisor' || rbac_rol_efectivo() === 'supervisor';
 }
 
 /** Supervisor o rol con acceso_total en sesión o en BD. */
 function rbac_tiene_acceso_total(): bool
 {
+    // Al simular, nunca heredar el acceso total de la cuenta real.
+    if (rbac_esta_simulando_rol()) {
+        return !empty($_SESSION['rbac_acceso_total']) && rbac_rol_efectivo() === 'supervisor';
+    }
+
     if (rbac_es_supervisor()) {
         return true;
     }
@@ -204,10 +223,13 @@ function rbac_tiene_acceso_total(): bool
     return false;
 }
 
-/** Fuerza flags de sesión para supervisor. */
+/** Fuerza flags de sesión para supervisor (no aplica mientras simula otro rol). */
 function rbac_supervisor_aplicar_sesion(): void
 {
-    if (!rbac_es_supervisor()) {
+    if (rbac_esta_simulando_rol()) {
+        return;
+    }
+    if (!rbac_es_supervisor_cuenta() && rbac_rol_efectivo() !== 'supervisor') {
         return;
     }
     $_SESSION['rbac_acceso_total'] = 1;
@@ -334,13 +356,22 @@ function rbac_cap(string $cap): bool
         return (bool) $map[$rol][$cap];
     }
 
-    // Capacidades transversales por rol real (aunque simule otro rol)
-    $real = rbac_rol_real();
-    if ($cap === 'admin_planteles' && $real === 'supervisor') {
-        return true;
-    }
-    if ($cap === 'admin_calendario' && in_array($real, ['supervisor', 'director'], true)) {
-        return true;
+    // Capacidades transversales por rol real: solo fuera de simulación
+    // (al simular, la vista debe coincidir con el rol elegido).
+    if (!rbac_esta_simulando_rol()) {
+        $real = rbac_rol_real();
+        if ($cap === 'admin_planteles' && $real === 'supervisor') {
+            return true;
+        }
+        if ($cap === 'admin_calendario' && in_array($real, ['supervisor', 'director'], true)) {
+            return true;
+        }
+        if ($cap === 'admin_catalogo' && in_array($real, ['supervisor', 'director'], true)) {
+            return true;
+        }
+        if (in_array($cap, rbac_cap_solo_supervisor(), true) && $real === 'supervisor') {
+            return true;
+        }
     }
     if ($cap === 'menu_calendario' && function_exists('calendario_puede_ver_menu') && calendario_puede_ver_menu()) {
         return true;
@@ -351,12 +382,6 @@ function rbac_cap(string $cap): bool
     if ($cap === 'menu_calendario_consulta' && function_exists('calendario_puede_ver_consulta')) {
         global $pdo;
         return isset($pdo) && $pdo instanceof PDO && calendario_puede_ver_consulta($pdo);
-    }
-    if ($cap === 'admin_catalogo' && in_array($real, ['supervisor', 'director'], true)) {
-        return true;
-    }
-    if (in_array($cap, rbac_cap_solo_supervisor(), true) && $real === 'supervisor') {
-        return true;
     }
     if ($cap === 'reporte_academico_ver' && function_exists('rbac_db_cap') && isset($pdo) && rbac_db_cap($pdo, $cap, $rol)) {
         return true;
@@ -539,9 +564,15 @@ function rbac_reparar_sesion_desde_cuenta_bd(PDO $pdo, int $idUsuario): void
         return;
     }
     $_SESSION['rol_real'] = 'supervisor';
-    if (empty($_SESSION['rol_simulado'])) {
-        $_SESSION['rol'] = 'supervisor';
+    if (rbac_esta_simulando_rol()) {
+        // Conservar vista simulada: no reaplicar caps de supervisor.
+        if (function_exists('rbac_db_cargar_sesion_rol')) {
+            rbac_db_cargar_sesion_rol($pdo, rbac_rol_efectivo());
+        }
+
+        return;
     }
+    $_SESSION['rol'] = 'supervisor';
     rbac_supervisor_aplicar_sesion();
     if (function_exists('rbac_db_cargar_sesion_rol')) {
         rbac_db_cargar_sesion_rol($pdo, 'supervisor');
@@ -552,6 +583,12 @@ function rbac_reparar_sesion_desde_cuenta_bd(PDO $pdo, int $idUsuario): void
 function rbac_usuario_en_roles(array $roles): bool
 {
     $roles = array_map(static fn($r) => rbac_normalizar_rol_clave((string) $r), $roles);
+
+    // En simulación, solo el rol efectivo cuenta para permisos de vista.
+    if (rbac_esta_simulando_rol()) {
+        return in_array(rbac_rol_efectivo(), $roles, true);
+    }
+
     global $pdo;
     if (isset($pdo) && $pdo instanceof PDO && !empty($_SESSION['user_id'])) {
         $st = $pdo->prepare('SELECT rol, id_rol FROM usuarios WHERE id_usuario = ? LIMIT 1');

@@ -87,7 +87,7 @@ function calendario_puede_editar_modelo(string $modelo): bool
 
 function calendario_puede_editar_administrativo(): bool
 {
-    if (rbac_rol_real() === 'supervisor' || rbac_rol_efectivo() === 'supervisor') {
+    if (function_exists('rbac_es_supervisor') && rbac_es_supervisor()) {
         return true;
     }
     if (rbac_rol_efectivo() === 'gerente') {
