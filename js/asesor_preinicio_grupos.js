@@ -2,6 +2,8 @@
   const cfg = window.HAY_ASESOR_PREINICIO || {};
   const api = cfg.api || 'php/grupo_preinicio_api.php';
   let idGrupoActivo = 0;
+  let claveGrupoActivo = '';
+  let alumnosCache = [];
   let bound = false;
 
   function esc(s) {
@@ -43,6 +45,7 @@
         '<p>Alumnos: ' + esc(g.total_alumnos) + ' · Contactados: ' + esc(g.contactados) + '</p>';
       card.addEventListener('click', () => {
         idGrupoActivo = Number(g.id_grupo);
+        claveGrupoActivo = g.clave || '';
         cargarGrupos().then(() => cargarAlumnos(idGrupoActivo, g.clave));
       });
       cont.appendChild(card);
@@ -63,29 +66,78 @@
     }
   }
 
+  function telefonosAlumno(a) {
+    const principal = a.telefono || '';
+    const opcional = a.telefono2 || a.celular || '';
+    return [principal, opcional].filter(Boolean);
+  }
+
+  function imprimirLista() {
+    if (!alumnosCache.length) {
+      msg('Seleccione un grupo con alumnos para imprimir.', false);
+      return;
+    }
+    const filas = alumnosCache.map((a, i) => {
+      const tels = telefonosAlumno(a);
+      return '<tr>' +
+        '<td style="text-align:center;">' + (i + 1) + '</td>' +
+        '<td>' + esc(a.numero_control || '') + '</td>' +
+        '<td>' + esc(a.nombre || '') + '</td>' +
+        '<td>' + esc(tels[0] || '—') + '</td>' +
+        '<td>' + esc(tels[1] || '—') + '</td>' +
+        '<td>' + (Number(a.contactado) === 1 ? 'Sí' : '') + '</td>' +
+        '</tr>';
+    }).join('');
+    const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Contacto pre-inicio</title>' +
+      '<style>body{font-family:Arial,sans-serif;font-size:12px;margin:16px;}h1{font-size:16px;margin:0 0 8px;}' +
+      'table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:4px 6px;}' +
+      'th{background:#f0f0f0;}@media print{.noprint{display:none;}}</style></head><body>' +
+      '<button class="noprint" onclick="window.print()">Imprimir</button>' +
+      '<h1>Contacto pre-inicio — ' + esc(claveGrupoActivo || ('Grupo ' + idGrupoActivo)) + '</h1>' +
+      '<p>Tel = principal · Tel 2 = opcional</p>' +
+      '<table><thead><tr><th>#</th><th>Control</th><th>Nombre</th><th>Tel</th><th>Tel 2</th><th>Contactado</th></tr></thead>' +
+      '<tbody>' + filas + '</tbody></table></body></html>';
+    const w = window.open('', 'apg_print', 'width=900,height=700,scrollbars=yes');
+    if (!w) {
+      alert('Permita ventanas emergentes para imprimir la lista.');
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => { try { w.print(); } catch (_e) {} }, 250);
+  }
+
   async function cargarAlumnos(idGrupo, clave) {
     const titulo = document.getElementById('apg-titulo-alumnos');
     if (titulo) titulo.textContent = clave ? 'Alumnos — ' + clave : 'Alumnos del grupo';
     const cont = document.getElementById('apg-lista-alumnos');
+    const btnPrint = document.getElementById('apg-imprimir');
     if (!cont) return;
     cont.innerHTML = '<p style="color:#888;">Cargando…</p>';
+    if (btnPrint) btnPrint.style.display = 'none';
     const d = await fetchJson(api + '?accion=listar_alumnos&id_grupo=' + encodeURIComponent(idGrupo));
     if (d.status === 'error') {
+      alumnosCache = [];
       cont.innerHTML = '<p class="catalog-alert catalog-alert--error">' + esc(d.message) + '</p>';
       return;
     }
     cont.innerHTML = '';
-    if (!(d.alumnos || []).length) {
+    alumnosCache = d.alumnos || [];
+    if (!alumnosCache.length) {
       cont.innerHTML = '<p style="color:#888;">Sin alumnos inscritos en este grupo.</p>';
       return;
     }
-    (d.alumnos || []).forEach((a) => {
+    if (btnPrint) btnPrint.style.display = '';
+    alumnosCache.forEach((a) => {
       const row = document.createElement('div');
       row.className = 'apg-alumno-row' + (Number(a.contactado) === 1 ? ' is-done' : '');
-      const tel = [a.telefono, a.celular].filter(Boolean).join(' / ');
+      const tels = telefonosAlumno(a);
+      const telTxt = tels.length
+        ? ' · Tel: ' + tels[0] + (tels[1] ? ' · Tel 2: ' + tels[1] : '')
+        : '';
       row.innerHTML =
         '<strong>' + esc(a.nombre) + '</strong> <span class="apg-alumno-meta">' +
-        esc(a.numero_control) + (tel ? ' · ' + esc(tel) : '') +
+        esc(a.numero_control) + esc(telTxt) +
         (a.email ? ' · ' + esc(a.email) : '') + '</span>' +
         '<form class="apg-form-contacto">' +
         '<div class="apg-form-grid">' +
@@ -110,6 +162,7 @@
   function bindEvents() {
     if (bound) return;
     document.getElementById('apg-recargar')?.addEventListener('click', () => cargarGrupos());
+    document.getElementById('apg-imprimir')?.addEventListener('click', () => imprimirLista());
     bound = true;
   }
 

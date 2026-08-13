@@ -2,12 +2,19 @@
   const cfg = window.__hayVentasComisionAdmin || {};
   const api = cfg.api || 'php/ventas_comision_api.php';
   const soloLectura = cfg.soloLectura === true;
+  const puedePrint = cfg.puedePrint === true;
 
   let reglasItems = [];
   let ocultarComGerente = false;
 
   function $(id) {
     return document.getElementById(id);
+  }
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
   }
 
   function aplicarOcultarGerente() {
@@ -51,7 +58,7 @@
   }
 
   function showPanel(name) {
-    ['reglas', 'tabulador', 'override', 'gerente'].forEach((p) => {
+    ['reglas', 'tabulador', 'override', 'gerente', 'print'].forEach((p) => {
       const el = $('vc-panel-' + p);
       if (el) el.style.display = p === name ? '' : 'none';
     });
@@ -165,16 +172,28 @@
     const { data } = await hayFetchJson(api + '?action=asesores_plantel');
     if (data.status !== 'ok') return;
     const sel = $('vc-ov-asesor');
-    if (!sel) return;
-    const current = sel.value;
-    sel.innerHTML = '<option value="">— Todos —</option>';
+    const selPrint = $('vc-print-asesor');
+    if (!sel && !selPrint) return;
+    const current = sel ? sel.value : '';
+    const currentPrint = selPrint ? selPrint.value : '';
+    if (sel) sel.innerHTML = '<option value="">— Todos —</option>';
+    if (selPrint) selPrint.innerHTML = '<option value="">— Seleccione asesor —</option>';
     (data.items || []).forEach((u) => {
-      const o = document.createElement('option');
-      o.value = u.id_usuario;
-      o.textContent = ((u.nombre || '') + ' ' + (u.apellido || '')).trim();
-      sel.appendChild(o);
+      if (sel) {
+        const o = document.createElement('option');
+        o.value = u.id_usuario;
+        o.textContent = ((u.nombre || '') + ' ' + (u.apellido || '')).trim();
+        sel.appendChild(o);
+      }
+      if (selPrint) {
+        const op = document.createElement('option');
+        op.value = u.id_usuario;
+        op.textContent = ((u.nombre || '') + ' ' + (u.apellido || '')).trim();
+        selPrint.appendChild(op);
+      }
     });
-    if (current) sel.value = current;
+    if (sel && current) sel.value = current;
+    if (selPrint && currentPrint) selPrint.value = currentPrint;
   }
 
   async function buscarGerente() {
@@ -196,6 +215,55 @@
     });
   }
 
+  async function generarPrintAsesor() {
+    if (!puedePrint) return;
+    const idAsesor = $('vc-print-asesor')?.value || '';
+    if (!idAsesor) {
+      showMsg('Seleccione un asesor para imprimir.', false);
+      return;
+    }
+    const periodo = $('vc-print-periodo')?.value || 'semana';
+    const fecha = $('vc-print-fecha')?.value || '';
+    let url = api + '?action=liquidacion_asesor&periodo=' + encodeURIComponent(periodo)
+      + '&id_usuario_asesor=' + encodeURIComponent(idAsesor);
+    if (fecha) url += '&fecha=' + encodeURIComponent(fecha);
+    const { data } = await hayFetchJson(url);
+    if (data.status !== 'ok') throw new Error(data.message || 'Error al cargar liquidación');
+    const liq = data.data || {};
+    const movs = liq.movimientos || [];
+    const rows = movs.map((m) => '<tr>'
+      + '<td>' + esc((m.creado_en || '').slice(0, 16)) + '</td>'
+      + '<td>' + esc(m.tipo || '') + '</td>'
+      + '<td>' + esc(m.numero_control || '') + '</td>'
+      + '<td>' + esc(m.esp_nombre || m.cert_nombre || '') + '</td>'
+      + '<td style="text-align:right;">$' + Number(m.comision_asesor || 0).toFixed(2) + '</td>'
+      + '</tr>').join('');
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>Comisiones asesor</title>'
+      + '<style>body{font-family:Arial,sans-serif;margin:24px;color:#222}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #ddd;padding:7px;font-size:12px}th{background:#f2f2f2;text-align:left}.total{font-size:18px;margin-top:14px;font-weight:bold}@media print{button{display:none}}</style>'
+      + '</head><body><button onclick="window.print()">Imprimir</button>'
+      + '<h1>Reporte de comisiones de asesor</h1>'
+      + '<p><strong>Asesor:</strong> ' + esc(liq.asesor || '') + '<br><strong>Periodo:</strong> ' + esc(liq.periodo_label || '') + '</p>'
+      + '<div class="total">Total comisiones: ' + esc(liq.comisiones_total_fmt || '$0.00') + '</div>'
+      + '<p>Este reporte no incluye sueldo base ni tabulador de nómina.</p>'
+      + '<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Control</th><th>Concepto</th><th>Comisión asesor</th></tr></thead><tbody>'
+      + (rows || '<tr><td colspan="5">Sin movimientos.</td></tr>')
+      + '</tbody></table></body></html>';
+    const preview = $('vc-print-preview');
+    if (preview) {
+      preview.hidden = false;
+      preview.textContent = 'Reporte listo: ' + (liq.comisiones_total_fmt || '$0.00') + ' en comisiones.';
+    }
+    const w = window.open('', '_blank');
+    if (!w) {
+      showMsg('Permita ventanas emergentes para imprimir.', false);
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+  }
+
   function onWrapClick(ev) {
     const tab = ev.target.closest('.vc-tab');
     if (tab) {
@@ -206,6 +274,7 @@
         Promise.all([loadTabuladores(), loadOverrides()]).catch((e) => showMsg(e.message, false));
       }
       if (name === 'gerente') buscarGerente().catch((e) => showMsg(e.message, false));
+      if (name === 'print') loadAsesores().catch((e) => showMsg(e.message, false));
       return;
     }
 
@@ -320,6 +389,10 @@
       buscarGerente().catch((e) => showMsg(e.message, false));
     });
 
+    $('vc-print-generar')?.addEventListener('click', () => {
+      generarPrintAsesor().catch((e) => showMsg(e.message, false));
+    });
+
     $('vc-ocultar-com-gerente')?.addEventListener('change', (ev) => {
       ocultarComGerente = !!ev.target.checked;
       aplicarOcultarGerente();
@@ -335,7 +408,9 @@
     bindEvents();
     const gf = $('vc-ger-fecha');
     if (gf && !gf.value) gf.value = new Date().toISOString().slice(0, 10);
-    showPanel('reglas');
+    const pf = $('vc-print-fecha');
+    if (pf && !pf.value) pf.value = new Date().toISOString().slice(0, 10);
+    showPanel(puedePrint && cfg.tabInicial === 'print' ? 'print' : 'reglas');
     loadReglas()
       .then(() => aplicarOcultarGerente())
       .catch((e) => showMsg(e.message || 'Error al cargar especialidades.', false));

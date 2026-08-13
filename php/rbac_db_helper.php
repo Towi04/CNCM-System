@@ -135,6 +135,15 @@ function rbac_privilegios_catalogo(): array
         'menu_grupos_fases' => ['label' => 'Grupos por fase', 'grupo' => 'Ventas y alumnos'],
         'menu_ubicacion_asesor' => ['label' => 'Ubicación (asesor)', 'grupo' => 'Ventas y alumnos'],
         'menu_cert_preregistro' => ['label' => 'Cert. pre-registro', 'grupo' => 'Ventas y alumnos'],
+        'menu_cronologia' => ['label' => 'Cronología de grupos', 'grupo' => 'Académico'],
+        'menu_reporte_bajas' => ['label' => 'Reporte de bajas', 'grupo' => 'Reportes'],
+        'menu_transferencias_confirmar' => ['label' => 'Confirmar transferencias (supervisión)', 'grupo' => 'Caja'],
+        'menu_transferencias_ver' => ['label' => 'Ver / imprimir transferencias', 'grupo' => 'Caja'],
+        'menu_manuales_stock' => ['label' => 'Stock de manuales', 'grupo' => 'Inventario'],
+        'menu_manuales_envios' => ['label' => 'Envíos de manuales a planteles', 'grupo' => 'Inventario'],
+        'menu_entrega_documentos' => ['label' => 'Entrega de documentos', 'grupo' => 'Caja'],
+        'menu_riesgo_reporte' => ['label' => 'Reporte de riesgo académico', 'grupo' => 'Académico'],
+        'menu_comisiones_nomina_print' => ['label' => 'Imprimir nómina de comisiones', 'grupo' => 'Ventas'],
         'menu_reporte_inscritos' => ['label' => 'Reporte de inscritos', 'grupo' => 'Ventas y alumnos'],
         'menu_reporte_presentados' => ['label' => 'Reporte de presentados', 'grupo' => 'Ventas y alumnos'],
         'menu_asesor_preinicio' => ['label' => 'Contacto pre-inicio (asesor)', 'grupo' => 'Ventas y alumnos'],
@@ -325,6 +334,7 @@ function rbac_db_seed_departamentos_roles(PDO $pdo): void
         'admin' => 'administrativo',
         'asesor' => 'ventas',
         'profesor' => 'ingles',
+        'manuales' => 'administrativo',
         'alumno' => 'administrativo',
     ];
     $st = $pdo->prepare(
@@ -346,6 +356,7 @@ function rbac_db_seed_alcance_planteles(PDO $pdo): void
         'admin' => 'solo_usuario',
         'asesor' => 'solo_usuario',
         'profesor' => 'solo_usuario',
+        'manuales' => 'todos',
         'alumno' => 'solo_usuario',
     ];
     $up = $pdo->prepare('UPDATE roles SET alcance_planteles = ? WHERE id_rol = ?');
@@ -378,6 +389,79 @@ function rbac_db_agregar_privilegios_rol(PDO $pdo, string $claveRol, array $priv
         if ($p !== '') {
             $ins->execute([(int) $rol['id_rol'], $p]);
         }
+    }
+}
+
+/** Crea/actualiza rol operativo de manuales y privilegios agregados en lote operativo. */
+function rbac_db_ensure_mejoras_operativas_lote(PDO $pdo): void
+{
+    if (!rbac_db_tablas_listas($pdo)) {
+        return;
+    }
+
+    $st = $pdo->prepare('SELECT id_rol FROM roles WHERE clave = ? LIMIT 1');
+    $st->execute(['manuales']);
+    $idManuales = (int) ($st->fetchColumn() ?: 0);
+    if ($idManuales <= 0) {
+        $pdo->prepare(
+            'INSERT INTO roles (clave, nombre, descripcion, acceso_total, es_sistema, activo, orden, alcance_planteles, departamento_default)
+             VALUES (?,?,?,?,1,1,?,?,?)'
+        )->execute([
+            'manuales',
+            'Inventario / Manuales',
+            'Gestión de manuales, stock central y envíos a planteles',
+            0,
+            8,
+            'todos',
+            'administrativo',
+        ]);
+        $idManuales = (int) $pdo->lastInsertId();
+    } else {
+        $pdo->prepare(
+            "UPDATE roles
+             SET nombre = ?, descripcion = COALESCE(NULLIF(descripcion, ''), ?), es_sistema = 1, activo = 1,
+                 alcance_planteles = CASE WHEN alcance_planteles = 'solo_usuario' OR alcance_planteles IS NULL THEN 'todos' ELSE alcance_planteles END,
+                 departamento_default = COALESCE(NULLIF(departamento_default, ''), 'administrativo')
+             WHERE id_rol = ?"
+        )->execute([
+            'Inventario / Manuales',
+            'Gestión de manuales, stock central y envíos a planteles',
+            $idManuales,
+        ]);
+    }
+
+    $adminExtras = [
+        'menu_preregistro',
+        'menu_cert_preregistro',
+        'menu_cronologia',
+        'menu_reporte_bajas',
+        'menu_transferencias_ver',
+        'menu_entrega_documentos',
+        'menu_manuales_envios', // confirmar recepción de envíos en plantel
+    ];
+    $directorExtras = array_values(array_unique(array_merge($adminExtras, [
+        'menu_transferencias_ver',
+        'menu_entrega_documentos',
+        'menu_riesgo_reporte',
+    ])));
+
+    $grants = [
+        'admin' => $adminExtras,
+        'profesor' => ['menu_preregistro', 'menu_cert_preregistro'],
+        'coordinador' => ['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte'],
+        'coordinacion' => ['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte'],
+        'director' => $directorExtras,
+        'supervisor' => ['menu_transferencias_confirmar', 'menu_transferencias_ver'],
+        'gerente' => ['menu_comisiones_nomina_print', 'menu_preregistro'],
+        'manuales' => ['menu_preregistro', 'menu_cert_preregistro', 'menu_manuales_stock', 'menu_manuales_envios', 'menu_soporte'],
+    ];
+
+    foreach ($grants as $rol => $caps) {
+        rbac_db_agregar_privilegios_rol($pdo, $rol, $caps);
+    }
+
+    if (function_exists('rbac_db_reparar_supervisor')) {
+        rbac_db_reparar_supervisor($pdo);
     }
 }
 
@@ -429,8 +513,8 @@ function rbac_db_reparar_roles_sistema(PDO $pdo): void
     }
 
     $quitarCoord = [
-        'menu_preregistro', 'menu_entrevistas', 'menu_grupos_fases', 'menu_ubicacion_asesor',
-        'menu_cert_preregistro', 'menu_reporte_inscritos', 'menu_comisiones_consulta', 'menu_comisiones_admin',
+        'menu_entrevistas', 'menu_grupos_fases', 'menu_ubicacion_asesor',
+        'menu_reporte_inscritos', 'menu_comisiones_consulta', 'menu_comisiones_admin',
         'menu_podio_ventas', 'menu_asesor_preinicio', 'menu_ventas', 'menu_caja', 'menu_consulta_adeudo',
         'menu_punto_venta', 'menu_venta_productos', 'menu_reportes', 'descuento_inscripcion_asesor',
     ];
@@ -447,8 +531,8 @@ function rbac_db_reparar_roles_sistema(PDO $pdo): void
     }
 
     $quitarAdmin = [
-        'menu_preregistro', 'menu_entrevistas', 'menu_grupos_fases', 'menu_ubicacion_asesor',
-        'menu_cert_preregistro', 'menu_reporte_inscritos', 'menu_comisiones_consulta', 'menu_comisiones_admin',
+        'menu_entrevistas', 'menu_grupos_fases', 'menu_ubicacion_asesor',
+        'menu_reporte_inscritos', 'menu_comisiones_consulta', 'menu_comisiones_admin',
         'menu_podio_ventas', 'menu_asesor_preinicio', 'menu_ventas', 'menu_academico', 'menu_grupos',
         'menu_especialidades', 'menu_asistencia', 'menu_examenes', 'menu_hay', 'hay_eval_gestionar',
         'hay_eval_configurar', 'menu_gerente_dashboard', 'menu_admin',
@@ -509,6 +593,10 @@ function rbac_db_reparar_roles_sistema(PDO $pdo): void
         foreach ($agregarGerente as $p) {
             $insG->execute([$idGerente, $p]);
         }
+    }
+
+    if (function_exists('rbac_db_ensure_mejoras_operativas_lote')) {
+        rbac_db_ensure_mejoras_operativas_lote($pdo);
     }
 }
 

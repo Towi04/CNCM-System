@@ -17,6 +17,11 @@ function ventas_comision_puede_administrar(): bool
     return in_array($rol, ['supervisor', 'gerente', 'director', 'admin'], true);
 }
 
+function ventas_comision_puede_imprimir_nomina_comisiones(): bool
+{
+    return function_exists('rbac_cap') && rbac_cap('menu_comisiones_nomina_print');
+}
+
 function ventas_comision_puede_consultar(): bool
 {
     if (ventas_comision_puede_administrar()) {

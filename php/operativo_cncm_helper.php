@@ -11,6 +11,9 @@ function operativo_cncm_ensure_schema(PDO $pdo): void
     operativo_cncm_cartas_schema($pdo);
     operativo_cncm_inscripcion_auth_schema($pdo);
     operativo_cncm_pagos_campos($pdo);
+    if (function_exists('pago_transferencia_ensure_schema')) {
+        pago_transferencia_ensure_schema($pdo);
+    }
     if (function_exists('plan_version_ensure_schema')) {
         plan_version_ensure_schema($pdo);
     }
@@ -194,6 +197,11 @@ function operativo_cncm_pagos_campos(PDO $pdo): void
     plantel_ensure_column($pdo, 'alumno_pagos', 'etiqueta_apoyo', 'VARCHAR(120) NULL', 'monto_apoyo');
     plantel_ensure_column($pdo, 'alumno_pagos', 'cobro_precio_lista', 'TINYINT(1) NOT NULL DEFAULT 0', 'etiqueta_apoyo');
     plantel_ensure_column($pdo, 'alumno_pagos', 'medio_pago', "ENUM('efectivo','tarjeta_debito','tarjeta_credito','transferencia') NULL", 'forma_pago');
+    plantel_ensure_column($pdo, 'alumno_pagos', 'cuenta_banco', "ENUM('bbva','bancoppel','hsbc') NULL", 'medio_pago');
+    plantel_ensure_column($pdo, 'alumno_pagos', 'transfer_estado', "ENUM('pendiente','confirmado','rechazado') NULL", 'cuenta_banco');
+    plantel_ensure_column($pdo, 'alumno_pagos', 'comprobante_path', 'VARCHAR(255) NULL', 'transfer_estado');
+    plantel_ensure_column($pdo, 'alumno_pagos', 'transfer_confirmado_por', 'INT UNSIGNED NULL', 'comprobante_path');
+    plantel_ensure_column($pdo, 'alumno_pagos', 'transfer_confirmado_en', 'DATETIME NULL', 'transfer_confirmado_por');
     plantel_ensure_column($pdo, 'alumno_pagos', 'origen_cartas', 'TINYINT(1) NOT NULL DEFAULT 0', 'cobro_precio_lista');
     plantel_ensure_column($pdo, 'alumno_pagos', 'comision_asesor_manual', 'DECIMAL(12,2) NULL', 'origen_cartas');
     plantel_ensure_column($pdo, 'alumno_pagos', 'comision_gerente_sobre', 'DECIMAL(12,2) NULL', 'comision_asesor_manual');
@@ -222,6 +230,7 @@ function operativo_cncm_roles_migrar(PDO $pdo): void
         ['director', 'Director de plantel', 'Administración operativa del plantel', 2],
         ['gerente', 'Gerente de ventas', 'Área comercial y comisiones', 3],
         ['coordinador', 'Coordinador académico', 'Jefe de maestros; calificaciones y planeaciones', 4],
+        ['manuales', 'Inventario / Manuales', 'Gestión de stock y envíos de manuales', 8],
     ];
     foreach ($rolesNuevos as [$clave, $nombre, $desc, $orden]) {
         $st = $pdo->prepare('SELECT id_rol FROM roles WHERE clave = ? LIMIT 1');
@@ -241,7 +250,8 @@ function operativo_cncm_roles_migrar(PDO $pdo): void
             'menu_admin', 'menu_alumnos', 'menu_asistencia', 'menu_grupos', 'menu_especialidades',
             'menu_consulta_adeudo', 'menu_punto_venta', 'menu_venta_productos', 'menu_reportes',
             'menu_calendario', 'menu_calendario_consulta', 'menu_certificaciones', 'menu_preregistro',
-            'menu_ventas', 'menu_caja', 'descuento_inscripcion_director', 'permiso_docente_aprobar_final',
+            'menu_ventas', 'menu_caja', 'menu_transferencias_ver', 'descuento_inscripcion_director',
+            'permiso_docente_aprobar_final',
             'inscripcion_autorizar_edad', 'inscripcion_autorizar_ubicacion',
         ];
         $capsGerente = [
@@ -261,9 +271,16 @@ function operativo_cncm_roles_migrar(PDO $pdo): void
         rbac_db_agregar_privilegios_rol($pdo, 'director', $capsDirector);
         rbac_db_agregar_privilegios_rol($pdo, 'gerente', $capsGerente);
         rbac_db_agregar_privilegios_rol($pdo, 'coordinador', $capsCoord);
-        rbac_db_agregar_privilegios_rol($pdo, 'supervisor', ['catalogo_editar_costos', 'cartas_excepcion_minimo']);
+        rbac_db_agregar_privilegios_rol($pdo, 'manuales', [
+            'menu_preregistro', 'menu_cert_preregistro', 'menu_manuales_stock', 'menu_manuales_envios', 'menu_soporte',
+        ]);
+        rbac_db_agregar_privilegios_rol($pdo, 'supervisor', [
+            'catalogo_editar_costos', 'cartas_excepcion_minimo',
+            'menu_transferencias_confirmar', 'menu_transferencias_ver',
+        ]);
         rbac_db_agregar_privilegios_rol($pdo, 'admin', [
             'inscripcion_solicitar_autorizacion', 'menu_caja', 'cobro_precio_lista', 'ticket_apoyo_educativo',
+            'menu_transferencias_ver',
         ]);
         rbac_db_agregar_privilegios_rol($pdo, 'asesor', [
             'descuento_inscripcion_asesor', 'inscripcion_solicitar_autorizacion',
@@ -413,10 +430,27 @@ function operativo_cncm_pago_aplicar_meta(PDO $pdo, int $idPago, array $data): v
         return;
     }
     operativo_cncm_ensure_schema($pdo);
+    $cuentaBanco = null;
+    if (!empty($data['cuenta_banco'])) {
+        $cb = strtolower(trim((string) $data['cuenta_banco']));
+        if (in_array($cb, ['bbva', 'bancoppel', 'hsbc'], true)) {
+            $cuentaBanco = $cb;
+        }
+    }
+    $transferEstado = null;
+    if (!empty($data['transfer_estado'])) {
+        $te = strtolower(trim((string) $data['transfer_estado']));
+        if (in_array($te, ['pendiente', 'confirmado', 'rechazado'], true)) {
+            $transferEstado = $te;
+        }
+    }
     $pdo->prepare(
         'UPDATE alumno_pagos SET
             monto_referencia = ?, monto_apoyo = ?, etiqueta_apoyo = ?,
-            cobro_precio_lista = ?, medio_pago = ?, origen_cartas = ?,
+            cobro_precio_lista = ?, medio_pago = ?, cuenta_banco = COALESCE(?, cuenta_banco),
+            transfer_estado = COALESCE(?, transfer_estado),
+            comprobante_path = COALESCE(?, comprobante_path),
+            origen_cartas = ?,
             comision_asesor_manual = ?, comision_gerente_sobre = ?,
             excluir_tabulador = ?, id_autoriza_director = ?
          WHERE id_pago = ?'
@@ -426,6 +460,9 @@ function operativo_cncm_pago_aplicar_meta(PDO $pdo, int $idPago, array $data): v
         !empty($data['etiqueta_apoyo']) ? trim((string) $data['etiqueta_apoyo']) : null,
         !empty($data['cobro_precio_lista']) ? 1 : 0,
         !empty($data['medio_pago']) ? (string) $data['medio_pago'] : null,
+        $cuentaBanco,
+        $transferEstado,
+        !empty($data['comprobante_path']) ? trim((string) $data['comprobante_path']) : null,
         !empty($data['origen_cartas']) ? 1 : 0,
         isset($data['comision_asesor_manual']) ? catalog_money($data['comision_asesor_manual']) : null,
         isset($data['comision_gerente_sobre']) ? catalog_money($data['comision_gerente_sobre']) : null,

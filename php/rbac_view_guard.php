@@ -90,6 +90,18 @@ function rbac_seccion_caps(): array
 
         'corte_caja' => 'menu_reportes',
 
+        'pagos_transferencias' => 'menu_transferencias_ver',
+
+        'reporte_bajas' => 'menu_reporte_bajas',
+
+        'manuales_stock' => 'menu_manuales_stock',
+
+        'manuales_envios' => 'menu_manuales_envios',
+
+        'cronologia_grupos' => 'menu_cronologia',
+
+        'reporte_riesgo_academico' => 'menu_riesgo_reporte',
+
         'ventas_comisiones_admin' => 'menu_comisiones_admin',
 
         'ventas_comisiones_consulta' => 'menu_comisiones_consulta',
@@ -152,6 +164,27 @@ function rbac_guard_seccion(string $seccion): void
 
         return;
 
+    }
+
+    if ($seccion === 'pagos_transferencias') {
+        if (
+            (function_exists('rbac_cap') && (rbac_cap('menu_transferencias_ver') || rbac_cap('menu_transferencias_confirmar')))
+            || (function_exists('pago_transferencia_puede_ver') && pago_transferencia_puede_ver())
+        ) {
+            return;
+        }
+    }
+
+    if ($seccion === 'ventas_comisiones_admin' && function_exists('rbac_cap') && rbac_cap('menu_comisiones_nomina_print')) {
+        return;
+    }
+
+    if ($seccion === 'manuales_envios' && function_exists('manuales_stock_puede_envios') && manuales_stock_puede_envios()) {
+        return;
+    }
+
+    if ($seccion === 'cronologia_grupos' && function_exists('cronologia_puede_ver') && cronologia_puede_ver()) {
+        return;
     }
 
     rbac_require_cap($cap);

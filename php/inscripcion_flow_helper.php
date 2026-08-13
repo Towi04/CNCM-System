@@ -969,7 +969,9 @@ function inscripcion_flow_completar(
         'id_pago' => $idPago,
         'ticket' => $ticket,
         'ticket_url' => $idPago > 0
-            ? 'views/ticket_pago_inscripcion.php?id_pago=' . $idPago . '&print=1'
+            ? (function_exists('hay_asset_url')
+                ? hay_asset_url('views/ticket_pago_inscripcion.php?id_pago=' . $idPago . '&print=1')
+                : ('views/ticket_pago_inscripcion.php?id_pago=' . $idPago . '&print=1'))
             : null,
         'grupo_clave' => $grupo['clave'] ?? '',
     ]);
@@ -1170,7 +1172,9 @@ function inscripcion_flow_completar_ubicacion(
             'id_pago' => $idPago,
             'ticket' => $ticket,
             'ticket_url' => $idPago > 0
-                ? 'views/ticket_pago_inscripcion.php?id_pago=' . $idPago . '&print=1'
+                ? (function_exists('hay_asset_url')
+                    ? hay_asset_url('views/ticket_pago_inscripcion.php?id_pago=' . $idPago . '&print=1')
+                    : ('views/ticket_pago_inscripcion.php?id_pago=' . $idPago . '&print=1'))
                 : null,
         ];
     } catch (Throwable $e) {

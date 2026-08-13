@@ -298,10 +298,12 @@ function reporte_financiero_clasificar_medio(string $forma): string
 /** @return array<string, mixed> */
 function reporte_corte_caja_calcular(PDO $pdo, int $idPlantel, string $fecha, string $cuenta = 'B'): array
 {
+    // Excluye transferencias pendientes/rechazadas (también vía pago_sql_filtro_activos).
     $st = $pdo->prepare(
         'SELECT p.monto, p.forma_pago, COALESCE(p.cuenta_contable, \'B\') AS cuenta_contable
          FROM alumno_pagos p
-         WHERE p.id_plantel = ? AND DATE(p.creado_en) = ?' . pago_sql_filtro_activos('p')
+         WHERE p.id_plantel = ? AND DATE(p.creado_en) = ?' . pago_sql_filtro_activos('p') . '
+           AND (p.transfer_estado IS NULL OR p.transfer_estado = \'\' OR p.transfer_estado = \'confirmado\')'
     );
     $st->execute([$idPlantel, $fecha]);
     $rows = $st->fetchAll(PDO::FETCH_ASSOC);
@@ -344,25 +346,102 @@ function reporte_corte_caja_calcular(PDO $pdo, int $idPlantel, string $fecha, st
     ];
 }
 
+/** @return list<array{label:string,monto:float}> */
+function reporte_corte_caja_normalizar_filas_extra(mixed $raw): array
+{
+    if (is_string($raw) && $raw !== '') {
+        $decoded = json_decode($raw, true);
+        $raw = is_array($decoded) ? $decoded : [];
+    }
+    if (!is_array($raw)) {
+        return [];
+    }
+    $out = [];
+    foreach ($raw as $fila) {
+        if (!is_array($fila)) {
+            continue;
+        }
+        $label = trim((string) ($fila['label'] ?? $fila['etiqueta'] ?? ''));
+        $monto = catalog_money($fila['monto'] ?? $fila['amount'] ?? 0);
+        if ($label === '' && $monto <= 0) {
+            continue;
+        }
+        $out[] = ['label' => $label !== '' ? $label : 'Concepto', 'monto' => $monto];
+    }
+
+    return $out;
+}
+
+/** @return array<string, int|float> */
+function reporte_corte_caja_normalizar_denominaciones(mixed $raw): array
+{
+    if (is_string($raw) && $raw !== '') {
+        $decoded = json_decode($raw, true);
+        $raw = is_array($decoded) ? $decoded : [];
+    }
+    if (!is_array($raw)) {
+        return [];
+    }
+    $allowed = ['1000', '500', '200', '100', '50', '20', '10', '5', '2', '1', '0.50'];
+    $out = [];
+    foreach ($allowed as $key) {
+        $qty = 0;
+        if (isset($raw[$key])) {
+            $qty = (int) $raw[$key];
+        } elseif (isset($raw['billetes'][$key])) {
+            $qty = (int) $raw['billetes'][$key];
+        } elseif (isset($raw['monedas'][$key])) {
+            $qty = (int) $raw['monedas'][$key];
+        }
+        if ($qty > 0) {
+            $out[$key] = $qty;
+        }
+    }
+
+    return $out;
+}
+
 /** @return array<string, mixed>|null */
 function reporte_corte_caja_obtener(PDO $pdo, int $idPlantel, string $fecha, string $cuenta = 'B'): ?array
 {
+    if (function_exists('pago_ensure_schema')) {
+        pago_ensure_schema($pdo);
+    }
+
     $st = $pdo->prepare(
-        'SELECT c.*, CONCAT(u.nombre, \' \', u.apellido) AS usuario_nombre
+        'SELECT c.*,
+                CONCAT(u.nombre, \' \', u.apellido) AS usuario_nombre,
+                CONCAT(ur.nombre, \' \', ur.apellido) AS recibido_nombre
          FROM corte_caja c
          LEFT JOIN usuarios u ON u.id_usuario = c.id_usuario
+         LEFT JOIN usuarios ur ON ur.id_usuario = c.recibido_por
          WHERE c.id_plantel = ? AND c.fecha = ? AND c.cuenta = ?
          ORDER BY c.id_corte DESC LIMIT 1'
     );
     $st->execute([$idPlantel, $fecha, $cuenta]);
     $row = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        return null;
+    }
 
-    return $row ?: null;
+    $row['billetes'] = (float) ($row['billetes'] ?? 0);
+    $row['monedas'] = (float) ($row['monedas'] ?? 0);
+    $row['filas_extra'] = reporte_corte_caja_normalizar_filas_extra($row['filas_extra'] ?? null);
+    $row['denominaciones'] = reporte_corte_caja_normalizar_denominaciones($row['denominaciones_json'] ?? null);
+    $row['recibido_por'] = isset($row['recibido_por']) && $row['recibido_por'] !== null
+        ? (int) $row['recibido_por']
+        : null;
+
+    return $row;
 }
 
 /** @param array<string, mixed> $data */
 function reporte_corte_caja_guardar(PDO $pdo, int $idPlantel, int $idUsuario, array $data): array
 {
+    if (function_exists('pago_ensure_schema')) {
+        pago_ensure_schema($pdo);
+    }
+
     $fecha = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($data['fecha'] ?? ''))
         ? $data['fecha']
         : date('Y-m-d');
@@ -370,14 +449,25 @@ function reporte_corte_caja_guardar(PDO $pdo, int $idPlantel, int $idUsuario, ar
     $ingreso = catalog_money($data['ingreso_sistema'] ?? 0);
     $retiros = catalog_money($data['retiros'] ?? 0);
     $comprobantes = catalog_money($data['comprobantes'] ?? 0);
+    $billetes = catalog_money($data['billetes'] ?? 0);
+    $monedas = catalog_money($data['monedas'] ?? 0);
+    $filasExtra = reporte_corte_caja_normalizar_filas_extra($data['filas_extra'] ?? null);
+    $denominaciones = reporte_corte_caja_normalizar_denominaciones($data['denominaciones'] ?? $data['denominaciones_json'] ?? null);
+    $filasJson = $filasExtra !== [] ? json_encode($filasExtra, JSON_UNESCAPED_UNICODE) : null;
+    $denomsJson = $denominaciones !== [] ? json_encode($denominaciones, JSON_UNESCAPED_UNICODE) : null;
+
     $efectivoContado = isset($data['efectivo_contado']) ? catalog_money($data['efectivo_contado']) : null;
+    if ($billetes > 0 || $monedas > 0) {
+        $efectivoContado = round($billetes + $monedas, 2);
+    }
     $notas = trim((string) ($data['notas'] ?? ''));
 
     $existente = reporte_corte_caja_obtener($pdo, $idPlantel, $fecha, $cuenta);
     if ($existente) {
         $st = $pdo->prepare(
             'UPDATE corte_caja SET id_usuario = ?, ingreso_sistema = ?, retiros = ?, comprobantes = ?,
-             efectivo_contado = ?, notas = ?, creado_en = NOW()
+             billetes = ?, monedas = ?, efectivo_contado = ?, filas_extra = ?, denominaciones_json = ?,
+             notas = ?, creado_en = NOW()
              WHERE id_corte = ?'
         );
         $st->execute([
@@ -385,15 +475,21 @@ function reporte_corte_caja_guardar(PDO $pdo, int $idPlantel, int $idUsuario, ar
             $ingreso,
             $retiros,
             $comprobantes,
+            $billetes,
+            $monedas,
             $efectivoContado,
+            $filasJson,
+            $denomsJson,
             $notas !== '' ? $notas : null,
             (int) $existente['id_corte'],
         ]);
         $id = (int) $existente['id_corte'];
     } else {
         $st = $pdo->prepare(
-            'INSERT INTO corte_caja (id_plantel, id_usuario, fecha, cuenta, ingreso_sistema, retiros, comprobantes, efectivo_contado, notas)
-             VALUES (?,?,?,?,?,?,?,?,?)'
+            'INSERT INTO corte_caja (
+                id_plantel, id_usuario, fecha, cuenta, ingreso_sistema, retiros, comprobantes,
+                billetes, monedas, efectivo_contado, filas_extra, denominaciones_json, notas
+             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
         );
         $st->execute([
             $idPlantel,
@@ -403,13 +499,81 @@ function reporte_corte_caja_guardar(PDO $pdo, int $idPlantel, int $idUsuario, ar
             $ingreso,
             $retiros,
             $comprobantes,
+            $billetes,
+            $monedas,
             $efectivoContado,
+            $filasJson,
+            $denomsJson,
             $notas !== '' ? $notas : null,
         ]);
         $id = (int) $pdo->lastInsertId();
     }
 
     return ['ok' => true, 'id_corte' => $id, 'message' => 'Corte guardado'];
+}
+
+/**
+ * Confirma recepción del dinero del corte con usuario/contraseña del receptor.
+ *
+ * @return array{ok:bool,message:string,id_corte?:int,recibido_por?:int,recibido_en?:string,recibido_usuario?:string,recibido_nombre?:string}
+ */
+function reporte_corte_caja_confirmar_recibo(
+    PDO $pdo,
+    int $idPlantel,
+    string $fecha,
+    string $cuenta,
+    string $usuario,
+    string $password
+): array {
+    if (function_exists('pago_ensure_schema')) {
+        pago_ensure_schema($pdo);
+    }
+
+    $cuenta = in_array($cuenta, ['A', 'B'], true) ? $cuenta : 'B';
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+        return ['ok' => false, 'message' => 'Fecha inválida'];
+    }
+
+    $corte = reporte_corte_caja_obtener($pdo, $idPlantel, $fecha, $cuenta);
+    if (!$corte) {
+        return ['ok' => false, 'message' => 'Guarde el corte antes de confirmar el recibo'];
+    }
+
+    $usuario = trim($usuario);
+    if ($usuario === '' || $password === '') {
+        return ['ok' => false, 'message' => 'Usuario y contraseña requeridos'];
+    }
+
+    require_once __DIR__ . '/auth_helpers.php';
+    $u = auth_find_user_by_login($pdo, $usuario);
+    if (!$u || empty($u['password']) || !password_verify($password, (string) $u['password'])) {
+        return ['ok' => false, 'message' => 'Usuario o contraseña incorrectos'];
+    }
+    if ((int) ($u['suspendido'] ?? 0) === 1) {
+        return ['ok' => false, 'message' => 'El usuario receptor está suspendido'];
+    }
+
+    $idReceptor = (int) $u['id_usuario'];
+    $username = (string) ($u['username'] ?? $usuario);
+    $nombre = trim(($u['nombre'] ?? '') . ' ' . ($u['apellido'] ?? ''));
+    $ahora = date('Y-m-d H:i:s');
+
+    $st = $pdo->prepare(
+        'UPDATE corte_caja
+         SET recibido_por = ?, recibido_en = ?, recibido_usuario = ?
+         WHERE id_corte = ? AND id_plantel = ?'
+    );
+    $st->execute([$idReceptor, $ahora, $username, (int) $corte['id_corte'], $idPlantel]);
+
+    return [
+        'ok' => true,
+        'message' => 'Recibo confirmado',
+        'id_corte' => (int) $corte['id_corte'],
+        'recibido_por' => $idReceptor,
+        'recibido_en' => $ahora,
+        'recibido_usuario' => $username,
+        'recibido_nombre' => $nombre,
+    ];
 }
 
 /** @return array{filas: list<array>, resumen: array<string, mixed>} */

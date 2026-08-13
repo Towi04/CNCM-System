@@ -192,6 +192,25 @@ function alumno_portal_grupos_activos(PDO $pdo, int $idAlumno): array
     return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
+/** Último seguimiento de riesgo académico visible para el alumno, sin nota interna. */
+function alumno_portal_riesgo_atendido(PDO $pdo, int $idAlumno): ?array
+{
+    if ($idAlumno <= 0) {
+        return null;
+    }
+    $st = $pdo->prepare(
+        "SELECT n.creado_en, CONCAT(u.nombre, ' ', u.apellido) AS atendido_por
+         FROM alumno_nota_coordinacion n
+         LEFT JOIN usuarios u ON u.id_usuario = n.id_usuario
+         WHERE n.id_alumno = ? AND n.tipo = 'riesgo_academico'
+         ORDER BY n.creado_en DESC LIMIT 1"
+    );
+    $st->execute([$idAlumno]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+
+    return $row ?: null;
+}
+
 /**
  * Avisos para el alumno: plantel, sus grupos, calificaciones recientes.
  *
@@ -296,6 +315,23 @@ function alumno_portal_notificaciones(PDO $pdo, int $idAlumno, int $idPlantel): 
             'mensaje' => 'Tiene ' . $nChat . ' respuesta(s) reciente(s) de recepción o coordinación.',
             'prioridad' => 'alta',
             'enlace' => 'alumno_chat',
+        ];
+    }
+
+    $riesgoAtendido = alumno_portal_riesgo_atendido($pdo, $idAlumno);
+    if ($riesgoAtendido) {
+        $quien = trim((string) ($riesgoAtendido['atendido_por'] ?? 'Coordinación'));
+        $cuando = !empty($riesgoAtendido['creado_en'])
+            ? date('d/m/Y H:i', strtotime((string) $riesgoAtendido['creado_en']))
+            : '';
+        $items[] = [
+            'tipo' => 'riesgo_academico',
+            'titulo' => 'Seguimiento académico atendido',
+            'mensaje' => 'Su caso de riesgo académico fue atendido por ' . ($quien !== '' ? $quien : 'Coordinación')
+                . ($cuando !== '' ? ' el ' . $cuando : '') . '.',
+            'prioridad' => 'media',
+            'creado' => $riesgoAtendido['creado_en'] ?? '',
+            'enlace' => 'alumno_mis_calificaciones',
         ];
     }
 

@@ -213,6 +213,9 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
     msg.style.display = text ? 'block' : 'none';
     msg.className = 'catalog-alert ' + (ok ? 'catalog-alert--ok' : 'catalog-alert--error');
     msg.textContent = text || '';
+    if (text) {
+      try { msg.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_e) {}
+    }
   }
 
   function escHtml(s) {
@@ -395,10 +398,21 @@ $iaConfigured = function_exists('hay_ai_configured') && hay_ai_configured();
       });
       const d = await r.json();
       if (d.status !== 'ok') throw new Error(d.message || 'Error al guardar');
-      showMsg('Planeación guardada.', true);
+      showMsg('✓ Planeación guardada con éxito. No es necesario volver a enviarla.', true);
+      alert('Planeación guardada con éxito.');
       document.getElementById('plan-contenido').value = '';
       const inst = document.getElementById('plan-instrucciones');
       if (inst) inst.value = '';
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        const prev = btnSubmit.textContent;
+        btnSubmit.textContent = 'Guardada';
+        setTimeout(() => {
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = prev || 'Guardar planeación';
+        }, 2500);
+      }
       <?php if ($esProfesor): ?>if (typeof cargarMisPlaneaciones === 'function') cargarMisPlaneaciones();<?php endif; ?>
     } catch (err) {
       showMsg(err.message || 'Error al guardar', false);

@@ -90,7 +90,7 @@ function menu_cncm_secciones(): array
 
                 'menu_gerente_perdidos', 'menu_gerente_hay', 'menu_gerente_matriz',
 
-                'menu_gerente_cartas', 'menu_comisiones_admin',
+                'menu_gerente_cartas', 'menu_comisiones_admin', 'menu_comisiones_nomina_print',
 
                 'menu_gerente_escuelas', 'menu_reporte_escuelas', 'menu_reporte_presentados',
 
@@ -120,6 +120,8 @@ function menu_cncm_secciones(): array
 
                 ['cap' => 'menu_comisiones_admin', 'seccion' => 'ventas_comisiones_admin', 'icon' => 'fa-sliders-h', 'text' => 'Comisiones ventas', 'title' => 'Comisiones y tabuladores', 'breadcrumb' => 'COMISIONES VENTAS'],
 
+                ['cap' => 'menu_comisiones_nomina_print', 'seccion' => 'ventas_comisiones_admin', 'query' => 'tab=print', 'icon' => 'fa-print', 'text' => 'Imprimir comisiones', 'title' => 'Imprimir reporte de comisiones', 'breadcrumb' => 'IMPRIMIR COMISIONES'],
+
             ],
 
         ],
@@ -142,7 +144,15 @@ function menu_cncm_secciones(): array
 
                 ['cap' => 'menu_venta_productos', 'seccion' => 'venta_productos', 'icon' => 'fa-shopping-cart', 'text' => 'Venta de productos', 'title' => 'Venta de productos', 'breadcrumb' => 'VENTA DE PRODUCTOS'],
 
+                ['cap' => 'menu_transferencias_ver', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Transferencias', 'title' => 'Transferencias y comprobantes', 'breadcrumb' => 'TRANSFERENCIAS'],
+
+                ['cap' => 'menu_transferencias_confirmar', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-check-double', 'text' => 'Confirmar transferencias', 'title' => 'Confirmar transferencias', 'breadcrumb' => 'CONFIRMAR TRANSFERENCIAS'],
+
                 ['callback' => 'documento_puede_mostrador', 'seccion' => 'documento_mostrador', 'icon' => 'fa-id-card', 'text' => 'Mostrador documentos', 'title' => 'Mostrador de constancias y diplomas', 'breadcrumb' => 'MOSTRADOR DOC'],
+
+                ['cap' => 'menu_cronologia', 'seccion' => 'cronologia_grupos', 'icon' => 'fa-table', 'text' => 'Cronología de fases', 'title' => 'Cronología de fases', 'breadcrumb' => 'CRONOLOGÍA GRUPOS'],
+
+                ['cap' => 'menu_reporte_bajas', 'seccion' => 'reporte_bajas', 'icon' => 'fa-user-slash', 'text' => 'Reporte de bajas', 'title' => 'Reporte de bajas', 'breadcrumb' => 'REPORTE BAJAS'],
 
                 ['callback' => 'cola_facturacion_puede_ver', 'seccion' => 'cola_facturacion', 'icon' => 'fa-file-invoice', 'text' => 'Cola de facturación', 'title' => 'Cola de facturación', 'breadcrumb' => 'COLA FACTURACIÓN'],
 
@@ -155,6 +165,24 @@ function menu_cncm_secciones(): array
                 ['cap' => 'menu_reportes', 'seccion' => 'corte_caja', 'icon' => 'fa-coins', 'text' => 'Corte de caja', 'title' => 'Corte de caja diario', 'breadcrumb' => 'CORTE DE CAJA'],
 
                 ['cap' => 'menu_reportes', 'flyout' => 'flyout-reportes', 'icon' => 'fa-chart-bar', 'text' => 'Reportes', 'title' => 'Reportes', 'breadcrumb' => 'REPORTES'],
+
+            ],
+
+        ],
+
+        [
+
+            'id' => 'manuales',
+
+            'titulo' => 'Inventario manuales',
+
+            'caps_any' => ['menu_manuales_stock', 'menu_manuales_envios'],
+
+            'items' => [
+
+                ['cap' => 'menu_manuales_stock', 'seccion' => 'manuales_stock', 'icon' => 'fa-boxes', 'text' => 'Stock manuales', 'title' => 'Stock de manuales', 'breadcrumb' => 'STOCK MANUALES'],
+
+                ['cap' => 'menu_manuales_envios', 'seccion' => 'manuales_envios', 'icon' => 'fa-shipping-fast', 'text' => 'Envíos manuales', 'title' => 'Envíos de manuales a planteles', 'breadcrumb' => 'ENVÍOS MANUALES'],
 
             ],
 
@@ -350,6 +378,8 @@ function menu_cncm_director_items(): array
 
         ['cap' => 'menu_punto_venta', 'seccion' => 'punto_venta', 'icon' => 'fa-cash-register', 'text' => 'Punto de venta', 'title' => 'Punto de venta', 'breadcrumb' => 'PUNTO DE VENTA'],
 
+        ['cap' => 'menu_transferencias_ver', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Transferencias', 'title' => 'Transferencias y comprobantes', 'breadcrumb' => 'TRANSFERENCIAS'],
+
         ['cap' => 'menu_reportes', 'seccion' => 'corte_caja', 'icon' => 'fa-coins', 'text' => 'Corte de caja', 'title' => 'Corte de caja diario', 'breadcrumb' => 'CORTE DE CAJA'],
 
         ['cap' => 'menu_reportes', 'seccion' => 'reporte_vencimientos', 'icon' => 'fa-exclamation-circle', 'text' => 'Cartera vencida', 'title' => 'Reporte de vencimientos', 'breadcrumb' => 'CARTERA VENCIDA'],
@@ -440,7 +470,7 @@ function menu_cncm_usa_menu_compacto(): bool
 
     }
 
-    return in_array(rbac_rol_efectivo(), ['profesor', 'coordinador', 'admin'], true);
+    return in_array(rbac_rol_efectivo(), ['profesor', 'coordinador', 'admin', 'manuales'], true);
 
 }
 
@@ -586,6 +616,8 @@ function menu_cncm_secciones_compactas(): array
 
                     ['cap' => 'reporte_academico_ver', 'seccion' => 'reporte_resumen_academico', 'icon' => 'fa-chart-line', 'text' => 'Reporte académico', 'title' => 'Resumen académico', 'breadcrumb' => 'RESUMEN ACADÉMICO'],
 
+                    ['cap' => 'menu_riesgo_reporte', 'seccion' => 'reporte_riesgo_academico', 'icon' => 'fa-exclamation-triangle', 'text' => 'Reporte riesgo', 'title' => 'Reporte de riesgo académico', 'breadcrumb' => 'RIESGO ACADÉMICO'],
+
                     ['callback' => 'documento_puede_gestionar_diplomas', 'seccion' => 'coordinador_diplomas', 'icon' => 'fa-award', 'text' => 'Diplomas por grupo', 'title' => 'Diplomas por grupo', 'breadcrumb' => 'DIPLOMAS'],
 
                     ['callback' => 'docente_prospecto_puede_gestionar', 'seccion' => 'docente_prospectos', 'icon' => 'fa-user-plus', 'text' => 'Reclutamiento docente', 'title' => 'Reclutamiento docente', 'breadcrumb' => 'RECLUTAMIENTO DOCENTE'],
@@ -603,6 +635,40 @@ function menu_cncm_secciones_compactas(): array
             ],
 
             $desarrollo,
+
+            $soporte,
+
+        ];
+
+    }
+
+    if ($rol === 'manuales') {
+
+        return [
+
+            [
+
+                'id' => 'manuales',
+
+                'titulo' => 'Inventario / Manuales',
+
+                'rol' => true,
+
+                'items' => [
+
+                    ['staff' => true, 'seccion' => 'inicio_panel', 'icon' => 'fa-home', 'text' => 'Inicio', 'title' => 'Inicio', 'breadcrumb' => 'INICIO'],
+
+                    ['cap' => 'menu_preregistro', 'seccion' => 'pre_registro_alumnos', 'icon' => 'fa-bookmark', 'text' => 'Pre-registro alumnos', 'title' => 'Pre-Registro Alumnos', 'breadcrumb' => 'PRE-REGISTRO ALUMNOS'],
+
+                    ['cap' => 'menu_cert_preregistro', 'seccion' => 'cert_preregistro_asesor', 'icon' => 'fa-award', 'text' => 'Cert. pre-registro', 'title' => 'Pre-registro certificaciones', 'breadcrumb' => 'CERTIFICACIONES PRE-REGISTRO'],
+
+                    ['cap' => 'menu_manuales_stock', 'seccion' => 'manuales_stock', 'icon' => 'fa-boxes', 'text' => 'Stock manuales', 'title' => 'Stock de manuales', 'breadcrumb' => 'STOCK MANUALES'],
+
+                    ['cap' => 'menu_manuales_envios', 'seccion' => 'manuales_envios', 'icon' => 'fa-shipping-fast', 'text' => 'Envíos manuales', 'title' => 'Envíos de manuales a planteles', 'breadcrumb' => 'ENVÍOS MANUALES'],
+
+                ],
+
+            ],
 
             $soporte,
 
@@ -638,9 +704,15 @@ function menu_cncm_secciones_compactas(): array
 
                 ['cap' => 'menu_venta_productos', 'seccion' => 'venta_productos', 'icon' => 'fa-shopping-cart', 'text' => 'Venta de productos', 'title' => 'Venta de productos', 'breadcrumb' => 'VENTA DE PRODUCTOS'],
 
+                ['cap' => 'menu_transferencias_ver', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Transferencias', 'title' => 'Transferencias y comprobantes', 'breadcrumb' => 'TRANSFERENCIAS'],
+
                 ['callback' => 'documento_puede_marcar_pagada', 'seccion' => 'constancia_recepcion', 'icon' => 'fa-file-certificate', 'text' => 'Constancias pendientes', 'title' => 'Constancias pendientes de pago', 'breadcrumb' => 'CONSTANCIAS'],
 
                 ['callback' => 'documento_puede_mostrador', 'seccion' => 'documento_mostrador', 'icon' => 'fa-id-card', 'text' => 'Mostrador documentos', 'title' => 'Mostrador de constancias y diplomas', 'breadcrumb' => 'MOSTRADOR DOC'],
+
+                ['cap' => 'menu_cronologia', 'seccion' => 'cronologia_grupos', 'icon' => 'fa-table', 'text' => 'Cronología de fases', 'title' => 'Cronología de fases', 'breadcrumb' => 'CRONOLOGÍA GRUPOS'],
+
+                ['cap' => 'menu_reporte_bajas', 'seccion' => 'reporte_bajas', 'icon' => 'fa-user-slash', 'text' => 'Reporte de bajas', 'title' => 'Reporte de bajas', 'breadcrumb' => 'REPORTE BAJAS'],
 
                 ['callback' => 'cola_facturacion_puede_ver', 'seccion' => 'cola_facturacion', 'icon' => 'fa-file-invoice', 'text' => 'Cola de facturación', 'title' => 'Cola de facturación', 'breadcrumb' => 'COLA FACTURACIÓN'],
 
@@ -730,9 +802,17 @@ function menu_cncm_secciones_por_rol(): array
 
                 ['seccion' => 'reporte_pagos_anulados', 'icon' => 'fa-ban', 'text' => 'Pagos anulados', 'title' => 'Reporte de pagos anulados', 'breadcrumb' => 'PAGOS ANULADOS'],
 
+                ['cap' => 'menu_transferencias_confirmar', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Confirmar transferencias', 'title' => 'Confirmar transferencias', 'breadcrumb' => 'CONFIRMAR TRANSFERENCIAS'],
+
                 ['seccion' => 'supervisor_acuerdo_escolar', 'icon' => 'fa-file-signature', 'text' => 'Acuerdo escolar', 'title' => 'Acuerdo escolar', 'breadcrumb' => 'ACUERDO ESCOLAR'],
 
                 ['seccion' => 'supervisor_grupos_historico', 'icon' => 'fa-history', 'text' => 'Carga histórica grupos', 'title' => 'Carga histórica de grupos', 'breadcrumb' => 'CARGA HISTÓRICA'],
+
+                ['seccion' => 'reporte_bajas', 'icon' => 'fa-user-slash', 'text' => 'Reporte de bajas', 'title' => 'Reporte de bajas', 'breadcrumb' => 'REPORTE BAJAS'],
+
+                ['seccion' => 'manuales_stock', 'icon' => 'fa-boxes', 'text' => 'Stock manuales', 'title' => 'Stock de manuales', 'breadcrumb' => 'STOCK MANUALES'],
+
+                ['seccion' => 'manuales_envios', 'icon' => 'fa-shipping-fast', 'text' => 'Envíos manuales', 'title' => 'Envíos de manuales a planteles', 'breadcrumb' => 'ENVÍOS MANUALES'],
 
             ],
 
@@ -915,6 +995,8 @@ function menu_cncm_secciones_por_rol(): array
                 ['seccion' => 'moodle_nivel_admin', 'icon' => 'fa-graduation-cap', 'text' => 'Moodle por nivel', 'title' => 'Moodle por nivel', 'breadcrumb' => 'MOODLE NIVEL'],
 
                 ['seccion' => 'reporte_resumen_academico', 'icon' => 'fa-chart-line', 'text' => 'Reporte académico', 'title' => 'Resumen académico', 'breadcrumb' => 'RESUMEN ACADÉMICO'],
+
+                ['seccion' => 'reporte_riesgo_academico', 'icon' => 'fa-exclamation-triangle', 'text' => 'Reporte riesgo', 'title' => 'Reporte de riesgo académico', 'breadcrumb' => 'RIESGO ACADÉMICO'],
 
                 ['callback' => 'documento_puede_gestionar_diplomas', 'seccion' => 'coordinador_diplomas', 'icon' => 'fa-award', 'text' => 'Diplomas por grupo', 'title' => 'Diplomas por grupo', 'breadcrumb' => 'DIPLOMAS'],
 

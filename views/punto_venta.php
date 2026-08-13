@@ -169,14 +169,23 @@ $pvPreloadId = (int) ($_GET['id_alumno'] ?? 0);
         <label>Medio de pago:</label>
 
         <select id="pv-medio" class="pv-select">
-          <option value="">Selecciona una opci�n</option>
+          <option value="">Selecciona una opción</option>
           <option value="efectivo">Efectivo</option>
-          <option value="tarjeta_debito">Tarjeta d�bito</option>
-          <option value="tarjeta_credito">Tarjeta cr�dito</option>
+          <option value="tarjeta_debito">Tarjeta débito</option>
+          <option value="tarjeta_credito">Tarjeta crédito</option>
           <option value="transferencia">Transferencia</option>
         </select>
 
-
+        <div id="pv-cuenta-banco-wrap" style="display:none;">
+          <label>Cuenta bancaria:</label>
+          <select id="pv-cuenta-banco" class="pv-select">
+            <option value="">Seleccione cuenta</option>
+            <option value="bbva">BBVA</option>
+            <option value="bancoppel">Bancoppel</option>
+            <option value="hsbc">HSBC</option>
+          </select>
+          <p style="margin:4px 0 8px; font-size:0.8rem; color:#64748b;">Pendiente hasta confirmación de supervisión.</p>
+        </div>
 
         <label>Paga con:</label>
 
@@ -249,12 +258,24 @@ $pvPreloadId = (int) ($_GET['id_alumno'] ?? 0);
   const msg = document.getElementById('pv-msg');
 
   const medioSel = document.getElementById('pv-medio');
+  const cuentaBancoWrap = document.getElementById('pv-cuenta-banco-wrap');
 
   const cobroListaChk = document.getElementById('pv-cobro-precio-lista');
   const origenCartasChk = document.getElementById('pv-origen-cartas');
   const cartasInfo = document.getElementById('pv-cartas-info');
 
   const ticketDesglose = document.getElementById('pv-ticket-desglose');
+
+  function syncPvCuentaBanco() {
+    const esTr = (medioSel?.value || '') === 'transferencia';
+    if (cuentaBancoWrap) cuentaBancoWrap.style.display = esTr ? 'block' : 'none';
+    if (!esTr) {
+      const sel = document.getElementById('pv-cuenta-banco');
+      if (sel) sel.value = '';
+    }
+  }
+  medioSel?.addEventListener('change', syncPvCuentaBanco);
+  syncPvCuentaBanco();
 
 
 
@@ -691,6 +712,15 @@ $pvPreloadId = (int) ($_GET['id_alumno'] ?? 0);
     fd.append('folio', 'PV-' + Date.now());
 
     fd.append('medio_pago', medio);
+
+    if (medio === 'transferencia') {
+      const cuenta = document.getElementById('pv-cuenta-banco')?.value || '';
+      if (!cuenta) {
+        alert('Seleccione la cuenta bancaria (BBVA, Bancoppel o HSBC)');
+        return;
+      }
+      fd.append('cuenta_banco', cuenta);
+    }
 
     fd.append('monto', String(monto));
 

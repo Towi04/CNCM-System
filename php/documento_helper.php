@@ -8,6 +8,7 @@ define('DOCUMENTO_UPLOAD_DIR', 'uploads/documentos');
 define('DOCUMENTO_PLANTILLA_DIR', 'uploads/documentos/plantillas');
 define('DOCUMENTO_EMITIDO_DIR', 'uploads/documentos/emitidos');
 define('DOCUMENTO_FIRMA_DIR', 'uploads/documentos/firmas');
+define('DOCUMENTO_EVIDENCIA_DIR', 'uploads/documentos/evidencias');
 
 function documento_ensure_schema(PDO $pdo): void
 {
@@ -58,6 +59,7 @@ function documento_ensure_schema(PDO $pdo): void
             generado_en DATETIME NULL,
             entregado_en DATETIME NULL,
             entregado_por INT UNSIGNED NULL,
+            evidencia_entrega_path VARCHAR(255) NULL,
             PRIMARY KEY (id_documento),
             UNIQUE KEY uq_ad_folio (folio),
             UNIQUE KEY uq_ad_token (token_verificacion),
@@ -71,6 +73,7 @@ function documento_ensure_schema(PDO $pdo): void
         plantel_ensure_column($pdo, 'productos', 'es_constancia', 'TINYINT(1) NOT NULL DEFAULT 0', 'activo');
         plantel_ensure_column($pdo, 'alumno_documento', 'entregado_en', 'DATETIME NULL', 'generado_en');
         plantel_ensure_column($pdo, 'alumno_documento', 'entregado_por', 'INT UNSIGNED NULL', 'entregado_en');
+        plantel_ensure_column($pdo, 'alumno_documento', 'evidencia_entrega_path', 'VARCHAR(255) NULL', 'entregado_por');
     }
 
     $st = $pdo->query("SELECT id_producto FROM productos WHERE clave = 'CONST-EST' LIMIT 1");
@@ -83,7 +86,7 @@ function documento_ensure_schema(PDO $pdo): void
         $pdo->exec("UPDATE productos SET es_constancia = 1 WHERE clave = 'CONST-EST'");
     }
 
-    foreach ([DOCUMENTO_UPLOAD_DIR, DOCUMENTO_PLANTILLA_DIR, DOCUMENTO_EMITIDO_DIR, DOCUMENTO_FIRMA_DIR] as $d) {
+    foreach ([DOCUMENTO_UPLOAD_DIR, DOCUMENTO_PLANTILLA_DIR, DOCUMENTO_EMITIDO_DIR, DOCUMENTO_FIRMA_DIR, DOCUMENTO_EVIDENCIA_DIR] as $d) {
         $abs = dirname(__DIR__) . '/' . $d;
         if (!is_dir($abs)) {
             @mkdir($abs, 0755, true);
@@ -161,7 +164,7 @@ function documento_puede_mostrador(): bool
 
 function documento_puede_entregar(): bool
 {
-    return documento_puede_mostrador();
+    return documento_puede_mostrador() || (function_exists('rbac_cap') && rbac_cap('menu_entrega_documentos'));
 }
 
 /** @return array<string, string> */
@@ -192,6 +195,9 @@ function documento_mostrador_enriquecer(array $doc): array
         && (empty($doc['vigente_hasta']) || $doc['vigente_hasta'] >= date('Y-m-d'));
     $doc['entregado'] = !empty($doc['entregado_en']);
     $doc['puede_entregar'] = $estado === 'pagada' && empty($doc['entregado_en']);
+    $doc['evidencia_entrega_url'] = !empty($doc['evidencia_entrega_path'])
+        ? hay_asset_url((string) $doc['evidencia_entrega_path'])
+        : null;
 
     return $doc;
 }
@@ -652,8 +658,35 @@ function documento_entrega_listar(PDO $pdo, int $idPlantel, ?string $tipo = null
     return array_map('documento_mostrador_enriquecer', $st->fetchAll(PDO::FETCH_ASSOC) ?: []);
 }
 
+/** @return array{ok: bool, message?: string, path?: string} */
+function documento_subir_evidencia_entrega(array $file, int $idDocumento): array
+{
+    if (!function_exists('hay_upload_guardar')) {
+        return ['ok' => false, 'message' => 'Carga segura de archivos no disponible'];
+    }
+    $dir = dirname(__DIR__) . '/' . DOCUMENTO_EVIDENCIA_DIR;
+    $basename = 'entrega_' . max(0, $idDocumento) . '_' . bin2hex(random_bytes(8));
+    $res = hay_upload_guardar(
+        $file,
+        $dir,
+        $basename,
+        HAY_UPLOAD_MIME_IMAGE,
+        5 * 1024 * 1024,
+        true,
+        true
+    );
+    if (!$res['ok']) {
+        return ['ok' => false, 'message' => $res['message'] ?? 'Evidencia no válida'];
+    }
+
+    return [
+        'ok' => true,
+        'path' => DOCUMENTO_EVIDENCIA_DIR . '/' . ($res['filename'] ?? $res['path'] ?? ''),
+    ];
+}
+
 /** @return array{ok: bool, message: string} */
-function documento_marcar_entregado(PDO $pdo, int $idDocumento, int $idPlantel, int $idUsuario): array
+function documento_marcar_entregado(PDO $pdo, int $idDocumento, int $idPlantel, int $idUsuario, ?string $evidenciaPath = null): array
 {
     if (!documento_puede_entregar()) {
         return ['ok' => false, 'message' => 'Sin permiso'];
@@ -673,10 +706,16 @@ function documento_marcar_entregado(PDO $pdo, int $idDocumento, int $idPlantel, 
     if (!empty($doc['entregado_en'])) {
         return ['ok' => false, 'message' => 'Este documento ya fue marcado como entregado'];
     }
+    $evidenciaPath = trim((string) $evidenciaPath);
+    if ($evidenciaPath === '') {
+        return ['ok' => false, 'message' => 'Adjunte foto de evidencia para entregar el documento'];
+    }
 
     $pdo->prepare(
-        'UPDATE alumno_documento SET entregado_en = NOW(), entregado_por = ? WHERE id_documento = ?'
-    )->execute([$idUsuario > 0 ? $idUsuario : null, $idDocumento]);
+        'UPDATE alumno_documento
+         SET entregado_en = NOW(), entregado_por = ?, evidencia_entrega_path = ?
+         WHERE id_documento = ?'
+    )->execute([$idUsuario > 0 ? $idUsuario : null, $evidenciaPath, $idDocumento]);
 
     $tipo = ($doc['tipo'] ?? '') === 'diploma' ? 'Diploma' : 'Constancia';
 

@@ -106,7 +106,7 @@ function grupo_preinicio_listar_alumnos(PDO $pdo, int $idGrupo, int $idPlantel):
     $st = $pdo->prepare(
         'SELECT a.id_alumno, a.numero_control,
                 TRIM(CONCAT(a.nombres, \' \', a.apellido_paterno, \' \', IFNULL(a.apellido_materno,\'\'))) AS nombre,
-                a.telefono, a.celular, a.email,
+                a.telefono, a.telefono2, a.celular, a.email,
                 gpc.id_contacto, gpc.contactado, gpc.fecha_contacto, gpc.medio, gpc.notas
          FROM alumno_grupos ag
          INNER JOIN alumnos a ON a.id_alumno = ag.id_alumno

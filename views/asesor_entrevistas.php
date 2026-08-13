@@ -11,6 +11,9 @@ $puedeAjena = asesor_puede_registrar_entrevista_ajena();
 $idPlantel = plantel_scope_id($pdo);
 $idUsuario = (int) ($_SESSION['user_id'] ?? 0);
 $asesoresEquipo = $puedeAjena ? asesor_entrevistas_opciones_asesor($pdo, $idPlantel, $idUsuario) : [];
+$especialidadesEntrevista = $pdo->query(
+    "SELECT id_especialidad, clave, nombre FROM especialidades WHERE COALESCE(activo, 1) = 1 ORDER BY nombre"
+)->fetchAll(PDO::FETCH_ASSOC) ?: [];
 ?>
 
 <link rel="stylesheet" href="css/admin_catalogo.css">
@@ -122,6 +125,18 @@ $asesoresEquipo = $puedeAjena ? asesor_entrevistas_opciones_asesor($pdo, $idPlan
 
     <div class="field"><label>Teléfono</label><input name="telefono"></div>
 
+    <div class="field">
+      <label>Especialidad</label>
+      <select name="id_especialidad">
+        <option value="">— Sin definir —</option>
+        <?php foreach ($especialidadesEntrevista as $esp): ?>
+          <option value="<?php echo (int) $esp['id_especialidad']; ?>">
+            <?php echo htmlspecialchars(trim(($esp['clave'] ?? '') . ' · ' . ($esp['nombre'] ?? ''))); ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+
     <div class="field" style="flex:1;"><label>Observaciones</label><input name="observaciones"></div>
 
     <button type="submit" class="primary">Registrar</button>
@@ -136,7 +151,7 @@ $asesoresEquipo = $puedeAjena ? asesor_entrevistas_opciones_asesor($pdo, $idPlan
 
       <thead>
 
-        <tr><th>Fecha</th><th>Nombre</th><th>Teléfono</th><th>Estado</th><th>Notas</th><th></th></tr>
+        <tr><th>Fecha</th><th>Nombre</th><th>Teléfono</th><th>Especialidad</th><th>Estado</th><th>Notas</th><th></th></tr>
 
       </thead>
 
@@ -158,7 +173,7 @@ window.HAY_ENTREVISTAS = <?php echo json_encode([
 
 </script>
 
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/asesor_entrevistas.js?v=20260612'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/asesor_entrevistas.js?v=20260813'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 
 <script>if (window.hayEntrevistasInit) window.hayEntrevistasInit();</script>
 

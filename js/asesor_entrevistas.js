@@ -122,6 +122,8 @@
 
         '<td>' + escapeHtml(e.telefono || '—') + '</td>' +
 
+        '<td>' + escapeHtml(e.especialidad_nombre || '—') + '</td>' +
+
         '<td>' + escapeHtml(e.estado || '') + '</td>' +
 
         '<td>' + escapeHtml((e.observaciones || '').slice(0, 80)) + '</td>' +
@@ -161,6 +163,8 @@
         if (p.telefono) qs.set('telefono', p.telefono);
 
         if (p.email) qs.set('email', p.email);
+
+        if (p.id_especialidad) qs.set('id_especialidad', p.id_especialidad);
 
         if (p.id_entrevista) qs.set('id_entrevista', p.id_entrevista);
 

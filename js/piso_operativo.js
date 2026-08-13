@@ -76,6 +76,7 @@
     if (d.pdf_url) {
       html += `<a class="secondary" href="${esc(d.pdf_url)}" target="_blank" rel="noopener"><i class="fas fa-print"></i> Imprimir</a>`;
     }
+    html += `<label style="font-size:0.82rem;">Foto evidencia<br><input type="file" class="piso-evidencia-input" accept="image/*" capture="environment"></label>`;
     html += `<button type="button" class="primary btn-piso-entregar" data-id="${d.id_documento}"><i class="fas fa-check"></i> Marcar entregado</button>`;
     html += `<button type="button" class="secondary btn-piso-pos" data-control="${esc(d.numero_control || '')}"><i class="fas fa-cash-register"></i> POS</button>`;
     html += '</div></article>';
@@ -126,10 +127,11 @@
     }
   }
 
-  async function marcarEntrega(id) {
+  async function marcarEntrega(id, file) {
     const fd = new FormData();
     fd.append('action', 'marcar_entrega');
     fd.append('id_documento', id);
+    if (file) fd.append('evidencia_entrega', file);
     const { data } = await hayFetchJson(api, { method: 'POST', body: fd });
     showMsg(data.status === 'ok', data.message || '');
     if (data.status === 'ok') {
@@ -193,8 +195,14 @@
     elLista?.addEventListener('click', (e) => {
       const ent = e.target.closest('.btn-piso-entregar');
       if (ent) {
+        const item = ent.closest('.piso-entrega-item');
+        const file = item?.querySelector('.piso-evidencia-input')?.files?.[0];
+        if (!file) {
+          showMsg(false, 'Adjunte una foto como evidencia de entrega.');
+          return;
+        }
         if (!confirm('¿Confirmar entrega física al alumno o familiar autorizado?')) return;
-        marcarEntrega(ent.dataset.id || '');
+        marcarEntrega(ent.dataset.id || '', file);
         return;
       }
       const pos = e.target.closest('.btn-piso-pos');

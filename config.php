@@ -103,6 +103,7 @@ require_once __DIR__ . '/php/asistencia_helper.php';
 require_once __DIR__ . '/php/huella_helper.php';
 require_once __DIR__ . '/php/huella_matcher_helper.php';
 require_once __DIR__ . '/php/pago_helper.php';
+require_once __DIR__ . '/php/pago_transferencia_helper.php';
 require_once __DIR__ . '/php/pago_supervisor_helper.php';
 require_once __DIR__ . '/php/fase_helper.php';
 require_once __DIR__ . '/php/notificaciones_helper.php';
@@ -144,10 +145,12 @@ require_once __DIR__ . '/php/reporte_academico_helper.php';
 require_once __DIR__ . '/php/reporte_semanal_helper.php';
 require_once __DIR__ . '/php/reporte_financiero_helper.php';
 require_once __DIR__ . '/php/reporte_cartera_helper.php';
+require_once __DIR__ . '/php/reporte_bajas_helper.php';
 require_once __DIR__ . '/php/nomina_helper.php';
 require_once __DIR__ . '/php/suplencia_helper.php';
 require_once __DIR__ . '/php/documento_helper.php';
 require_once __DIR__ . '/php/venta_producto_helper.php';
+require_once __DIR__ . '/php/manuales_stock_helper.php';
 require_once __DIR__ . '/php/certificacion_campos_helper.php';
 require_once __DIR__ . '/php/asesor_helper.php';
 require_once __DIR__ . '/php/comision_cert_helper.php';
@@ -199,7 +202,7 @@ hay_utf8_init($pdo);
 
 /** Incrementar al agregar migraciones en hay_bootstrap_schema (fuerza una pasada completa). */
 if (!defined('HAY_SCHEMA_VERSION')) {
-    define('HAY_SCHEMA_VERSION', 8);
+    define('HAY_SCHEMA_VERSION', 9);
 }
 
 /**
@@ -233,6 +236,13 @@ function hay_bootstrap_schema(PDO $pdo): void
             rbac_db_sincronizar_jerarquia_roles($pdo);
         } catch (Throwable $e) {
             error_log('HAY rbac jerarquia sync: ' . $e->getMessage());
+        }
+    }
+    if (function_exists('rbac_db_ensure_mejoras_operativas_lote')) {
+        try {
+            rbac_db_ensure_mejoras_operativas_lote($pdo);
+        } catch (Throwable $e) {
+            error_log('HAY rbac mejoras operativas: ' . $e->getMessage());
         }
     }
 
@@ -275,6 +285,11 @@ function hay_bootstrap_schema(PDO $pdo): void
             }
         },
         'pago' => static function (PDO $pdo): void { pago_ensure_schema($pdo); },
+        'manuales' => static function (PDO $pdo): void {
+            if (function_exists('manuales_stock_ensure_schema')) {
+                manuales_stock_ensure_schema($pdo);
+            }
+        },
         'fase' => static function (PDO $pdo): void { fase_ensure_schema($pdo); },
         'academico' => static function (PDO $pdo): void {
             academico_ensure_schema($pdo);

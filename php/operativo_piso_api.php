@@ -41,11 +41,26 @@ if ($action === 'listar_entrega') {
 }
 
 if ($action === 'marcar_entrega' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $idDocumento = (int) ($_POST['id_documento'] ?? 0);
+    $evidenciaPath = null;
+    if (!empty($_FILES['evidencia_entrega'])) {
+        $up = documento_subir_evidencia_entrega($_FILES['evidencia_entrega'], $idDocumento);
+        if (empty($up['ok'])) {
+            hay_json_response([
+                'status' => 'error',
+                'message' => $up['message'] ?? 'No se pudo guardar evidencia',
+                'seccion' => 'piso_operativo',
+            ]);
+            exit;
+        }
+        $evidenciaPath = $up['path'] ?? null;
+    }
     $res = documento_marcar_entregado(
         $pdo,
-        (int) ($_POST['id_documento'] ?? 0),
+        $idDocumento,
         $idPlantel,
-        $idUsuario
+        $idUsuario,
+        $evidenciaPath
     );
     hay_json_response(array_merge([
         'status' => $res['ok'] ? 'ok' : 'error',

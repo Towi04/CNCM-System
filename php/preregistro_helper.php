@@ -441,7 +441,7 @@ function preregistro_ensure_medio_entero_enum(PDO $pdo): void
 /** Roles que pueden ver pre-registros. */
 function preregistro_roles_permitidos(): array
 {
-    return ['supervisor', 'admin', 'gerente', 'asesor', 'director', 'coordinador', 'recepcion', 'ventas'];
+    return ['supervisor', 'admin', 'gerente', 'asesor', 'director', 'coordinador', 'profesor', 'manuales', 'recepcion', 'ventas'];
 }
 
 /** Asegura menu_preregistro (y catálogo) en role_privilegios del supervisor. */

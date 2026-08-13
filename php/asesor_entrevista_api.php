@@ -66,6 +66,7 @@ if ($action === 'guardar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'apellido_materno' => $_POST['apellido_materno'] ?? '',
         'telefono' => $_POST['telefono'] ?? '',
         'email' => $_POST['email'] ?? '',
+        'id_especialidad' => (int) ($_POST['id_especialidad'] ?? 0),
         'observaciones' => $_POST['observaciones'] ?? '',
         'sin_datos' => !empty($_POST['sin_datos']),
     ]);
@@ -94,6 +95,7 @@ if ($action === 'ir_preregistro') {
             'apellido_materno' => $e['apellido_materno'],
             'telefono' => $e['telefono'],
             'email' => $e['email'],
+            'id_especialidad' => (int) ($e['id_especialidad'] ?? 0),
             'observaciones' => $e['observaciones'],
             'id_entrevista' => (int) $e['id_entrevista'],
         ],

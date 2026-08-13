@@ -302,6 +302,47 @@ function grupo_avance_listar_riesgo_plantel(PDO $pdo, ?int $idPlantel = null): a
     return $st->fetchAll(PDO::FETCH_ASSOC);
 }
 
+/** @return list<array<string,mixed>> */
+function grupo_avance_reporte_riesgo_plantel(PDO $pdo, ?int $idPlantel = null): array
+{
+    $idPlantel = $idPlantel ?? plantel_id_activo();
+    $st = $pdo->prepare(
+        "SELECT ag.id_alumno, ag.id_grupo, ag.en_riesgo_academico, ag.omitir_alerta_riesgo,
+                g.clave AS grupo_clave, e.nombre AS especialidad,
+                f.clave_fase, f.nombre_fase,
+                a.numero_control,
+                TRIM(CONCAT(COALESCE(a.nombres, a.nombre, ''), ' ', COALESCE(a.apellido_paterno, a.apellido, ''), ' ', COALESCE(a.apellido_materno, ''))) AS nombre_completo,
+                c.promedio, c.aprobado
+         FROM alumno_grupos ag
+         INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
+         INNER JOIN alumnos a ON a.id_alumno = ag.id_alumno
+         LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad
+         LEFT JOIN especialidad_fases f ON f.id_fase = g.id_fase_actual
+         LEFT JOIN alumno_calificacion_parcial c ON c.id_alumno = ag.id_alumno AND c.id_fase = g.id_fase_actual
+         WHERE g.id_plantel = ? AND ag.activo = 1
+           AND (ag.en_riesgo_academico = 1 OR ag.omitir_alerta_riesgo = 1)
+         ORDER BY ag.omitir_alerta_riesgo ASC, g.clave, nombre_completo"
+    );
+    $st->execute([$idPlantel]);
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $notaSt = $pdo->prepare(
+        "SELECT n.*, CONCAT(u.nombre, ' ', u.apellido) AS atendido_por_nombre
+         FROM alumno_nota_coordinacion n
+         LEFT JOIN usuarios u ON u.id_usuario = n.id_usuario
+         WHERE n.id_alumno = ? AND n.tipo = 'riesgo_academico'
+         ORDER BY n.creado_en DESC LIMIT 1"
+    );
+    foreach ($rows as &$row) {
+        $notaSt->execute([(int) $row['id_alumno']]);
+        $nota = $notaSt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $row['seguimiento'] = $nota;
+        $row['estado_seguimiento'] = $nota ? 'atendido' : 'pendiente';
+    }
+    unset($row);
+
+    return $rows;
+}
+
 function grupo_avance_resolver_riesgo(
     PDO $pdo,
     int $idAlumno,

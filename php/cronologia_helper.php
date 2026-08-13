@@ -2,7 +2,7 @@
 
 function cronologia_puede_ver(): bool
 {
-    return function_exists('rbac_cap') && (rbac_cap('menu_grupos') || rbac_cap('menu_especialidades'));
+    return function_exists('rbac_cap') && (rbac_cap('menu_grupos') || rbac_cap('menu_especialidades') || rbac_cap('menu_cronologia'));
 }
 
 /**

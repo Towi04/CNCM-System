@@ -57,7 +57,9 @@ function pago_inscripcion_vigencia_meses_alumno(PDO $pdo, int $idAlumno): int
 
 function pago_sql_filtro_activos(string $alias = 'ap'): string
 {
-    return " AND ({$alias}.estado = 'activo' OR {$alias}.estado IS NULL)";
+    // Transferencias pendientes/rechazadas no cuentan en adeudo ni corte.
+    return " AND ({$alias}.estado = 'activo' OR {$alias}.estado IS NULL)"
+        . " AND ({$alias}.transfer_estado IS NULL OR {$alias}.transfer_estado = '' OR {$alias}.transfer_estado = 'confirmado')";
 }
 
 function pago_ensure_schema(PDO $pdo): void
@@ -221,13 +223,28 @@ function pago_migrate_alumno_pagos_columns(PDO $pdo): void
             ingreso_sistema DECIMAL(12,2) NOT NULL DEFAULT 0,
             retiros DECIMAL(12,2) NOT NULL DEFAULT 0,
             comprobantes DECIMAL(12,2) NOT NULL DEFAULT 0,
+            billetes DECIMAL(12,2) NOT NULL DEFAULT 0,
+            monedas DECIMAL(12,2) NOT NULL DEFAULT 0,
             efectivo_contado DECIMAL(12,2) NULL,
+            filas_extra JSON NULL,
+            denominaciones_json JSON NULL,
             notas TEXT NULL,
+            recibido_por INT UNSIGNED NULL,
+            recibido_en DATETIME NULL,
+            recibido_usuario VARCHAR(80) NULL,
             creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id_corte),
             KEY idx_corte_plantel_fecha (id_plantel, fecha)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
+
+    plantel_ensure_column($pdo, 'corte_caja', 'billetes', 'DECIMAL(12,2) NOT NULL DEFAULT 0', 'comprobantes');
+    plantel_ensure_column($pdo, 'corte_caja', 'monedas', 'DECIMAL(12,2) NOT NULL DEFAULT 0', 'billetes');
+    plantel_ensure_column($pdo, 'corte_caja', 'filas_extra', 'JSON NULL', 'efectivo_contado');
+    plantel_ensure_column($pdo, 'corte_caja', 'denominaciones_json', 'JSON NULL', 'filas_extra');
+    plantel_ensure_column($pdo, 'corte_caja', 'recibido_por', 'INT UNSIGNED NULL', 'notas');
+    plantel_ensure_column($pdo, 'corte_caja', 'recibido_en', 'DATETIME NULL', 'recibido_por');
+    plantel_ensure_column($pdo, 'corte_caja', 'recibido_usuario', 'VARCHAR(80) NULL', 'recibido_en');
 
     pago_backfill_cuenta_contable($pdo);
     pago_reparar_abonos_periodo_mal_asignado($pdo);
@@ -1397,6 +1414,25 @@ function pago_generar_folio_inscripcion(PDO $pdo, int $idPlantel): string
     return $pref . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
 }
 
+/** Folio de abono / pago general: AB-{plantel}-{seq}. */
+function pago_generar_folio_abono(PDO $pdo, int $idPlantel): string
+{
+    $pref = 'AB-' . str_pad((string) $idPlantel, 2, '0', STR_PAD_LEFT) . '-';
+    $st = $pdo->prepare(
+        'SELECT folio FROM alumno_pagos
+         WHERE id_plantel = ? AND folio LIKE ?
+         ORDER BY id_pago DESC LIMIT 1'
+    );
+    $st->execute([$idPlantel, $pref . '%']);
+    $ultimo = (string) $st->fetchColumn();
+    $seq = 1;
+    if ($ultimo !== '' && preg_match('/(\d+)$/', $ultimo, $m)) {
+        $seq = (int) $m[1] + 1;
+    }
+
+    return $pref . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
+}
+
 /** Formato de moneda para ticket térmico ($ 370.00). */
 function pago_ticket_format_mxn(float $monto): string
 {
@@ -2001,7 +2037,38 @@ function pago_registrar(PDO $pdo, array $data): array
 
     $requiereFactura = pago_alumno_requiere_factura($pdo, $idAlumno);
     $formaPago = (string) ($data['forma_pago_efectivo'] ?? 'Efectivo');
+    $medioPago = strtolower(trim((string) ($data['medio_pago'] ?? '')));
+    $cuentaBanco = strtolower(trim((string) ($data['cuenta_banco'] ?? '')));
+    if ($cuentaBanco !== '' && !in_array($cuentaBanco, ['bbva', 'bancoppel', 'hsbc'], true)) {
+        return ['ok' => false, 'message' => 'Cuenta bancaria no válida (BBVA, Bancoppel o HSBC)'];
+    }
+
+    $formaLower = mb_strtolower($formaPago);
+    $esTransferencia = $medioPago === 'transferencia'
+        || $cuentaBanco !== ''
+        || str_contains($formaLower, 'transfer');
+
+    if ($esTransferencia) {
+        if ($cuentaBanco === '') {
+            return ['ok' => false, 'message' => 'Seleccione la cuenta bancaria (BBVA, Bancoppel o HSBC)'];
+        }
+        // Contabilidad: BBVA = Transferencia; Bancoppel/HSBC = Efectivo.
+        $formaPago = $cuentaBanco === 'bbva' ? 'Transferencia' : 'Efectivo';
+        $medioPago = 'transferencia';
+        $data['medio_pago'] = 'transferencia';
+        $data['cuenta_banco'] = $cuentaBanco;
+        $data['transfer_estado'] = 'pendiente';
+    }
+
     $cuentaContable = $data['cuenta_contable'] ?? pago_resolver_cuenta_contable($formaPago, $requiereFactura, $tipo);
+
+    $idPlantelPago = plantel_id_activo();
+    $folio = trim((string) ($data['folio'] ?? ''));
+    if ($folio === '') {
+        $folio = $tipo === 'inscripcion'
+            ? pago_generar_folio_inscripcion($pdo, $idPlantelPago)
+            : pago_generar_folio_abono($pdo, $idPlantelPago);
+    }
 
     $idSolCert = (int) ($data['id_solicitud_cert'] ?? 0) ?: null;
 
@@ -2014,13 +2081,13 @@ function pago_registrar(PDO $pdo, array $data): array
     );
     $stmt->execute([
         $idAlumno,
-        plantel_id_activo(),
+        $idPlantelPago,
         $data['id_especialidad'] ?: null,
         $tipo,
         $data['id_producto'] ?: null,
         $data['id_alumno_especialidad'] ?: null,
         $idSolCert,
-        $data['folio'] ?? null,
+        $folio,
         $monto,
         $formaPago,
         $cuentaContable,
@@ -2044,7 +2111,9 @@ function pago_registrar(PDO $pdo, array $data): array
         operativo_cncm_pago_aplicar_meta($pdo, $idPago, $data);
     }
 
-    if ($tipo === 'inscripcion') {
+    // Inscripción / adeudo: no acreditar hasta confirmar transferencia.
+    $puedeAcreditar = !$esTransferencia;
+    if ($puedeAcreditar && $tipo === 'inscripcion') {
         if (!empty($data['id_alumno_especialidad'])) {
             $idAe = (int) $data['id_alumno_especialidad'];
             $idEspInsc = (int) ($data['id_especialidad'] ?? 0);
@@ -2062,13 +2131,22 @@ function pago_registrar(PDO $pdo, array $data): array
         pago_sync_inscripcion_global($pdo, $idAlumno);
     }
 
+    $msg = $esTransferencia
+        ? 'Transferencia registrada (pendiente de confirmación)'
+        : 'Pago registrado';
+
     return [
         'ok' => true,
-        'message' => 'Pago registrado',
+        'message' => $msg,
         'id_pago' => $idPago,
         'periodo_ref' => $periodoRef,
         'monto' => $monto,
         'descuento' => $descuento,
+        'folio' => $folio,
+        'transfer_pendiente' => $esTransferencia,
+        'ticket_url' => function_exists('hay_asset_url')
+            ? hay_asset_url('views/ticket_pago.php?id_pago=' . $idPago . '&print=1')
+            : ('views/ticket_pago.php?id_pago=' . $idPago . '&print=1'),
     ];
 }
 

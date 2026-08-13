@@ -70,5 +70,5 @@ window.HAY_DOC_MOSTRADOR = <?php echo json_encode([
 
 </script>
 
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/documento_mostrador.js?v=20260623'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/documento_mostrador.js?v=20260813'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 

@@ -64,7 +64,7 @@ if ($accion === 'ventas_cuenta') {
     exit;
 }
 
-if ($accion === 'corte_caja') {
+if ($accion === 'corte_caja' || $accion === 'confirmar_recibo') {
     $fecha = trim($_GET['fecha'] ?? $_POST['fecha'] ?? date('Y-m-d'));
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
         $fecha = date('Y-m-d');
@@ -74,14 +74,47 @@ if ($accion === 'corte_caja') {
         $cuenta = 'B';
     }
 
+    if ($accion === 'confirmar_recibo') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            hay_json_response(['status' => 'error', 'message' => 'Método no permitido'], 405);
+            exit;
+        }
+        $res = reporte_corte_caja_confirmar_recibo(
+            $pdo,
+            $idPlantel,
+            $fecha,
+            $cuenta,
+            trim((string) ($_POST['usuario'] ?? $_POST['username'] ?? '')),
+            (string) ($_POST['password'] ?? '')
+        );
+        if (!$res['ok']) {
+            hay_json_response(['status' => 'error', 'message' => $res['message'] ?? 'No se pudo confirmar']);
+            exit;
+        }
+        hay_json_response(array_merge(['status' => 'ok'], $res));
+        exit;
+    }
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $calc = reporte_corte_caja_calcular($pdo, $idPlantel, $fecha, $cuenta);
+        $filasExtraRaw = $_POST['filas_extra'] ?? '[]';
+        if (is_string($filasExtraRaw)) {
+            $filasDecoded = json_decode($filasExtraRaw, true);
+            $filasExtraRaw = is_array($filasDecoded) ? $filasDecoded : [];
+        }
+        $denomsRaw = $_POST['denominaciones'] ?? $_POST['denominaciones_json'] ?? '{}';
+        if (is_string($denomsRaw)) {
+            $denomsDecoded = json_decode($denomsRaw, true);
+            $denomsRaw = is_array($denomsDecoded) ? $denomsDecoded : [];
+        }
         $payload = array_merge($calc, [
             'retiros' => $_POST['retiros'] ?? 0,
             'comprobantes' => $_POST['comprobantes'] ?? 0,
             'efectivo_contado' => $_POST['efectivo_contado'] ?? null,
             'billetes' => $_POST['billetes'] ?? 0,
             'monedas' => $_POST['monedas'] ?? 0,
+            'filas_extra' => $filasExtraRaw,
+            'denominaciones' => $denomsRaw,
             'notas' => $_POST['notas'] ?? '',
             'fecha' => $fecha,
             'cuenta' => $cuenta,

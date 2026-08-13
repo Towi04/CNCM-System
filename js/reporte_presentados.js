@@ -30,6 +30,9 @@
       }
       return;
     }
+    const totalInsc = Number(d.resumen?.total_inscritos || 0);
+    const totalPres = Number(d.resumen?.total_presentados || 0);
+    const totalNo = Math.max(0, totalInsc - totalPres);
     if (res && d.resumen) {
       res.className = 'catalog-alert catalog-alert--ok';
       res.textContent =
@@ -37,10 +40,19 @@
         (Number(d.resumen.grupos_sin_horario || 0) > 0
           ? ' · Sin horario: ' + d.resumen.grupos_sin_horario
           : '') +
-        ' · Inscritos: ' + (d.resumen.total_inscritos ?? 0) +
-        ' · Presentados: ' + (d.resumen.total_presentados ?? 0) +
+        ' · Inscritos: ' + totalInsc +
+        ' · Presentados: ' + totalPres +
+        ' · No presentados: ' + totalNo +
         ' · %: ' + (d.resumen.pct_presentados ?? 0);
     }
+
+    const filtro = document.getElementById('rp-filtro-presento')?.value || 'todos';
+    const filas = (d.filas || []).filter((f) => {
+      const pres = Number(f.presentado) === 1;
+      if (filtro === 'si') return pres;
+      if (filtro === 'no') return !pres;
+      return true;
+    });
 
     const tb = document.querySelector('#rp-tabla tbody');
     if (!tb) return;
@@ -49,7 +61,7 @@
       window.HayDataTable.destroyIn(tabla.closest('.catalog-table-wrap') || tabla.parentElement);
     }
     tb.innerHTML = '';
-    (d.filas || []).forEach((f) => {
+    filas.forEach((f) => {
       const tr = document.createElement('tr');
       const pres = Number(f.presentado) === 1;
       tr.innerHTML =
@@ -63,7 +75,7 @@
         '<td class="' + (pres ? 'rp-presentado-si' : 'rp-presentado-no') + '">' + (pres ? 'Sí' : 'No') + '</td>';
       tb.appendChild(tr);
     });
-    if (tabla && window.HayDataTable && (d.filas || []).length > 0) {
+    if (tabla && window.HayDataTable && filas.length > 0) {
       window.HayDataTable.init('#rp-tabla', { order: [[1, 'asc']], scrollX: false, pageLength: 25 });
     }
   }
@@ -71,6 +83,7 @@
   function bindEvents() {
     if (bound) return;
     document.getElementById('rp-buscar')?.addEventListener('click', cargar);
+    document.getElementById('rp-filtro-presento')?.addEventListener('change', cargar);
     bound = true;
   }
 

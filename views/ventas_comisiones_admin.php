@@ -1,10 +1,12 @@
 <?php
 require_once __DIR__ . '/../config.php';
-if (!ventas_comision_puede_administrar()) {
+if (!ventas_comision_puede_administrar() && !ventas_comision_puede_imprimir_nomina_comisiones()) {
     echo '<div class="catalog-alert catalog-alert--error">Sin permiso. Solo supervisor o gerente pueden configurar comisiones.</div>';
     return;
 }
 $puedeEditar = ventas_comision_puede_editar();
+$puedePrint = ventas_comision_puede_imprimir_nomina_comisiones();
+$tabInicial = trim((string) ($_GET['tab'] ?? ''));
 $api = hay_asset_url('php/ventas_comision_api.php');
 ?>
 <link rel="stylesheet" href="css/admin_catalogo.css">
@@ -34,6 +36,9 @@ $api = hay_asset_url('php/ventas_comision_api.php');
     <button type="button" class="vc-tab" data-tab="tabulador">Tabulador sueldo</button>
     <button type="button" class="vc-tab" data-tab="override">Autorizaciones</button>
     <button type="button" class="vc-tab" data-tab="gerente" id="vc-tab-gerente">Sobrecomisión gerente</button>
+    <?php if ($puedePrint): ?>
+    <button type="button" class="vc-tab" data-tab="print" id="vc-tab-print"><i class="fas fa-print"></i> Imprimir comisiones asesor</button>
+    <?php endif; ?>
   </div>
 
   <section id="vc-panel-reglas">
@@ -107,6 +112,25 @@ $api = hay_asset_url('php/ventas_comision_api.php');
     <table class="catalog-table" id="vc-tabla-ger"><thead><tr><th>Asesor</th><th>Ops</th><th>Sobrecomisión</th></tr></thead><tbody></tbody></table>
   </section>
 
+  <?php if ($puedePrint): ?>
+  <section id="vc-panel-print" style="display:none;">
+    <div class="catalog-toolbar">
+      <label class="field">Asesor
+        <select id="vc-print-asesor"></select>
+      </label>
+      <label class="field">Periodo
+        <select id="vc-print-periodo"><option value="semana">Semana</option><option value="mes">Mes</option><option value="dia">Día</option></select>
+      </label>
+      <label class="field">Fecha referencia
+        <input type="date" id="vc-print-fecha">
+      </label>
+      <button type="button" class="primary" id="vc-print-generar"><i class="fas fa-print"></i> Generar impresión</button>
+    </div>
+    <p style="color:#666;">Este reporte incluye únicamente comisiones del asesor. No imprime sueldo base ni tabulador de nómina.</p>
+    <div id="vc-print-preview" class="catalog-alert catalog-alert--ok" hidden></div>
+  </section>
+  <?php endif; ?>
+
   <div class="catalog-modal" id="vc-modal-regla">
     <div class="catalog-modal__panel">
       <h3 id="vc-regla-titulo">Reglas de comisión</h3>
@@ -133,6 +157,6 @@ $api = hay_asset_url('php/ventas_comision_api.php');
   </div>
 </div>
 
-<script>window.__hayVentasComisionAdmin = { api: <?php echo json_encode($api, JSON_UNESCAPED_UNICODE); ?>, soloLectura: <?php echo $puedeEditar ? 'false' : 'true'; ?> };</script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/ventas_comisiones_admin.js?v=20260612'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script>window.__hayVentasComisionAdmin = { api: <?php echo json_encode($api, JSON_UNESCAPED_UNICODE); ?>, soloLectura: <?php echo $puedeEditar ? 'false' : 'true'; ?>, puedePrint: <?php echo $puedePrint ? 'true' : 'false'; ?>, tabInicial: <?php echo json_encode($tabInicial, JSON_UNESCAPED_UNICODE); ?> };</script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/ventas_comisiones_admin.js?v=20260813'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <script>if (window.hayVentasComisionAdminInit) window.hayVentasComisionAdminInit();</script>

@@ -1352,11 +1352,18 @@
         extraMsg += '\nAtención semana extra: ' + data.asesoria_semana_error;
       }
 
-      closeModal();
-
+      // Imprimir ticket ANTES de cerrar/navegar (evita que el navegador bloquee el popup).
       if (data.ticket_url) {
         imprimirTicket(data.ticket_url, data.grupo_clave || data.examen || '');
+      } else if (data.id_pago) {
+        imprimirTicket(
+          'views/ticket_pago_inscripcion.php?id_pago=' + encodeURIComponent(data.id_pago) + '&print=1',
+          data.grupo_clave || data.examen || ''
+        );
       }
+
+      closeModal();
+
       if (extraMsg) alert('Inscripción completada.' + extraMsg);
 
       if (data.es_ubicacion && data.examen) {
@@ -1385,14 +1392,17 @@
         alert('Inscripción OK, pero referido: ' + data.referido_error);
       }
 
-      if (data.id_alumno) {
-        cargarSeccion('alumno_huella_enroll', 'id=' + data.id_alumno + '&nuevo=1');
-        return;
-      }
-
-      if (typeof onSuccess === 'function') {
-        onSuccess(data);
-      }
+      const continuar = () => {
+        if (data.id_alumno) {
+          cargarSeccion('alumno_huella_enroll', 'id=' + data.id_alumno + '&nuevo=1');
+          return;
+        }
+        if (typeof onSuccess === 'function') {
+          onSuccess(data);
+        }
+      };
+      // Dar tiempo a que abra el diálogo de impresión del ticket.
+      setTimeout(continuar, data.ticket_url || data.id_pago ? 600 : 0);
     } catch (err) {
       showMsg(false, err.message || 'Error');
     } finally {

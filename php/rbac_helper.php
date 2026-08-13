@@ -108,6 +108,7 @@ function rbac_roles_etiquetas(): array
         'coordinador' => 'Coordinador académico',
         'admin' => 'Recepción / Caja',
         'profesor' => 'Profesor',
+        'manuales' => 'Inventario / Manuales',
         'asesor' => 'Asesor de ventas',
         'alumno' => 'Alumno',
     ];

@@ -33,7 +33,12 @@ if (!grupo_preinicio_puede_ver()) {
       <div id="apg-lista-grupos" class="apg-card-list"></div>
     </div>
     <div class="apg-alumnos">
-      <h3 id="apg-titulo-alumnos">Seleccione un grupo</h3>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+        <h3 id="apg-titulo-alumnos" style="margin:0;">Seleccione un grupo</h3>
+        <button type="button" class="secondary" id="apg-imprimir" style="display:none;">
+          <i class="fas fa-print"></i> Imprimir lista (ambos teléfonos)
+        </button>
+      </div>
       <div id="apg-lista-alumnos"></div>
     </div>
   </div>
@@ -44,5 +49,5 @@ window.HAY_ASESOR_PREINICIO = <?php echo json_encode([
     'api' => hay_asset_url('php/grupo_preinicio_api.php'),
 ], JSON_UNESCAPED_UNICODE); ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/asesor_preinicio_grupos.js?v=20260623'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/asesor_preinicio_grupos.js?v=20260813'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <script>if (window.hayAsesorPreinicioInit) window.hayAsesorPreinicioInit();</script>

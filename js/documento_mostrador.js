@@ -55,9 +55,11 @@
     }
 
     if (d.puede_entregar) {
+      acciones.push(`<label style="font-size:0.82rem;">Foto evidencia<br><input type="file" class="doc-evidencia-input" accept="image/*" capture="environment"></label>`);
       acciones.push(`<button type="button" class="primary btn-doc-entregar" data-id="${d.id_documento}"><i class="fas fa-check"></i> Marcar entregado</button>`);
     } else if (d.entregado) {
-      acciones.push('<span style="color:#2e7d32; font-size:0.88rem;"><i class="fas fa-check-circle"></i> Entregado</span>');
+      const ev = d.evidencia_entrega_url ? ` · <a href="${esc(d.evidencia_entrega_url)}" target="_blank" rel="noopener">ver evidencia</a>` : '';
+      acciones.push('<span style="color:#2e7d32; font-size:0.88rem;"><i class="fas fa-check-circle"></i> Entregado' + ev + '</span>');
     }
 
     if (!acciones.length) {
@@ -201,6 +203,13 @@
             const fd = new FormData();
             fd.append('action', 'marcar_entrega');
             fd.append('id_documento', btn.dataset.id || '');
+            const file = btn.closest('.doc-item')?.querySelector('.doc-evidencia-input')?.files?.[0];
+            if (!file) {
+              if (elMsg) elMsg.textContent = 'Adjunte una foto como evidencia de entrega.';
+              btn.disabled = false;
+              return;
+            }
+            fd.append('evidencia_entrega', file);
             try {
               const pisoApi = (window.HAY_DOC_MOSTRADOR && window.HAY_DOC_MOSTRADOR.piso_api)
                 || 'php/operativo_piso_api.php';

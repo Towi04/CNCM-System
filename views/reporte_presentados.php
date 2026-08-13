@@ -24,6 +24,14 @@ if (!reporte_presentados_puede_ver()) {
       <label>Asesor (ID usuario)</label>
       <input type="number" id="rp-asesor" placeholder="Opcional" min="0">
     </div>
+    <div class="field">
+      <label>Mostrar</label>
+      <select id="rp-filtro-presento">
+        <option value="todos" selected>Todos (presentados y no)</option>
+        <option value="si">Solo presentados</option>
+        <option value="no">Solo no presentados</option>
+      </select>
+    </div>
     <button type="button" class="primary" id="rp-buscar">Actualizar</button>
   </div>
 
@@ -53,5 +61,5 @@ window.HAY_REPORTE_PRESENTADOS = <?php echo json_encode([
     'api' => hay_asset_url('php/reporte_presentados_api.php'),
 ], JSON_UNESCAPED_UNICODE); ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/reporte_presentados.js?v=20260623'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/reporte_presentados.js?v=20260813'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <script>if (window.hayReportePresentadosInit) window.hayReportePresentadosInit();</script>

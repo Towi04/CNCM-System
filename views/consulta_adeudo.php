@@ -100,21 +100,29 @@ if ($control !== '') {
             <input type="number" name="monto" min="0.01" step="0.01" required style="width:100%; padding:8px;">
           </div>
           <div>
-            <label>Folio</label>
-            <input type="text" name="folio" style="width:100%; padding:8px;">
-          </div>
-          <div>
             <label>Fecha del pago</label>
             <input type="datetime-local" name="fecha_pago" value="<?php echo date('Y-m-d\TH:i'); ?>" style="width:100%; padding:8px;">
           </div>
           <div>
             <label>Forma de pago</label>
-            <select name="forma_pago_efectivo" style="width:100%; padding:8px;">
+            <select name="forma_pago_efectivo" id="pago-forma" style="width:100%; padding:8px;">
               <option>Efectivo</option>
               <option>Tarjeta débito</option>
               <option>Tarjeta crédito</option>
               <option>Transferencia</option>
             </select>
+          </div>
+          <div id="pago-cuenta-banco-wrap" style="display:none;">
+            <label>Cuenta bancaria</label>
+            <select name="cuenta_banco" id="pago-cuenta-banco" style="width:100%; padding:8px;">
+              <option value="">— Seleccione —</option>
+              <option value="bbva">BBVA</option>
+              <option value="bancoppel">Bancoppel</option>
+              <option value="hsbc">HSBC</option>
+            </select>
+            <p style="margin:6px 0 0; font-size:0.8rem; color:#666;">
+              La transferencia queda pendiente hasta que supervisión confirme el depósito.
+            </p>
           </div>
           <div>
             <label>Notas / qué cubrió</label>
@@ -152,16 +160,40 @@ if ($control !== '') {
     if (ae) ae.value = opt?.dataset?.ae || '';
   });
 
+  const formaSel = document.getElementById('pago-forma');
+  const cuentaWrap = document.getElementById('pago-cuenta-banco-wrap');
+  const cuentaSel = document.getElementById('pago-cuenta-banco');
+  function syncCuentaBanco() {
+    const esTr = (formaSel?.value || '').toLowerCase().includes('transfer');
+    if (cuentaWrap) cuentaWrap.style.display = esTr ? 'block' : 'none';
+    if (cuentaSel) {
+      cuentaSel.required = esTr;
+      if (!esTr) cuentaSel.value = '';
+    }
+  }
+  formaSel?.addEventListener('change', syncCuentaBanco);
+  syncCuentaBanco();
+
   document.getElementById('form-registro-pago')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
     if (fd.get('fecha_pago')) {
       fd.set('fecha_pago', fd.get('fecha_pago').replace('T', ' ') + ':00');
     }
+    const esTr = String(fd.get('forma_pago_efectivo') || '').toLowerCase().includes('transfer');
+    if (esTr && !fd.get('cuenta_banco')) {
+      alert('Seleccione la cuenta bancaria (BBVA, Bancoppel o HSBC)');
+      return;
+    }
     const res = await fetch('php/pago_registrar.php', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
     const data = await res.json();
     alert(data.message || '');
-    if (data.status === 'ok') cargarSeccion('consulta_adeudo', data.params ? Object.fromEntries(new URLSearchParams(data.params)) : {});
+    if (data.status === 'ok') {
+      if (data.ticket_url) {
+        window.open(data.ticket_url, '_blank', 'noopener');
+      }
+      cargarSeccion('consulta_adeudo', data.params ? Object.fromEntries(new URLSearchParams(data.params)) : {});
+    }
   });
 })();
 </script>

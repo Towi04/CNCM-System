@@ -264,6 +264,7 @@ if ($action === 'cobrar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $folio = trim($_POST['folio'] ?? '');
     $medioPago = strtolower(trim((string) ($_POST['medio_pago'] ?? '')));
+    $cuentaBanco = strtolower(trim((string) ($_POST['cuenta_banco'] ?? '')));
     $forma = trim($_POST['forma_pago'] ?? '');
     if ($forma === '' && $medioPago !== '') {
         $forma = function_exists('operativo_cncm_medio_pago_forma')
@@ -272,6 +273,13 @@ if ($action === 'cobrar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($forma === '') {
         $forma = 'Efectivo';
+    }
+    if ($medioPago === 'transferencia' && $cuentaBanco === '') {
+        hay_json_response([
+            'status' => 'error',
+            'message' => 'Seleccione la cuenta bancaria (BBVA, Bancoppel o HSBC)',
+        ]);
+        exit;
     }
     $cobroPrecioLista = !empty($_POST['cobro_precio_lista']);
     $montoReferencia = ($_POST['monto_referencia'] ?? '') !== '' ? catalog_money($_POST['monto_referencia']) : null;
@@ -415,6 +423,7 @@ if ($action === 'cobrar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'folio' => $folio,
             'forma_pago_efectivo' => $forma,
             'medio_pago' => $medioPago !== '' ? $medioPago : null,
+            'cuenta_banco' => $cuentaBanco !== '' ? $cuentaBanco : null,
             'cobro_precio_lista' => $cobroPrecioLista,
             'monto_referencia' => $montoReferencia,
             'monto_apoyo' => $montoApoyo,

@@ -54,6 +54,8 @@ function rbac_cap_academico(): array
 {
     return [
         'menu_academico',
+        'menu_preregistro',
+        'menu_cert_preregistro',
         'menu_alumnos',
         'menu_grupos',
         'menu_especialidades',
@@ -94,6 +96,9 @@ function rbac_cap_academico(): array
 function rbac_cap_recepcion(): array
 {
     return array_merge(rbac_cap_caja(), [
+        'menu_preregistro',
+        'menu_cert_preregistro',
+        'menu_cronologia',
         'menu_alumnos',
         'menu_mi_evaluacion',
         'menu_matriz_entrenamiento',
@@ -111,10 +116,12 @@ function rbac_cap_caja(): array
 {
     return [
         'menu_caja',
+        'menu_cronologia',
         'menu_asistencia',
         'menu_consulta_adeudo',
         'menu_punto_venta',
         'menu_venta_productos',
+        'menu_transferencias_ver',
         'menu_certificaciones',
         'menu_reportes',
         'menu_soporte',
@@ -160,6 +167,7 @@ function rbac_cap_director_extra(): array
         'asesoria_tabulador',
         'asesoria_autorizar_mismo_dia',
         'asesoria_calendario',
+        'menu_transferencias_ver',
     ];
 }
 function rbac_cap_solo_supervisor(): array
@@ -174,6 +182,8 @@ function rbac_cap_solo_supervisor(): array
         'menu_supervisor_acuerdo',
         'pago_supervisor_editar',
         'menu_reporte_pagos_anulados',
+        'menu_transferencias_confirmar',
+        'menu_transferencias_ver',
         'expediente_requisitos_admin',
     ];
 }
@@ -182,6 +192,8 @@ function rbac_cap_solo_supervisor(): array
 function rbac_cap_profesor(): array
 {
     return [
+        'menu_preregistro',
+        'menu_cert_preregistro',
         'menu_asistencia',
         'menu_grupos',
         'menu_asesorias',
@@ -193,6 +205,18 @@ function rbac_cap_profesor(): array
         'asistencia_lista_grupo',
         'asistencia_checada',
         'menu_mi_expediente',
+    ];
+}
+
+/** Inventario / Manuales: stock central y envíos a planteles. */
+function rbac_cap_manuales(): array
+{
+    return [
+        'menu_preregistro',
+        'menu_cert_preregistro',
+        'menu_manuales_stock',
+        'menu_manuales_envios',
+        'menu_soporte',
     ];
 }
 
@@ -265,6 +289,7 @@ function rbac_db_mapa_jerarquia(): array
         'coordinacion' => rbac_cap_academico(),
         'admin' => rbac_cap_recepcion(),
         'profesor' => rbac_cap_profesor(),
+        'manuales' => rbac_cap_manuales(),
         'director' => rbac_merge_caps($asesor, $acad, $caja, $ventas, $dir),
         'supervisor' => ['__acceso_total__' => true],
     ];

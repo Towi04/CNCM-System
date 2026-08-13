@@ -18,6 +18,7 @@ function asesor_ensure_schema(PDO $pdo): void
             apellido_materno VARCHAR(80) NULL,
             telefono VARCHAR(40) NULL,
             email VARCHAR(160) NULL,
+            id_especialidad INT UNSIGNED NULL,
             observaciones TEXT NULL,
             estado ENUM(\'contacto\',\'preregistro\',\'inscrito\',\'descartado\') NOT NULL DEFAULT \'contacto\',
             id_preregistro INT UNSIGNED NULL,
@@ -33,6 +34,9 @@ function asesor_ensure_schema(PDO $pdo): void
 
     if (function_exists('certificacion_campos_ensure_schema')) {
         certificacion_campos_ensure_schema($pdo);
+    }
+    if (function_exists('plantel_ensure_column')) {
+        plantel_ensure_column($pdo, 'asesor_entrevistas', 'id_especialidad', 'INT UNSIGNED NULL', 'email');
     }
 
     asesor_asegurar_privilegio_ubicacion($pdo);
@@ -81,7 +85,7 @@ function asesor_puede_grupos_fases(): bool
 
 function asesor_puede_cert_preregistro(): bool
 {
-    if (function_exists('rbac_usuario_en_roles') && rbac_usuario_en_roles(['asesor', 'gerente', 'supervisor', 'admin'])) {
+    if (function_exists('rbac_usuario_en_roles') && rbac_usuario_en_roles(['asesor', 'gerente', 'supervisor', 'admin', 'profesor', 'coordinador', 'director', 'manuales'])) {
         return true;
     }
 
@@ -315,8 +319,8 @@ function asesor_entrevista_guardar(PDO $pdo, int $idPlantel, array $data): array
     $st = $pdo->prepare(
         'INSERT INTO asesor_entrevistas (
             id_plantel, id_usuario_asesor, id_usuario_registra, origen,
-            nombres, apellido_paterno, apellido_materno, telefono, email, observaciones
-        ) VALUES (?,?,?,?,?,?,?,?,?,?)'
+            nombres, apellido_paterno, apellido_materno, telefono, email, id_especialidad, observaciones
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
     );
     $st->execute([
         $idPlantel,
@@ -328,6 +332,7 @@ function asesor_entrevista_guardar(PDO $pdo, int $idPlantel, array $data): array
         trim((string) ($data['apellido_materno'] ?? '')) ?: null,
         trim((string) ($data['telefono'] ?? '')) ?: null,
         trim((string) ($data['email'] ?? '')) ?: null,
+        (int) ($data['id_especialidad'] ?? 0) ?: null,
         trim((string) ($data['observaciones'] ?? '')) ?: null,
     ]);
 
@@ -354,8 +359,10 @@ function asesor_entrevista_listar(
     asesor_ensure_schema($pdo);
     $params = [$idPlantel, $idAsesor];
     $sql = 'SELECT e.*,
+                   esp.nombre AS especialidad_nombre,
                    CONCAT(ur.nombre, \' \', ur.apellido) AS registrado_por
             FROM asesor_entrevistas e
+            LEFT JOIN especialidades esp ON esp.id_especialidad = e.id_especialidad
             LEFT JOIN usuarios ur ON ur.id_usuario = e.id_usuario_registra
             WHERE e.id_plantel = ? AND e.id_usuario_asesor = ?';
     if ($periodo !== null && $periodo !== '') {
