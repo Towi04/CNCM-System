@@ -32,6 +32,8 @@ function menu_cncm_secciones(): array
 
                 ['cap' => 'menu_entrevistas', 'seccion' => 'asesor_entrevistas', 'icon' => 'fa-handshake', 'text' => 'Entrevistas', 'title' => 'Entrevistas', 'breadcrumb' => 'ENTREVISTAS'],
 
+                ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
+
             ],
 
         ],
@@ -800,6 +802,8 @@ function menu_cncm_secciones_por_rol(): array
 
                 ['seccion' => 'matriz_entrenamiento', 'icon' => 'fa-graduation-cap', 'text' => 'Matriz de entrenamiento', 'title' => 'Matriz de entrenamiento', 'breadcrumb' => 'MATRIZ'],
 
+                ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
+
                 ['seccion' => 'reporte_pagos_anulados', 'icon' => 'fa-ban', 'text' => 'Pagos anulados', 'title' => 'Reporte de pagos anulados', 'breadcrumb' => 'PAGOS ANULADOS'],
 
                 ['cap' => 'menu_transferencias_confirmar', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Confirmar transferencias', 'title' => 'Confirmar transferencias', 'breadcrumb' => 'CONFIRMAR TRANSFERENCIAS'],
@@ -847,6 +851,8 @@ function menu_cncm_secciones_por_rol(): array
                 ['seccion' => 'ventas_comisiones_consulta', 'icon' => 'fa-coins', 'text' => 'Mis comisiones', 'title' => 'Mis comisiones', 'breadcrumb' => 'COMISIONES'],
 
                 ['seccion' => 'calendario_consulta', 'icon' => 'fa-calendar', 'text' => 'Calendario institucional', 'title' => 'Vista combinada calendario', 'breadcrumb' => 'CALENDARIO INSTITUCIONAL'],
+
+                ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
 
             ],
 

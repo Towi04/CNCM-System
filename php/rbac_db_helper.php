@@ -445,15 +445,21 @@ function rbac_db_ensure_mejoras_operativas_lote(PDO $pdo): void
         'menu_riesgo_reporte',
     ])));
 
+    $tutorCaps = ['menu_tutor', 'tutor_usar'];
     $grants = [
-        'admin' => $adminExtras,
-        'profesor' => ['menu_preregistro', 'menu_cert_preregistro'],
-        'coordinador' => ['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte'],
-        'coordinacion' => ['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte'],
-        'director' => $directorExtras,
-        'supervisor' => ['menu_transferencias_confirmar', 'menu_transferencias_ver'],
-        'gerente' => ['menu_comisiones_nomina_print', 'menu_preregistro'],
-        'manuales' => ['menu_preregistro', 'menu_cert_preregistro', 'menu_manuales_stock', 'menu_manuales_envios', 'menu_soporte'],
+        'admin' => array_merge($adminExtras, $tutorCaps),
+        'profesor' => array_merge(['menu_preregistro', 'menu_cert_preregistro'], $tutorCaps),
+        'coordinador' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte'], $tutorCaps),
+        'coordinacion' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte'], $tutorCaps),
+        'director' => array_merge($directorExtras, $tutorCaps),
+        'supervisor' => array_merge(['menu_transferencias_confirmar', 'menu_transferencias_ver'], $tutorCaps),
+        'gerente' => array_merge(['menu_comisiones_nomina_print', 'menu_preregistro'], $tutorCaps),
+        'asesor' => $tutorCaps,
+        'alumno' => $tutorCaps,
+        'manuales' => array_merge(
+            ['menu_preregistro', 'menu_cert_preregistro', 'menu_manuales_stock', 'menu_manuales_envios', 'menu_soporte'],
+            $tutorCaps
+        ),
     ];
 
     foreach ($grants as $rol => $caps) {

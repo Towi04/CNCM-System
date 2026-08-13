@@ -144,28 +144,8 @@ function tutor_service(PDO $pdo): TutorService
 
 function tutor_puede_usar(): bool
 {
-    global $pdo;
-    if (empty($_SESSION['user_id'])) {
-        return false;
-    }
-    if (!($pdo instanceof PDO)) {
-        return false;
-    }
-    tutor_ensure_schema($pdo);
-
-    if (function_exists('rbac_rol_efectivo') && rbac_rol_efectivo() === 'alumno') {
-        $idAlumno = function_exists('alumno_portal_id_sesion') ? alumno_portal_id_sesion() : 0;
-        if ($idAlumno <= 0) {
-            $st = $pdo->prepare('SELECT id_alumno FROM usuarios WHERE id_usuario = ? LIMIT 1');
-            $st->execute([(int) $_SESSION['user_id']]);
-            $idAlumno = (int) $st->fetchColumn();
-        }
-        if ($idAlumno > 0 && function_exists('usuario_alumno_puede_tutor') && !usuario_alumno_puede_tutor($pdo, $idAlumno)) {
-            return false;
-        }
-    }
-
-    return tutor_access($pdo)->puedeUsar((int) $_SESSION['user_id']);
+    // Todos los usuarios autenticados pueden usar el Tutor IA (sin excepciones).
+    return !empty($_SESSION['user_id']);
 }
 
 function tutor_puede_administrar(): bool
@@ -271,8 +251,7 @@ function tutor_require_session(): int
 function tutor_require_permiso(): int
 {
     $uid = tutor_require_session();
-    global $pdo;
-    if ($pdo instanceof PDO && !tutor_access($pdo)->puedeUsar($uid)) {
+    if (!tutor_puede_usar()) {
         tutor_json(['status' => 'error', 'message' => 'Sin permiso para usar el tutor'], 403);
         exit;
     }

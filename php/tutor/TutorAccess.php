@@ -21,39 +21,17 @@ final class TutorAccess
     /** null = todos los tutores; array = IDs permitidos. */
     public function idsPermitidos(int $userId): ?array
     {
-        if (function_exists('rbac_tiene_acceso_total') && rbac_tiene_acceso_total()) {
-            return null;
+        // Acceso abierto: cualquier usuario autenticado ve todos los tutores.
+        if ($userId <= 0) {
+            return [];
         }
 
-        $rol = function_exists('rbac_rol_efectivo') ? rbac_rol_efectivo() : '';
-
-        if (in_array($rol, self::ROLES_TODOS_TUTORES, true)) {
-            return null;
-        }
-
-        if ($rol === 'alumno') {
-            return $this->idsParaAlumno($userId);
-        }
-
-        if ($rol === 'profesor') {
-            return $this->idsParaProfesor($userId);
-        }
-
-        if (in_array($rol, self::ROLES_SOLO_ASISTENTE, true)) {
-            return $this->idsSoloAsistente();
-        }
-
-        return $this->idsSoloAsistente();
+        return null;
     }
 
     public function puedeUsar(int $userId): bool
     {
-        if (empty($userId)) {
-            return false;
-        }
-        $ids = $this->idsPermitidos($userId);
-
-        return $ids === null || $ids !== [];
+        return $userId > 0;
     }
 
     public function puedeTutor(int $userId, int $tutorId): bool

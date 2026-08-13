@@ -22,6 +22,8 @@ function rbac_cap_asesor(): array
         'menu_podio_ventas',
         'menu_mi_evaluacion',
         'menu_matriz_entrenamiento',
+        'menu_tutor',
+        'tutor_usar',
         'menu_soporte',
         'inscripcion_solicitar_autorizacion',
         'descuento_inscripcion_asesor',
@@ -204,6 +206,8 @@ function rbac_cap_profesor(): array
         'menu_calendario_consulta',
         'asistencia_lista_grupo',
         'asistencia_checada',
+        'menu_tutor',
+        'tutor_usar',
         'menu_mi_expediente',
     ];
 }
@@ -216,6 +220,8 @@ function rbac_cap_manuales(): array
         'menu_cert_preregistro',
         'menu_manuales_stock',
         'menu_manuales_envios',
+        'menu_tutor',
+        'tutor_usar',
         'menu_soporte',
     ];
 }
@@ -232,6 +238,8 @@ function rbac_cap_alumno(): array
         'menu_alumno_chat',
         'menu_alumno_perfil',
         'menu_alumno_cuentas',
+        'menu_tutor',
+        'tutor_usar',
         'menu_soporte',
         'menu_mi_expediente',
     ];
