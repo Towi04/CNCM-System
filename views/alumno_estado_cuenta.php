@@ -23,7 +23,8 @@ if (rbac_rol_efectivo() === 'alumno') {
     return;
 }
 $fecha = trim($_GET['fecha'] ?? date('Y-m-d'));
-$ec = pago_estado_cuenta($pdo, $id, $fecha);
+$idEspecialidad = max(0, (int) ($_GET['id_especialidad'] ?? 0));
+$ec = pago_estado_cuenta($pdo, $id, $fecha, $idEspecialidad > 0 ? $idEspecialidad : null);
 
 if (!$ec['ok']) {
     echo '<div class="alert">' . htmlspecialchars($ec['message'] ?? 'Error') . '</div>';
@@ -113,3 +114,15 @@ if (!$ec['ok']) {
 <div class="ec-wrap">
   <?php include __DIR__ . '/partials/estado_cuenta_body.php'; ?>
 </div>
+<script>
+(function () {
+  document.getElementById('ec-especialidad-filtro')?.addEventListener('change', (event) => {
+    const params = new URLSearchParams({
+      id: '<?php echo (int) $id; ?>',
+      fecha: '<?php echo htmlspecialchars($fecha, ENT_QUOTES, 'UTF-8'); ?>'
+    });
+    if (event.target.value) params.set('id_especialidad', event.target.value);
+    cargarSeccion('alumno_estado_cuenta', params);
+  });
+})();
+</script>

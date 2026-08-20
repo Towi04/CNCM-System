@@ -3,13 +3,19 @@ require_once __DIR__ . '/../config.php';
 $idPlantel = plantel_scope_id($pdo);
 $control = trim($_GET['control'] ?? $_GET['q'] ?? '');
 $fechaCorte = trim($_GET['fecha'] ?? date('Y-m-d'));
+$idEspecialidad = max(0, (int) ($_GET['id_especialidad'] ?? 0));
 $ec = null;
 $alumno = null;
 
 if ($control !== '') {
     $alumno = pago_buscar_alumno_control($pdo, $control, $idPlantel);
     if ($alumno) {
-        $ec = pago_estado_cuenta($pdo, (int) $alumno['id_alumno'], $fechaCorte);
+        $ec = pago_estado_cuenta(
+            $pdo,
+            (int) $alumno['id_alumno'],
+            $fechaCorte,
+            $idEspecialidad > 0 ? $idEspecialidad : null
+        );
     }
 }
 ?>
@@ -145,10 +151,15 @@ if ($control !== '') {
     const f = document.getElementById('adeudo-fecha').value;
     if (c) p.set('control', c);
     if (f) p.set('fecha', f);
+    const esp = document.getElementById('ec-especialidad-filtro')?.value || '';
+    if (esp) p.set('id_especialidad', esp);
     cargarSeccion('consulta_adeudo', p);
   });
   document.getElementById('adeudo-control')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('btn-buscar-adeudo').click();
+  });
+  document.getElementById('ec-especialidad-filtro')?.addEventListener('change', () => {
+    document.getElementById('btn-buscar-adeudo')?.click();
   });
   document.getElementById('btn-toggle-registro-pago')?.addEventListener('click', () => {
     const p = document.getElementById('panel-registro-pago');
@@ -192,7 +203,12 @@ if ($control !== '') {
       if (data.ticket_url) {
         window.open(data.ticket_url, '_blank', 'noopener');
       }
-      cargarSeccion('consulta_adeudo', data.params ? Object.fromEntries(new URLSearchParams(data.params)) : {});
+      const params = new URLSearchParams(data.params || '');
+      const esp = document.getElementById('ec-especialidad-filtro')?.value || '';
+      const fecha = document.getElementById('adeudo-fecha')?.value || '';
+      if (esp) params.set('id_especialidad', esp);
+      if (fecha) params.set('fecha', fecha);
+      cargarSeccion('consulta_adeudo', params);
     }
   });
 })();

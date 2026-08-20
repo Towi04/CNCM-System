@@ -301,6 +301,9 @@ $puedeSimularRol = rbac_puede_simular_rol();
                 <?php if (function_exists('documento_puede_configurar_plantillas') && documento_puede_configurar_plantillas()): ?>
                 <li data-seccion="admin_documento_plantillas" data-title="Plantillas documentos" data-breadcrumb="PLANTILLAS DOC">Plantillas constancias/diplomas</li>
                 <?php endif; ?>
+                <?php if (function_exists('credencial_puede_diseñar') && credencial_puede_diseñar()): ?>
+                <li data-seccion="admin_credencial_plantilla" data-title="Plantillas credenciales" data-breadcrumb="DISEÑO CREDENCIALES">Plantillas de credencial</li>
+                <?php endif; ?>
                 <?php if (function_exists('operativo_piso_puede_ver') && operativo_piso_puede_ver()): ?>
                 <li data-seccion="piso_operativo" data-title="Piso operativo" data-breadcrumb="PISO OPERATIVO">Piso operativo</li>
                 <?php endif; ?>

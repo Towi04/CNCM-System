@@ -152,6 +152,8 @@ function rbac_privilegios_catalogo(): array
         'menu_comisiones_admin' => ['label' => 'Administrar comisiones', 'grupo' => 'Ventas y alumnos'],
         'menu_alumnos' => ['label' => 'Alumnos', 'grupo' => 'Ventas y alumnos'],
         'menu_alumno_cambio_plantel' => ['label' => 'Cambio de plantel de alumnos', 'grupo' => 'Ventas y alumnos'],
+        'menu_credenciales' => ['label' => 'Generar credenciales de alumnos', 'grupo' => 'Ventas y alumnos'],
+        'menu_credenciales_diseno' => ['label' => 'Diseñar plantillas de credencial', 'grupo' => 'Administración'],
         'menu_consulta_adeudo' => ['label' => 'Consulta de adeudo', 'grupo' => 'Ventas y alumnos'],
         'menu_asistencia' => ['label' => 'Menú asistencias', 'grupo' => 'Académico'],
         'menu_grupos' => ['label' => 'Grupos', 'grupo' => 'Académico'],
@@ -178,6 +180,7 @@ function rbac_privilegios_catalogo(): array
         'menu_calendario_admin' => ['label' => 'Calendario administrativo', 'grupo' => 'Calendario'],
         'menu_punto_venta' => ['label' => 'Punto de venta', 'grupo' => 'Caja'],
         'menu_venta_productos' => ['label' => 'Venta de productos', 'grupo' => 'Caja'],
+        'menu_tareas' => ['label' => 'Tareas del personal', 'grupo' => 'Personal'],
         'menu_certificaciones' => ['label' => 'Certificaciones', 'grupo' => 'Caja'],
         'menu_reportes' => ['label' => 'Reportes', 'grupo' => 'Reportes'],
         'menu_gerente_dashboard' => ['label' => 'Panel gerente ventas', 'grupo' => 'Ventas'],
@@ -434,6 +437,7 @@ function rbac_db_ensure_mejoras_operativas_lote(PDO $pdo): void
     }
 
     $adminExtras = [
+        'admin_catalogo',
         'menu_preregistro',
         'menu_cert_preregistro',
         'menu_cronologia',
@@ -443,6 +447,8 @@ function rbac_db_ensure_mejoras_operativas_lote(PDO $pdo): void
         'menu_manuales_envios', // confirmar recepción de envíos en plantel
         'menu_audifonos',
         'menu_grupo_division',
+        'menu_credenciales',
+        'menu_tareas',
     ];
     $directorExtras = array_values(array_unique(array_merge($adminExtras, [
         'menu_transferencias_ver',
@@ -451,30 +457,38 @@ function rbac_db_ensure_mejoras_operativas_lote(PDO $pdo): void
         'menu_alumno_cambio_plantel',
         'menu_grupo_division',
         'menu_audifonos',
+        'menu_credenciales',
+        'menu_tareas',
     ])));
 
     $tutorCaps = ['menu_tutor', 'tutor_usar'];
     $grants = [
         'admin' => array_merge($adminExtras, $tutorCaps),
-        'profesor' => array_merge(['menu_preregistro', 'menu_cert_preregistro'], $tutorCaps),
-        'coordinador' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte', 'menu_grupo_division'], $tutorCaps),
-        'coordinacion' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte', 'menu_grupo_division'], $tutorCaps),
+        'profesor' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_tareas'], $tutorCaps),
+        'coordinador' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte', 'menu_grupo_division', 'menu_tareas'], $tutorCaps),
+        'coordinacion' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte', 'menu_grupo_division', 'menu_tareas'], $tutorCaps),
         'director' => array_merge($directorExtras, $tutorCaps),
         'supervisor' => array_merge(
-            ['menu_transferencias_confirmar', 'menu_transferencias_ver', 'menu_alumno_cambio_plantel', 'menu_grupo_division', 'menu_audifonos'],
+            [
+                'menu_transferencias_confirmar', 'menu_transferencias_ver', 'menu_alumno_cambio_plantel',
+                'menu_grupo_division', 'menu_audifonos', 'menu_credenciales', 'menu_credenciales_diseno', 'menu_tareas',
+            ],
             $tutorCaps
         ),
-        'gerente' => array_merge(['menu_comisiones_nomina_print', 'menu_preregistro'], $tutorCaps),
-        'asesor' => $tutorCaps,
+        'gerente' => array_merge(['menu_comisiones_nomina_print', 'menu_preregistro', 'menu_tareas'], $tutorCaps),
+        'asesor' => array_merge(['menu_tareas'], $tutorCaps),
         'alumno' => $tutorCaps,
         'manuales' => array_merge(
-            ['menu_preregistro', 'menu_cert_preregistro', 'menu_manuales_stock', 'menu_manuales_envios', 'menu_soporte'],
+            ['menu_preregistro', 'menu_cert_preregistro', 'menu_manuales_stock', 'menu_manuales_envios', 'menu_soporte', 'menu_tareas'],
             $tutorCaps
         ),
     ];
 
     foreach ($grants as $rol => $caps) {
         rbac_db_agregar_privilegios_rol($pdo, $rol, $caps);
+    }
+    foreach (['asesor', 'gerente', 'admin', 'profesor', 'coordinador', 'coordinacion', 'director', 'supervisor', 'manuales'] as $rolStaff) {
+        rbac_db_agregar_privilegios_rol($pdo, $rolStaff, ['menu_tareas']);
     }
 
     if (function_exists('rbac_db_reparar_supervisor')) {

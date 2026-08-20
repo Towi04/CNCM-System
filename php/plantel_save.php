@@ -3,7 +3,9 @@ require __DIR__ . '/../config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['user_id']) || !plantel_es_admin()) {
+$puedeGestionar = isset($_SESSION['user_id'])
+    && (plantel_es_admin() || (function_exists('rbac_cap') && rbac_cap('admin_planteles')));
+if (!$puedeGestionar) {
     echo json_encode(['status' => 'error', 'message' => 'No autorizado'], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -24,6 +26,13 @@ $rfc = trim($_POST['rfc'] ?? '');
 $telefono = trim($_POST['telefono'] ?? '');
 $emailContacto = trim($_POST['email_contacto'] ?? '') ?: 'corporativo@cncm.com.mx';
 $logoUrl = trim($_POST['logo_url'] ?? '');
+$cct = trim($_POST['cct'] ?? '');
+$rvoe = trim($_POST['rvoe'] ?? '');
+$prepaNombreSep = trim($_POST['prepa_nombre_sep'] ?? '');
+$prepaCct = trim($_POST['prepa_cct'] ?? '');
+$prepaRvoe = trim($_POST['prepa_rvoe'] ?? '');
+$prepaLogoUrl = trim($_POST['prepa_logo_url'] ?? '');
+$prepaDireccion = trim($_POST['prepa_direccion'] ?? '');
 
 if ($nombre === '') {
     echo json_encode(['status' => 'error', 'message' => 'El nombre es obligatorio'], JSON_UNESCAPED_UNICODE);
@@ -49,13 +58,17 @@ try {
         }
         $stmt = $pdo->prepare(
             'UPDATE planteles SET slug = ?, nombre = ?, orden = ?, activo = ?,
-             razon_social = ?, direccion = ?, rfc = ?, telefono = ?, email_contacto = ?, logo_url = ?
+             razon_social = ?, direccion = ?, rfc = ?, telefono = ?, email_contacto = ?, logo_url = ?,
+             cct = ?, rvoe = ?, prepa_nombre_sep = ?, prepa_cct = ?, prepa_rvoe = ?,
+             prepa_logo_url = ?, prepa_direccion = ?
              WHERE id_plantel = ?'
         );
         $stmt->execute([
             $slug, $nombre, $orden, $activo,
             $razonSocial, $direccion ?: null, $rfc ?: null, $telefono ?: null,
-            $emailContacto, $logoUrl ?: null, $id,
+            $emailContacto, $logoUrl ?: null,
+            $cct ?: null, $rvoe ?: null, $prepaNombreSep ?: null, $prepaCct ?: null,
+            $prepaRvoe ?: null, $prepaLogoUrl ?: null, $prepaDireccion ?: null, $id,
         ]);
     } else {
         $dup = $pdo->prepare('SELECT id_plantel FROM planteles WHERE slug = ? LIMIT 1');
@@ -65,13 +78,17 @@ try {
             exit;
         }
         $stmt = $pdo->prepare(
-            'INSERT INTO planteles (slug, nombre, orden, activo, razon_social, direccion, rfc, telefono, email_contacto, logo_url)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO planteles (
+                slug, nombre, orden, activo, razon_social, direccion, rfc, telefono, email_contacto, logo_url,
+                cct, rvoe, prepa_nombre_sep, prepa_cct, prepa_rvoe, prepa_logo_url, prepa_direccion
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $slug, $nombre, $orden, $activo,
             $razonSocial, $direccion ?: null, $rfc ?: null, $telefono ?: null,
             $emailContacto, $logoUrl ?: null,
+            $cct ?: null, $rvoe ?: null, $prepaNombreSep ?: null, $prepaCct ?: null,
+            $prepaRvoe ?: null, $prepaLogoUrl ?: null, $prepaDireccion ?: null,
         ]);
         $id = (int) $pdo->lastInsertId();
     }

@@ -7,6 +7,8 @@ if (empty($ec['ok'])) {
 $a = $ec['alumno'];
 $r = $ec['resumen'];
 $plantelNombre = $_SESSION['plantel_nombre'] ?? 'CNCM';
+$especialidadesEc = $ec['especialidades'] ?? [];
+$idEspecialidadEc = (int) ($ec['id_especialidad'] ?? 0);
 ?>
 <div class="ec-print-area" id="estado-cuenta-print">
   <div class="ec-print-header">
@@ -21,6 +23,21 @@ $plantelNombre = $_SESSION['plantel_nombre'] ?? 'CNCM';
     <strong># Control:</strong> <?php echo htmlspecialchars((string)($a['numero_control'] ?? $a['id_alumno'])); ?>
     <?php if (!empty($a['telefono'])): ?> · <strong>Tel:</strong> <?php echo htmlspecialchars($a['telefono']); ?><?php endif; ?>
   </p>
+
+  <?php if (count($especialidadesEc) >= 2): ?>
+    <div class="no-print" style="margin:0 0 16px;max-width:360px;">
+      <label for="ec-especialidad-filtro" style="display:block;font-weight:600;margin-bottom:5px;">Mostrar adeudo de</label>
+      <select id="ec-especialidad-filtro" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;">
+        <option value="">Todas (conjunto)</option>
+        <?php foreach ($especialidadesEc as $especialidadEc): ?>
+          <option value="<?php echo (int) $especialidadEc['id_especialidad']; ?>"
+            <?php echo (int) $especialidadEc['id_especialidad'] === $idEspecialidadEc ? 'selected' : ''; ?>>
+            <?php echo htmlspecialchars($especialidadEc['nombre']); ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+  <?php endif; ?>
 
   <div class="ec-resumen no-print" style="margin-bottom:16px;">
     <div class="ec-resumen-card">

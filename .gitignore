@@ -7,3 +7,6 @@ config.mail.php
 google_key.json
 /downloads/**/*.exe
 /downloads/**/*.msi
+
+# Credenciales generadas/plantillas
+/uploads/credenciales/

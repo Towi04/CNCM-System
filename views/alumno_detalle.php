@@ -190,6 +190,15 @@ $puedeCambioDrasticoNombre = function_exists('alumno_nombre_puede_cambio_drastic
 $puedeTarifaSupervisor = function_exists('alumno_tarifa_supervisor_puede') && alumno_tarifa_supervisor_puede();
 $puedeCambioPlantel = function_exists('alumno_plantel_transfer_puede_solicitar') && alumno_plantel_transfer_puede_solicitar();
 $control = $a['numero_control'] ?? $a['matricula'] ?? $id;
+$puedeGenerarCredencial = function_exists('credencial_puede_generar') && credencial_puede_generar();
+$credencialesRecientes = [];
+if ($puedeGenerarCredencial && function_exists('credencial_listar_alumno')) {
+    try {
+        $credencialesRecientes = credencial_listar_alumno($pdo, $id, 8);
+    } catch (Throwable $e) {
+        error_log('alumno_detalle credenciales: ' . $e->getMessage());
+    }
+}
 $puedeSuspenderAlumno = function_exists('usuario_suspension_puede_gestionar_alumno') && usuario_suspension_puede_gestionar_alumno();
 $uAlumnoSusp = null;
 if (!empty($a['id_usuario'])) {
@@ -262,6 +271,17 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
       <button type="button" class="primary" style="margin-top:14px; width:100%;" onclick="cargarSeccion('alumno_estado_cuenta', 'id=<?php echo (int)$id; ?>')">
         Estado de cuenta / Adeudo
       </button>
+      <?php if ($puedeGenerarCredencial): ?>
+        <a
+          href="<?php echo htmlspecialchars(hay_asset_url('php/credencial_pdf.php?id_alumno=' . (int) $id), ENT_QUOTES, 'UTF-8'); ?>"
+          target="_blank"
+          rel="noopener"
+          class="primary"
+          style="display:block;box-sizing:border-box;margin-top:8px;width:100%;padding:10px;text-align:center;text-decoration:none;border-radius:8px;"
+        >
+          <i class="fas fa-id-card"></i> Generar / Imprimir credencial
+        </a>
+      <?php endif; ?>
       <?php if ($puedeCambioPlantel): ?>
         <button type="button" class="secondary" style="margin-top:8px; width:100%;" onclick="cargarSeccion('alumno_cambio_plantel', 'id_alumno=<?php echo (int)$id; ?>')">
           <i class="fas fa-exchange-alt"></i> Solicitar cambio de plantel
@@ -342,6 +362,35 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
         <ul><?php foreach ($docRows as $d): ?>
           <li><?php echo htmlspecialchars($d['tipo'] . ' — ' . $d['nombre']); ?></li>
         <?php endforeach; ?></ul>
+      <?php endif; ?>
+      <?php if ($puedeGenerarCredencial): ?>
+        <h3 style="margin-top:22px;">Credenciales recientes</h3>
+        <?php if ($credencialesRecientes === []): ?>
+          <p>No hay credenciales generadas.</p>
+        <?php else: ?>
+          <table class="catalog-table">
+            <thead><tr><th>Generada</th><th>Plantilla</th><th>Vigencia</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <?php foreach ($credencialesRecientes as $cred): ?>
+                <?php
+                  $vigente = (int) ($cred['activo'] ?? 0) === 1
+                      && (string) ($cred['vigencia_fin'] ?? '') >= date('Y-m-d');
+                ?>
+                <tr>
+                  <td><?php echo date('d/m/Y H:i', strtotime((string) $cred['generado_en'])); ?></td>
+                  <td><?php echo htmlspecialchars((string) ($cred['plantilla_nombre'] ?? '—')); ?></td>
+                  <td><?php echo date('d/m/Y', strtotime((string) $cred['vigencia_inicio'])); ?> – <?php echo date('d/m/Y', strtotime((string) $cred['vigencia_fin'])); ?></td>
+                  <td style="color:<?php echo $vigente ? '#2e7d32' : '#777'; ?>;"><?php echo $vigente ? 'Vigente' : 'Reemplazada / vencida'; ?></td>
+                  <td>
+                    <a target="_blank" rel="noopener" href="<?php echo htmlspecialchars(hay_asset_url('php/credencial_pdf.php?id_credencial=' . (int) $cred['id_credencial']), ENT_QUOTES, 'UTF-8'); ?>">Imprimir</a>
+                    ·
+                    <a target="_blank" rel="noopener" href="<?php echo htmlspecialchars(hay_asset_url('credencial_verificar.php?token=' . rawurlencode((string) $cred['token_verificacion'])), ENT_QUOTES, 'UTF-8'); ?>">Verificar</a>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        <?php endif; ?>
       <?php endif; ?>
     </div>
 

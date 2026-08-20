@@ -76,6 +76,8 @@ function rbac_seccion_caps(): array
 
         'audifonos_control' => 'menu_audifonos',
 
+        'tareas' => 'menu_tareas',
+
         'consulta_adeudo' => 'menu_consulta_adeudo',
 
         'alumno_cambio_plantel' => 'menu_alumno_cambio_plantel',
@@ -87,6 +89,8 @@ function rbac_seccion_caps(): array
         'admin_productos' => 'admin_catalogo',
 
         'admin_planteles' => 'admin_planteles',
+
+        'admin_credencial_plantilla' => 'menu_credenciales_diseno',
 
         'admin_roles' => 'admin_roles',
 
@@ -170,6 +174,14 @@ function rbac_guard_seccion(string $seccion): void
 
         return;
 
+    }
+
+    if (
+        $seccion === 'admin_credencial_plantilla'
+        && function_exists('credencial_puede_diseñar')
+        && credencial_puede_diseñar()
+    ) {
+        return;
     }
 
     if ($seccion === 'pagos_transferencias') {

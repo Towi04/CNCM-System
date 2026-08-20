@@ -29,6 +29,13 @@ function plantel_ensure_schema(PDO $pdo): void
     plantel_ensure_column($pdo, 'planteles', 'telefono', 'VARCHAR(30) NULL', 'rfc');
     plantel_ensure_column($pdo, 'planteles', 'email_contacto', "VARCHAR(120) NULL DEFAULT 'corporativo@cncm.com.mx'", 'telefono');
     plantel_ensure_column($pdo, 'planteles', 'logo_url', 'VARCHAR(255) NULL', 'email_contacto');
+    plantel_ensure_column($pdo, 'planteles', 'cct', 'VARCHAR(40) NULL', 'logo_url');
+    plantel_ensure_column($pdo, 'planteles', 'rvoe', 'VARCHAR(80) NULL', 'cct');
+    plantel_ensure_column($pdo, 'planteles', 'prepa_nombre_sep', 'VARCHAR(160) NULL', 'rvoe');
+    plantel_ensure_column($pdo, 'planteles', 'prepa_cct', 'VARCHAR(40) NULL', 'prepa_nombre_sep');
+    plantel_ensure_column($pdo, 'planteles', 'prepa_rvoe', 'VARCHAR(80) NULL', 'prepa_cct');
+    plantel_ensure_column($pdo, 'planteles', 'prepa_logo_url', 'VARCHAR(255) NULL', 'prepa_rvoe');
+    plantel_ensure_column($pdo, 'planteles', 'prepa_direccion', 'VARCHAR(255) NULL', 'prepa_logo_url');
 
     $count = (int) $pdo->query('SELECT COUNT(*) FROM planteles')->fetchColumn();
     if ($count === 0) {

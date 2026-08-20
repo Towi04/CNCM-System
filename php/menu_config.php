@@ -147,6 +147,7 @@ function menu_cncm_secciones(): array
         ['cap' => 'menu_audifonos', 'seccion' => 'audifonos_control', 'icon' => 'fa-headphones', 'text' => 'Control audífonos', 'title' => 'Préstamo y devolución de audífonos', 'breadcrumb' => 'AUDÍFONOS'],
 
                 ['cap' => 'menu_venta_productos', 'seccion' => 'venta_productos', 'icon' => 'fa-shopping-cart', 'text' => 'Venta de productos', 'title' => 'Venta de productos', 'breadcrumb' => 'VENTA DE PRODUCTOS'],
+                ['cap' => 'admin_catalogo', 'seccion' => 'admin_productos', 'icon' => 'fa-boxes', 'text' => 'Productos e inventario', 'title' => 'Productos e inventario', 'breadcrumb' => 'PRODUCTOS E INVENTARIO'],
 
                 ['cap' => 'menu_transferencias_ver', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Transferencias', 'title' => 'Transferencias y comprobantes', 'breadcrumb' => 'TRANSFERENCIAS'],
 
@@ -203,6 +204,8 @@ function menu_cncm_secciones(): array
             'items' => [
 
                 ['cap' => 'menu_alumnos', 'seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
+
+                ['cap' => 'menu_credenciales', 'seccion' => 'alumnos', 'icon' => 'fa-id-card', 'text' => 'Credenciales', 'title' => 'Generar credenciales de alumnos', 'breadcrumb' => 'CREDENCIALES'],
 
                 ['cap' => 'menu_alumno_cambio_plantel', 'seccion' => 'alumno_cambio_plantel', 'icon' => 'fa-exchange-alt', 'text' => 'Cambio de plantel', 'title' => 'Cambio de plantel de alumnos', 'breadcrumb' => 'CAMBIO DE PLANTEL'],
 
@@ -288,6 +291,8 @@ function menu_cncm_secciones(): array
 
             'items' => [
 
+                ['cap' => 'menu_tareas', 'seccion' => 'tareas', 'icon' => 'fa-clipboard-check', 'text' => 'Tareas', 'title' => 'Tareas del personal', 'breadcrumb' => 'TAREAS'],
+
                 ['staff' => true, 'seccion' => 'soporte_tecnico', 'icon' => 'fa-headset', 'text' => 'Soporte técnico', 'title' => 'Soporte Técnico', 'breadcrumb' => 'SOPORTE TÉCNICO'],
 
             ],
@@ -366,6 +371,8 @@ function menu_cncm_director_items(): array
 
     return [
 
+        ['cap' => 'menu_tareas', 'seccion' => 'tareas', 'icon' => 'fa-clipboard-check', 'text' => 'Tareas', 'title' => 'Tareas del personal', 'breadcrumb' => 'TAREAS'],
+
         ['callback' => 'bandeja_aprobaciones_puede_ver', 'seccion' => 'bandeja_aprobaciones', 'icon' => 'fa-inbox', 'text' => 'Bandeja de aprobaciones', 'title' => 'Bandeja de aprobaciones', 'breadcrumb' => 'BANDEJA APROBACIONES'],
 
         ['callback' => 'grupo_apertura_puede_gestionar', 'seccion' => 'grupo_apertura', 'icon' => 'fa-door-open', 'text' => 'Apertura de grupos', 'title' => 'Autorizar apertura de grupos', 'breadcrumb' => 'APERTURA GRUPOS'],
@@ -375,6 +382,8 @@ function menu_cncm_director_items(): array
         ['callback' => 'nomina_puede_gestionar', 'seccion' => 'director_nomina', 'icon' => 'fa-money-check-alt', 'text' => 'Nómina personal', 'title' => 'Nómina del personal', 'breadcrumb' => 'NÓMINA'],
 
         ['cap' => 'menu_alumnos', 'seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
+
+        ['cap' => 'menu_credenciales', 'seccion' => 'alumnos', 'icon' => 'fa-id-card', 'text' => 'Credenciales alumnos', 'title' => 'Generar credenciales de alumnos', 'breadcrumb' => 'CREDENCIALES'],
 
         ['cap' => 'menu_alumno_cambio_plantel', 'seccion' => 'alumno_cambio_plantel', 'icon' => 'fa-exchange-alt', 'text' => 'Cambio de plantel', 'title' => 'Cambio de plantel de alumnos', 'breadcrumb' => 'CAMBIO DE PLANTEL'],
 
@@ -391,6 +400,8 @@ function menu_cncm_director_items(): array
         ['cap' => 'menu_punto_venta', 'seccion' => 'punto_venta', 'icon' => 'fa-cash-register', 'text' => 'Punto de venta', 'title' => 'Punto de venta', 'breadcrumb' => 'PUNTO DE VENTA'],
 
         ['cap' => 'menu_audifonos', 'seccion' => 'audifonos_control', 'icon' => 'fa-headphones', 'text' => 'Control audífonos', 'title' => 'Préstamo y devolución de audífonos', 'breadcrumb' => 'AUDÍFONOS'],
+
+        ['cap' => 'admin_catalogo', 'seccion' => 'admin_productos', 'icon' => 'fa-boxes', 'text' => 'Productos e inventario', 'title' => 'Productos e inventario', 'breadcrumb' => 'PRODUCTOS E INVENTARIO'],
 
         ['cap' => 'menu_transferencias_ver', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Transferencias', 'title' => 'Transferencias y comprobantes', 'breadcrumb' => 'TRANSFERENCIAS'],
 
@@ -417,6 +428,8 @@ function menu_cncm_director_items(): array
         ['cap' => 'expediente_requisitos_admin', 'seccion' => 'expediente_requisitos', 'icon' => 'fa-clipboard-list', 'text' => 'Requisitos documentales', 'title' => 'Requisitos documentales', 'breadcrumb' => 'REQ. DOCUMENTALES'],
 
         ['callback' => 'documento_puede_configurar_plantillas', 'seccion' => 'admin_documento_plantillas', 'icon' => 'fa-file-image', 'text' => 'Plantillas documentos', 'title' => 'Plantillas constancias y diplomas', 'breadcrumb' => 'PLANTILLAS DOC'],
+
+        ['callback' => 'credencial_puede_diseñar', 'seccion' => 'admin_credencial_plantilla', 'icon' => 'fa-address-card', 'text' => 'Diseño credenciales', 'title' => 'Plantillas de credencial', 'breadcrumb' => 'DISEÑO CREDENCIALES'],
 
         ['callback' => 'rol_aula_puede_ver', 'seccion' => 'rol_aulas_consulta', 'icon' => 'fa-th-large', 'text' => 'Rol de aulas', 'title' => 'Consulta rol de aulas', 'breadcrumb' => 'ROL DE AULAS'],
 
@@ -505,6 +518,8 @@ function menu_cncm_secciones_compactas(): array
         'titulo' => 'Otros',
 
         'items' => [
+
+            ['cap' => 'menu_tareas', 'seccion' => 'tareas', 'icon' => 'fa-clipboard-check', 'text' => 'Tareas', 'title' => 'Tareas del personal', 'breadcrumb' => 'TAREAS'],
 
             ['staff' => true, 'seccion' => 'soporte_tecnico', 'icon' => 'fa-headset', 'text' => 'Soporte técnico', 'title' => 'Soporte Técnico', 'breadcrumb' => 'SOPORTE TÉCNICO'],
 
@@ -712,6 +727,8 @@ function menu_cncm_secciones_compactas(): array
 
                 ['cap' => 'menu_alumnos', 'seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
 
+                ['cap' => 'menu_credenciales', 'seccion' => 'alumnos', 'icon' => 'fa-id-card', 'text' => 'Credenciales', 'title' => 'Generar credenciales de alumnos', 'breadcrumb' => 'CREDENCIALES'],
+
                 ['callback' => 'operativo_piso_puede_ver', 'seccion' => 'piso_operativo', 'icon' => 'fa-concierge-bell', 'text' => 'Piso operativo', 'title' => 'Entrega documentos y cobranza', 'breadcrumb' => 'PISO OPERATIVO'],
 
                 ['cap' => 'menu_consulta_adeudo', 'seccion' => 'consulta_adeudo', 'icon' => 'fa-calculator', 'text' => 'Consulta de adeudo', 'title' => 'Consulta de adeudo', 'breadcrumb' => 'CONSULTA ADEUDO'],
@@ -721,6 +738,8 @@ function menu_cncm_secciones_compactas(): array
                 ['cap' => 'menu_audifonos', 'seccion' => 'audifonos_control', 'icon' => 'fa-headphones', 'text' => 'Control audífonos', 'title' => 'Préstamo y devolución de audífonos', 'breadcrumb' => 'AUDÍFONOS'],
 
                 ['cap' => 'menu_venta_productos', 'seccion' => 'venta_productos', 'icon' => 'fa-shopping-cart', 'text' => 'Venta de productos', 'title' => 'Venta de productos', 'breadcrumb' => 'VENTA DE PRODUCTOS'],
+
+                ['cap' => 'admin_catalogo', 'seccion' => 'admin_productos', 'icon' => 'fa-boxes', 'text' => 'Productos e inventario', 'title' => 'Productos e inventario', 'breadcrumb' => 'PRODUCTOS E INVENTARIO'],
 
                 ['cap' => 'menu_transferencias_ver', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Transferencias', 'title' => 'Transferencias y comprobantes', 'breadcrumb' => 'TRANSFERENCIAS'],
 
@@ -813,6 +832,8 @@ function menu_cncm_secciones_por_rol(): array
             'items' => [
 
                 ['staff' => true, 'seccion' => 'inicio_panel', 'icon' => 'fa-home', 'text' => 'Inicio', 'title' => 'Inicio', 'breadcrumb' => 'INICIO'],
+
+                ['seccion' => 'tareas', 'icon' => 'fa-clipboard-check', 'text' => 'Tareas', 'title' => 'Tareas del personal', 'breadcrumb' => 'TAREAS'],
 
                 ['seccion' => 'mi_evaluacion', 'icon' => 'fa-user-check', 'text' => 'Mi evaluación', 'title' => 'Mi evaluación', 'breadcrumb' => 'MI EVALUACIÓN'],
 
@@ -931,6 +952,8 @@ function menu_cncm_secciones_por_rol(): array
                 ['cap' => 'menu_audifonos', 'seccion' => 'audifonos_control', 'icon' => 'fa-headphones', 'text' => 'Control audífonos', 'title' => 'Préstamo y devolución de audífonos', 'breadcrumb' => 'AUDÍFONOS'],
 
                 ['seccion' => 'venta_productos', 'icon' => 'fa-shopping-cart', 'text' => 'Venta de productos', 'title' => 'Venta de productos', 'breadcrumb' => 'VENTA DE PRODUCTOS'],
+
+                ['seccion' => 'admin_productos', 'icon' => 'fa-boxes', 'text' => 'Productos e inventario', 'title' => 'Productos e inventario', 'breadcrumb' => 'PRODUCTOS E INVENTARIO'],
 
                 ['callback' => 'documento_puede_marcar_pagada', 'seccion' => 'constancia_recepcion', 'icon' => 'fa-file-certificate', 'text' => 'Constancias pendientes', 'title' => 'Constancias pendientes de pago', 'breadcrumb' => 'CONSTANCIAS'],
 

@@ -1,12 +1,16 @@
 <?php
 require_once __DIR__ . '/../config.php';
-if (!isset($_SESSION['user_id']) || !plantel_es_admin()) {
+if (
+    !isset($_SESSION['user_id'])
+    || !(plantel_es_admin() || (function_exists('rbac_cap') && rbac_cap('admin_planteles')))
+) {
     echo '<div class="alert">Solo administradores pueden gestionar planteles.</div>';
     return;
 }
 
 $planteles = $pdo->query(
-    'SELECT id_plantel, slug, nombre, activo, orden, razon_social, direccion, rfc, telefono, email_contacto, logo_url
+    'SELECT id_plantel, slug, nombre, activo, orden, razon_social, direccion, rfc, telefono, email_contacto, logo_url,
+            cct, rvoe, prepa_nombre_sep, prepa_cct, prepa_rvoe, prepa_logo_url, prepa_direccion
      FROM planteles ORDER BY orden ASC, nombre ASC'
 )->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -95,6 +99,44 @@ $planteles = $pdo->query(
           <input type="text" name="logo_url" id="plantel-logo" placeholder="src/logo.png" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
         </div>
       </fieldset>
+      <fieldset style="border:1px solid #e5e5e5; border-radius:8px; padding:12px 14px; margin:0 0 14px;">
+        <legend style="font-weight:700; padding:0 6px;">CCT / RVOE y Prepa escolarizada SEP</legend>
+        <p style="margin:0 0 10px; color:#666; font-size:0.85rem;">
+          Los datos generales se usan en credenciales. Los datos SEP sustituyen el encabezado CNCM en listas de grupos PE.
+        </p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div>
+            <label><strong>CCT general</strong></label><br>
+            <input type="text" name="cct" id="plantel-cct" maxlength="40" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+          </div>
+          <div>
+            <label><strong>RVOE general</strong></label><br>
+            <input type="text" name="rvoe" id="plantel-rvoe" maxlength="80" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label><strong>Nombre de prepa registrado ante SEP</strong></label><br>
+          <input type="text" name="prepa_nombre_sep" id="plantel-prepa-nombre" maxlength="160" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div>
+            <label><strong>CCT prepa</strong></label><br>
+            <input type="text" name="prepa_cct" id="plantel-prepa-cct" maxlength="40" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+          </div>
+          <div>
+            <label><strong>RVOE prepa</strong></label><br>
+            <input type="text" name="prepa_rvoe" id="plantel-prepa-rvoe" maxlength="80" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label><strong>Logo prepa (ruta o URL)</strong></label><br>
+          <input type="text" name="prepa_logo_url" id="plantel-prepa-logo" maxlength="255" placeholder="uploads/planteles/prepa.png" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+        </div>
+        <div>
+          <label><strong>Dirección prepa (opcional)</strong></label><br>
+          <input type="text" name="prepa_direccion" id="plantel-prepa-direccion" maxlength="255" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+        </div>
+      </fieldset>
       <div style="margin-bottom:12px;">
         <label><strong>Orden en men�</strong></label><br>
         <input type="number" name="orden" id="plantel-orden" min="0" value="0" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
@@ -128,6 +170,13 @@ $planteles = $pdo->query(
     document.getElementById('plantel-telefono').value = data ? (data.telefono || '') : '';
     document.getElementById('plantel-email').value = data ? (data.email_contacto || 'corporativo@cncm.com.mx') : 'corporativo@cncm.com.mx';
     document.getElementById('plantel-logo').value = data ? (data.logo_url || '') : '';
+    document.getElementById('plantel-cct').value = data ? (data.cct || '') : '';
+    document.getElementById('plantel-rvoe').value = data ? (data.rvoe || '') : '';
+    document.getElementById('plantel-prepa-nombre').value = data ? (data.prepa_nombre_sep || '') : '';
+    document.getElementById('plantel-prepa-cct').value = data ? (data.prepa_cct || '') : '';
+    document.getElementById('plantel-prepa-rvoe').value = data ? (data.prepa_rvoe || '') : '';
+    document.getElementById('plantel-prepa-logo').value = data ? (data.prepa_logo_url || '') : '';
+    document.getElementById('plantel-prepa-direccion').value = data ? (data.prepa_direccion || '') : '';
     document.getElementById('plantel-orden').value = data ? data.orden : '0';
     document.getElementById('plantel-activo').checked = data ? Number(data.activo) === 1 : true;
     modal.style.display = 'flex';

@@ -6,7 +6,10 @@ if (!catalog_puede_administrar() && !catalog_puede_confirmar_inventario()) {
 }
 
 $idPlantel = (int) ($_GET['id_plantel'] ?? plantel_id_activo());
-$planteles = plantel_list($pdo, false);
+$planteles = plantel_list_accesibles($pdo, true);
+if (!plantel_puede_cambiar_a($pdo, $idPlantel)) {
+    $idPlantel = plantel_scope_id($pdo);
+}
 $filtros = [
     'q' => trim($_GET['q'] ?? ''),
     'visible' => $_GET['visible'] ?? '',
@@ -25,9 +28,12 @@ $puedeConfirmar = catalog_puede_confirmar_inventario();
 <div class="catalog-wrap">
   <div class="catalog-header">
     <h2><i class="fas fa-box"></i> Productos e inventario</h2>
-    <?php if ($puedeAdmin): ?>
-      <button type="button" class="primary" id="btn-nuevo-producto">Nuevo producto</button>
-    <?php endif; ?>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="secondary" id="btn-imprimir-existencia"><i class="fas fa-print"></i> Imprimir existencia</button>
+      <?php if ($puedeAdmin): ?>
+        <button type="button" class="primary" id="btn-nuevo-producto">Nuevo producto</button>
+      <?php endif; ?>
+    </div>
   </div>
 
   <p style="color:#666; margin-top:0;">
@@ -364,7 +370,7 @@ $puedeConfirmar = catalog_puede_confirmar_inventario();
     document.getElementById('mov-id-plantel').value = document.getElementById('filtro-plantel-prod')?.value || idPlantel;
     document.getElementById('mov-producto-label').textContent = row.nombre + ' (' + row.clave + ')';
     document.getElementById('modal-mov-titulo').textContent = tipo === 'entrada' ? 'Registrar entrada al plantel' : 'Registrar merma';
-    document.getElementById('btn-guardar-mov').textContent = tipo === 'entrada' ? 'Solicitar confirmación' : 'Aplicar merma';
+    document.getElementById('btn-guardar-mov').textContent = tipo === 'entrada' ? 'Registrar entrada' : 'Aplicar merma';
     document.getElementById('mov-cantidad').value = '1';
     document.getElementById('mov-notas').value = '';
     modalMov.classList.add('is-open');
@@ -380,6 +386,9 @@ $puedeConfirmar = catalog_puede_confirmar_inventario();
   }
 
   document.getElementById('btn-nuevo-producto')?.addEventListener('click', () => abrirProducto(null));
+  document.getElementById('btn-imprimir-existencia')?.addEventListener('click', () => {
+    cargarSeccion('inventario_reporte');
+  });
   document.getElementById('btn-cerrar-prod')?.addEventListener('click', () => cerrarModal(modalProd));
   document.getElementById('btn-cerrar-mov')?.addEventListener('click', () => cerrarModal(modalMov));
 

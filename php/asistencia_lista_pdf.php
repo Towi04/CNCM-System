@@ -32,7 +32,8 @@ asistencia_ensure_schema($pdo);
 $stGrupo = $pdo->prepare(
     'SELECT g.*, e.nombre AS especialidad_nombre, e.clave AS especialidad_clave,
             CONCAT(u.nombre, " ", u.apellido) AS profesor_nombre,
-            p.nombre AS plantel_nombre, p.razon_social, p.direccion AS plantel_direccion
+            p.nombre AS plantel_nombre, p.razon_social, p.direccion AS plantel_direccion,
+            p.prepa_nombre_sep, p.prepa_cct, p.prepa_rvoe, p.prepa_logo_url, p.prepa_direccion
      FROM grupos g
      LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad
      LEFT JOIN usuarios u ON u.id_usuario = g.id_profesor
@@ -46,6 +47,16 @@ if (!$grupo) {
     http_response_code(404);
     echo 'Grupo no encontrado';
     exit;
+}
+$esPrepaEscolarizada = strtoupper(trim((string) ($grupo['codigo_area'] ?? ''))) === 'PE'
+    || str_starts_with(strtoupper(trim((string) ($grupo['clave'] ?? ''))), 'PE');
+if ($esPrepaEscolarizada) {
+    $grupo['razon_social'] = trim((string) ($grupo['prepa_nombre_sep'] ?? ''))
+        ?: (trim((string) ($grupo['plantel_nombre'] ?? '')) ?: 'Preparatoria escolarizada');
+    $grupo['plantel_direccion'] = trim((string) ($grupo['prepa_direccion'] ?? ''));
+    $grupo['cct_lista'] = trim((string) ($grupo['prepa_cct'] ?? ''));
+    $grupo['rvoe_lista'] = trim((string) ($grupo['prepa_rvoe'] ?? ''));
+    $grupo['es_prepa_escolarizada'] = 1;
 }
 
 $dias = asistencia_lista_pdf_dias_grupo($pdo, $grupo);
@@ -191,24 +202,31 @@ function asistencia_lista_pdf_tel_opcional(array $alumno): string
 function asistencia_lista_pdf_logo_data_uri(PDO $pdo, int $idPlantel, array $grupo = []): string
 {
     $candidatos = [];
-    $logoRel = '';
+    $esPrepa = !empty($grupo['es_prepa_escolarizada']);
+    $logoRel = $esPrepa
+        ? trim((string) ($grupo['prepa_logo_url'] ?? ''))
+        : '';
     try {
-        $st = $pdo->prepare('SELECT logo_url FROM planteles WHERE id_plantel = ? LIMIT 1');
-        $st->execute([$idPlantel > 0 ? $idPlantel : (int) ($grupo['id_plantel'] ?? 0)]);
-        $logoRel = trim((string) ($st->fetchColumn() ?: ''));
+        if ($logoRel === '' && !$esPrepa) {
+            $st = $pdo->prepare('SELECT logo_url FROM planteles WHERE id_plantel = ? LIMIT 1');
+            $st->execute([$idPlantel > 0 ? $idPlantel : (int) ($grupo['id_plantel'] ?? 0)]);
+            $logoRel = trim((string) ($st->fetchColumn() ?: ''));
+        }
     } catch (Throwable $e) {
         $logoRel = '';
     }
     if ($logoRel !== '') {
         $candidatos[] = $logoRel;
     }
-    $candidatos = array_merge($candidatos, [
-        'src/logo.png',
-        'src/logo.jpg',
-        'uploads/logo.png',
-        'uploads/planteles/logo.png',
-        'default_avatar.png',
-    ]);
+    if (!$esPrepa) {
+        $candidatos = array_merge($candidatos, [
+            'src/logo.png',
+            'src/logo.jpg',
+            'uploads/logo.png',
+            'uploads/planteles/logo.png',
+            'default_avatar.png',
+        ]);
+    }
 
     $root = defined('HAY_ROOT') ? HAY_ROOT : dirname(__DIR__);
     foreach ($candidatos as $rel) {
@@ -298,6 +316,8 @@ function asistencia_lista_pdf_html(
     $plantel = trim((string) ($grupo['razon_social'] ?? 'GRUPO EDUCATIVO CNCM')) ?: 'GRUPO EDUCATIVO CNCM';
     $nombrePlantel = trim((string) ($grupo['plantel_nombre'] ?? ''));
     $direccion = trim((string) ($grupo['plantel_direccion'] ?? ''));
+    $cct = trim((string) ($grupo['cct_lista'] ?? ''));
+    $rvoe = trim((string) ($grupo['rvoe_lista'] ?? ''));
     $cellWidth = max(8, min(24, (int) floor(620 / max(1, $numCols))));
     $nombreWidth = $incluirTelefonos ? 130 : 210;
 
@@ -364,6 +384,8 @@ function asistencia_lista_pdf_html(
         <div class="sub">
           Lista de asistencia
           <?php if ($nombrePlantel !== ''): ?> · <?php echo htmlspecialchars($nombrePlantel); ?><?php endif; ?>
+          <?php if ($cct !== ''): ?> · CCT <?php echo htmlspecialchars($cct); ?><?php endif; ?>
+          <?php if ($rvoe !== ''): ?> · RVOE <?php echo htmlspecialchars($rvoe); ?><?php endif; ?>
         </div>
       </div>
     </div>

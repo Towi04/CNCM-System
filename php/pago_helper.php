@@ -1003,7 +1003,12 @@ function pago_periodos_semanales(string $fechaInscripcion, string $fechaCorte, i
  * Estado de cuenta / adeudo completo.
  * @return array<string, mixed>
  */
-function pago_estado_cuenta(PDO $pdo, int $idAlumno, ?string $fechaCorte = null): array
+function pago_estado_cuenta(
+    PDO $pdo,
+    int $idAlumno,
+    ?string $fechaCorte = null,
+    ?int $idEspecialidad = null
+): array
 {
     $fechaCorte = $fechaCorte ?: date('Y-m-d');
     if (function_exists('alumno_tarifa_supervisor_aplicar_vencidas')) {
@@ -1226,6 +1231,8 @@ function pago_estado_cuenta(PDO $pdo, int $idAlumno, ?string $fechaCorte = null)
         }
 
         $desgloseEspecialidades[] = [
+            'id_especialidad' => $idEsp,
+            'id_alumno_especialidad' => $idAe,
             'especialidad' => $ins['especialidad_nombre'],
             'forma_pago' => $ins['forma_pago'],
             'fecha_inscripcion' => $ins['fecha_inscripcion'],
@@ -1249,6 +1256,43 @@ function pago_estado_cuenta(PDO $pdo, int $idAlumno, ?string $fechaCorte = null)
         ];
     }
 
+    $especialidades = array_map(
+        static fn(array $d): array => [
+            'id_especialidad' => (int) $d['id_especialidad'],
+            'nombre' => (string) $d['especialidad'],
+        ],
+        $desgloseEspecialidades
+    );
+    $idEspecialidad = ($idEspecialidad ?? 0) > 0 ? (int) $idEspecialidad : null;
+    if ($idEspecialidad !== null) {
+        $seleccionadas = array_values(array_filter(
+            $desgloseEspecialidades,
+            static fn(array $d): bool => (int) $d['id_especialidad'] === $idEspecialidad
+        ));
+        if ($seleccionadas !== []) {
+            $desgloseEspecialidades = $seleccionadas;
+            $lineasDebe = [];
+            foreach ($desgloseEspecialidades as $d) {
+                $lineasDebe = array_merge($lineasDebe, $d['lineas_pendientes'] ?? []);
+            }
+            $idsAe = array_map(
+                static fn(array $d): int => (int) ($d['id_alumno_especialidad'] ?? 0),
+                $desgloseEspecialidades
+            );
+            $pagoPertenece = static function (array $p) use ($idEspecialidad, $idsAe): bool {
+                $idEspPago = (int) ($p['id_especialidad'] ?? 0);
+                $idAePago = (int) ($p['id_alumno_especialidad'] ?? 0);
+                return ($idEspPago === 0 && $idAePago === 0)
+                    || $idEspPago === $idEspecialidad
+                    || ($idAePago > 0 && in_array($idAePago, $idsAe, true));
+            };
+            $pagosColeg = array_values(array_filter($pagosColeg, $pagoPertenece));
+            $pagosProductos = array_values(array_filter($pagosProductos, $pagoPertenece));
+        } else {
+            $idEspecialidad = null;
+        }
+    }
+
     $pagosInscripcion = [];
     $pagosColegiaturaSolo = [];
     foreach ($pagosColeg as $p) {
@@ -1263,7 +1307,12 @@ function pago_estado_cuenta(PDO $pdo, int $idAlumno, ?string $fechaCorte = null)
         fn($d) => (float) ($d['total_esperado_colegiatura'] ?? 0),
         $desgloseEspecialidades
     ));
-    $totalPagadoColeg = array_sum(array_map(fn($p) => (float) $p['monto'], $pagosColegiaturaSolo));
+    $totalPagadoColeg = $idEspecialidad !== null
+        ? array_sum(array_map(
+            fn($d) => (float) ($d['pagado_colegiatura'] ?? 0),
+            $desgloseEspecialidades
+        ))
+        : array_sum(array_map(fn($p) => (float) $p['monto'], $pagosColegiaturaSolo));
     $adeudoColeg = max(0, round(array_sum(array_map(
         fn($d) => (float) ($d['adeudo_colegiatura'] ?? 0),
         $desgloseEspecialidades
@@ -1274,6 +1323,8 @@ function pago_estado_cuenta(PDO $pdo, int $idAlumno, ?string $fechaCorte = null)
         'ok' => true,
         'alumno' => $alumno,
         'fecha_corte' => $fechaCorte,
+        'id_especialidad' => $idEspecialidad,
+        'especialidades' => $especialidades,
         'dia_pronto_pago' => PAGO_DIA_PRONTO,
         'inscripciones' => $desgloseEspecialidades,
         'lineas_adeudo' => $lineasDebe,

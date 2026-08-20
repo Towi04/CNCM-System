@@ -149,10 +149,12 @@ require_once __DIR__ . '/php/reporte_bajas_helper.php';
 require_once __DIR__ . '/php/nomina_helper.php';
 require_once __DIR__ . '/php/suplencia_helper.php';
 require_once __DIR__ . '/php/documento_helper.php';
+require_once __DIR__ . '/php/credencial_helper.php';
 require_once __DIR__ . '/php/documento_word_helper.php';
 require_once __DIR__ . '/php/venta_producto_helper.php';
 require_once __DIR__ . '/php/manuales_stock_helper.php';
 require_once __DIR__ . '/php/audifonos_helper.php';
+require_once __DIR__ . '/php/tareas_helper.php';
 require_once __DIR__ . '/php/certificacion_campos_helper.php';
 require_once __DIR__ . '/php/asesor_helper.php';
 require_once __DIR__ . '/php/comision_cert_helper.php';
@@ -206,7 +208,7 @@ hay_utf8_init($pdo);
 
 /** Incrementar al agregar migraciones en hay_bootstrap_schema (fuerza una pasada completa). */
 if (!defined('HAY_SCHEMA_VERSION')) {
-    define('HAY_SCHEMA_VERSION', 11);
+    define('HAY_SCHEMA_VERSION', 13);
 }
 
 /**
@@ -281,6 +283,7 @@ function hay_bootstrap_schema(PDO $pdo): void
         },
         'preregistro' => static function (PDO $pdo): void { preregistro_ensure_schema($pdo); },
         'alumno' => static function (PDO $pdo): void { alumno_ensure_schema($pdo); },
+        'credencial' => static function (PDO $pdo): void { credencial_ensure_schema($pdo); },
         'asistencia' => static function (PDO $pdo): void {
             asistencia_ensure_schema($pdo);
             huella_ensure_schema($pdo);
@@ -297,6 +300,11 @@ function hay_bootstrap_schema(PDO $pdo): void
         'audifonos' => static function (PDO $pdo): void {
             if (function_exists('audifonos_ensure_schema')) {
                 audifonos_ensure_schema($pdo);
+            }
+        },
+        'tareas' => static function (PDO $pdo): void {
+            if (function_exists('tareas_ensure_schema')) {
+                tareas_ensure_schema($pdo);
             }
         },
         'fase' => static function (PDO $pdo): void { fase_ensure_schema($pdo); },

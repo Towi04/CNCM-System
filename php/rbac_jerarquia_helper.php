@@ -9,6 +9,7 @@
 function rbac_cap_asesor(): array
 {
     return [
+        'menu_tareas',
         'menu_ventas',
         'menu_preregistro',
         'menu_entrevistas',
@@ -55,6 +56,7 @@ function rbac_cap_ventas_admin(): array
 function rbac_cap_academico(): array
 {
     return [
+        'menu_tareas',
         'menu_academico',
         'menu_preregistro',
         'menu_cert_preregistro',
@@ -99,10 +101,12 @@ function rbac_cap_academico(): array
 function rbac_cap_recepcion(): array
 {
     return array_merge(rbac_cap_caja(), [
+        'admin_catalogo',
         'menu_preregistro',
         'menu_cert_preregistro',
         'menu_cronologia',
         'menu_alumnos',
+        'menu_credenciales',
         'menu_mi_evaluacion',
         'menu_matriz_entrenamiento',
         'menu_mi_expediente',
@@ -119,6 +123,7 @@ function rbac_cap_recepcion(): array
 function rbac_cap_caja(): array
 {
     return [
+        'menu_tareas',
         'menu_caja',
         'menu_cronologia',
         'menu_asistencia',
@@ -175,6 +180,7 @@ function rbac_cap_director_extra(): array
         'menu_transferencias_ver',
         'menu_alumno_cambio_plantel',
         'menu_grupo_division',
+        'menu_credenciales',
     ];
 }
 function rbac_cap_solo_supervisor(): array
@@ -192,6 +198,7 @@ function rbac_cap_solo_supervisor(): array
         'menu_transferencias_confirmar',
         'menu_transferencias_ver',
         'expediente_requisitos_admin',
+        'menu_credenciales_diseno',
     ];
 }
 
@@ -199,6 +206,7 @@ function rbac_cap_solo_supervisor(): array
 function rbac_cap_profesor(): array
 {
     return [
+        'menu_tareas',
         'menu_preregistro',
         'menu_cert_preregistro',
         'menu_asistencia',
@@ -221,6 +229,7 @@ function rbac_cap_profesor(): array
 function rbac_cap_manuales(): array
 {
     return [
+        'menu_tareas',
         'menu_preregistro',
         'menu_cert_preregistro',
         'menu_manuales_stock',

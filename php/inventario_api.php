@@ -27,8 +27,12 @@ $cantidad = max(1, (int) ($_POST['cantidad'] ?? 0));
 $notas = trim((string) ($_POST['notas'] ?? ''));
 $userId = (int) ($_SESSION['user_id'] ?? 0);
 
-if ($idProducto <= 0 || $idPlantel <= 0) {
+if ($idPlantel <= 0 || ($action !== 'confirmar_entrada' && $idProducto <= 0)) {
     hay_json_response(['status' => 'error', 'message' => 'Producto y plantel son obligatorios']);
+    exit;
+}
+if (!plantel_puede_cambiar_a($pdo, $idPlantel)) {
+    hay_json_response(['status' => 'error', 'message' => 'No tiene acceso a ese plantel']);
     exit;
 }
 
@@ -42,10 +46,17 @@ try {
             'INSERT INTO producto_movimientos (id_producto, id_plantel, tipo, cantidad, notas, estado, id_usuario_registro)
              VALUES (?, ?, \'entrada\', ?, ?, \'pendiente\', ?)'
         );
+        $pdo->beginTransaction();
         $stmt->execute([$idProducto, $idPlantel, $cantidad, $notas, $userId]);
+        $idMov = (int) $pdo->lastInsertId();
+        $res = catalog_aplicar_movimiento($pdo, $idMov);
+        if (!$res['ok']) {
+            throw new RuntimeException($res['message'] ?? 'No se pudo aplicar la entrada');
+        }
+        $pdo->commit();
         hay_json_response([
             'status' => 'ok',
-            'message' => 'Entrada registrada; el director del plantel debe confirmarla',
+            'message' => 'Entrada registrada y existencia actualizada',
             'seccion' => 'admin_productos',
         ]);
         exit;
@@ -62,9 +73,19 @@ try {
             hay_json_response(['status' => 'error', 'message' => 'Movimiento inválido']);
             exit;
         }
+        $movimiento = $pdo->prepare(
+            'SELECT 1 FROM producto_movimientos WHERE id_movimiento = ? AND id_plantel = ? LIMIT 1'
+        );
+        $movimiento->execute([$idMov, $idPlantel]);
+        if (!$movimiento->fetchColumn()) {
+            hay_json_response(['status' => 'error', 'message' => 'Movimiento no encontrado en el plantel']);
+            exit;
+        }
         if ($cantidadConfirm > 0) {
-            $pdo->prepare('UPDATE producto_movimientos SET cantidad = ? WHERE id_movimiento = ? AND estado = \'pendiente\'')
-                ->execute([$cantidadConfirm, $idMov]);
+            $pdo->prepare(
+                'UPDATE producto_movimientos SET cantidad = ?
+                 WHERE id_movimiento = ? AND id_plantel = ? AND estado = \'pendiente\''
+            )->execute([$cantidadConfirm, $idMov, $idPlantel]);
         }
         $res = catalog_aplicar_movimiento($pdo, $idMov);
         hay_json_response([
@@ -114,6 +135,9 @@ try {
     }
 
     hay_json_response(['status' => 'error', 'message' => 'Acción no reconocida']);
-} catch (PDOException $e) {
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     hay_json_response(['status' => 'error', 'message' => 'Error BD: ' . $e->getMessage()]);
 }
