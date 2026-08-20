@@ -68,6 +68,11 @@ $gradPendientes = $puedeGraduacion ? count(graduacion_listar_alertas($pdo, $idPl
     <h2>Grupos — <?php echo htmlspecialchars($_SESSION['plantel_nombre'] ?? ''); ?></h2>
     <div class="disc-actions">
       <button class="primary" type="button" onclick="cargarSeccion('grupo_nuevo')">Nuevo grupo</button>
+      <?php if (function_exists('grupo_division_puede') && grupo_division_puede()): ?>
+        <button type="button" class="secondary" onclick="cargarSeccion('grupo_division')" title="Dividir grupos grandes por edad">
+          Dividir grupo
+        </button>
+      <?php endif; ?>
       <?php if ($puedeApertura): ?>
         <button type="button" class="secondary" onclick="cargarSeccion('grupo_apertura')">Apertura de grupos</button>
       <?php endif; ?>
