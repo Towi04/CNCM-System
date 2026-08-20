@@ -30,7 +30,8 @@ function preregistro_ensure_schema(PDO $pdo): void
             fecha_nacimiento DATE NULL,
             edad TINYINT UNSIGNED NULL,
             medio_entero ENUM(
-                \'redes_sociales\',\'publicidad\',\'cartas\',\'pasando\',\'recomendado\',\'otro\'
+                \'redes_sociales\',\'red_social_personal\',\'publicidad\',\'cartas\',\'pasando\',
+                \'recomendado\',\'crm\',\'crm_cita\',\'cita_crm\',\'convenio\',\'otro\'
             ) NOT NULL DEFAULT \'otro\',
             medio_entero_otro VARCHAR(120) NULL,
             domicilio VARCHAR(200) NULL,
@@ -430,7 +431,8 @@ function preregistro_ensure_medio_entero_enum(PDO $pdo): void
     try {
         $pdo->exec(
             "ALTER TABLE preregistros MODIFY COLUMN medio_entero
-             ENUM('redes_sociales','publicidad','cartas','pasando','recomendado','crm','cita_crm','otro')
+             ENUM('redes_sociales','red_social_personal','publicidad','cartas','pasando','recomendado',
+                  'crm','crm_cita','cita_crm','convenio','otro')
              NOT NULL DEFAULT 'otro'"
         );
     } catch (PDOException $e) {
@@ -1648,12 +1650,15 @@ function preregistro_labels(): array
     return [
         'medio_entero' => [
             'redes_sociales' => 'Redes sociales',
+            'red_social_personal' => 'Red Social Personal',
             'publicidad' => 'Publicidad',
             'cartas' => 'Cartas',
             'pasando' => 'Pasando',
             'recomendado' => 'Recomendado',
             'crm' => 'CRM',
+            'crm_cita' => 'CRM Cita',
             'cita_crm' => 'Cita de CRM',
+            'convenio' => 'Convenio',
             'otro' => 'Otro',
         ],
         'grado_estudios' => [

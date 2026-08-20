@@ -82,9 +82,11 @@ window.HAY_DOC_ALUMNO = <?php echo json_encode([
 
     'pdf' => hay_asset_url('documento_pdf.php'),
 
+    'word' => hay_asset_url('php/documento_word.php'),
+
 ], JSON_UNESCAPED_UNICODE); ?>;
 
 </script>
 
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/alumno_solicitar_constancia.js?v=20260623'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/alumno_solicitar_constancia.js?v=20260820'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 

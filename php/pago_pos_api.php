@@ -403,7 +403,7 @@ if ($action === 'cobrar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $pagos = [];
-    $pdfConstancia = null;
+    $documentoConstancia = null;
     $idDocPagado = 0;
     $ticketInscripcionUrl = null;
     foreach ($items as $it) {
@@ -463,8 +463,8 @@ if ($action === 'cobrar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $idPlantelSesion,
                 (int) $_SESSION['user_id']
             );
-            if (!empty($docRes['pdf_url'])) {
-                $pdfConstancia = $docRes['pdf_url'];
+            if (!empty($docRes['word_url']) || !empty($docRes['pdf_url'])) {
+                $documentoConstancia = $docRes['word_url'] ?? $docRes['pdf_url'];
                 $idDocPagado = $idDocItem;
             }
         }
@@ -478,7 +478,8 @@ if ($action === 'cobrar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             : ($idDocPagado > 0 ? 'Constancia pagada y generada' : 'Cobro registrado'),
         'pagos' => $pagos,
         'seccion' => 'punto_venta',
-        'pdf_constancia' => $pdfConstancia,
+        'documento_constancia' => $documentoConstancia,
+        'pdf_constancia' => $documentoConstancia,
         'ticket_url' => $ticketInscripcionUrl,
         'id_documento' => $idDocPagado > 0 ? $idDocPagado : null,
     ]);

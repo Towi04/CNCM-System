@@ -24,7 +24,7 @@ if (!documento_puede_marcar_pagada()) {
 
     <h2><i class="fas fa-file-invoice-dollar"></i> Constancias pendientes de pago</h2>
 
-    <p style="color:#666;">Marque como pagada cuando el alumno cubra el producto en caja, o cobre desde <strong>Punto de venta</strong> (aparece en pagos pendientes al seleccionar al alumno). Se generará el PDF con QR automáticamente.</p>
+    <p style="color:#666;">Marque como pagada cuando el alumno cubra el producto en caja, o cobre desde <strong>Punto de venta</strong>. Se generará la constancia editable en Word; el PDF con QR seguirá disponible como respaldo.</p>
 
   </div>
 

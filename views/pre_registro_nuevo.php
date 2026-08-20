@@ -258,9 +258,9 @@ $gradoActual = $r['grado_estudios'] ?? '';
 
       </div>
 
-      <div class="prereg-field" id="wrap-medio-otro" style="<?php echo ($r['medio_entero'] ?? '') === 'otro' ? '' : 'display:none;'; ?> margin-top:10px;">
+      <div class="prereg-field" id="wrap-medio-otro" style="<?php echo in_array(($r['medio_entero'] ?? ''), ['otro', 'convenio'], true) ? '' : 'display:none;'; ?> margin-top:10px;">
 
-        <label>Especifique (otro)</label>
+        <label id="label-medio-otro"><?php echo ($r['medio_entero'] ?? '') === 'convenio' ? 'Especifique el convenio' : 'Especifique (otro)'; ?></label>
 
         <input type="text" name="medio_entero_otro" maxlength="120" placeholder="ESPECIFIQUE" value="<?php echo htmlspecialchars($r['medio_entero_otro'] ?? ''); ?>">
 
@@ -616,12 +616,15 @@ $gradoActual = $r['grado_estudios'] ?? '';
   const medio = document.getElementById('prereg-medio');
 
   const wrapOtro = document.getElementById('wrap-medio-otro');
+  const labelOtro = document.getElementById('label-medio-otro');
 
   const wrapEscuela = document.getElementById('wrap-escuela-origen');
 
   function syncMedioFields() {
 
-    if (wrapOtro) wrapOtro.style.display = medio?.value === 'otro' ? '' : 'none';
+    const requiereDetalle = medio?.value === 'otro' || medio?.value === 'convenio';
+    if (wrapOtro) wrapOtro.style.display = requiereDetalle ? '' : 'none';
+    if (labelOtro) labelOtro.textContent = medio?.value === 'convenio' ? 'Especifique el convenio' : 'Especifique (otro)';
 
     if (wrapEscuela) wrapEscuela.style.display = medio?.value === 'cartas' ? '' : 'none';
 

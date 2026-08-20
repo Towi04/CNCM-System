@@ -768,8 +768,8 @@ $pvPreloadId = (int) ($_GET['id_alumno'] ?? 0);
 
       if (data.status === 'ok') {
         pagaCon.value = '';
-        if (data.pdf_constancia) {
-          window.open(data.pdf_constancia, '_blank', 'noopener');
+        if (data.documento_constancia || data.pdf_constancia) {
+          window.open(data.documento_constancia || data.pdf_constancia, '_blank', 'noopener');
         }
         if (data.ticket_url) {
           window.open(data.ticket_url, '_blank', 'noopener');

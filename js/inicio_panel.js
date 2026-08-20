@@ -272,7 +272,7 @@
     if ((data.documentos || []).length) {
       docsHtml = '<ul class="inicio-panel__doc-list">' + data.documentos.map((d) =>
         `<li>${esc(d.folio)} · ${esc(d.tipo)} — ${esc(d.estado)}`
-        + (d.pdf_url ? ` <a href="${esc(d.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : '')
+        + (d.word_url ? ` <a href="${esc(d.word_url)}">Word</a>` : (d.pdf_url ? ` <a href="${esc(d.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ''))
         + '</li>'
       ).join('') + '</ul>';
     }

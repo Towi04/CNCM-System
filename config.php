@@ -149,8 +149,10 @@ require_once __DIR__ . '/php/reporte_bajas_helper.php';
 require_once __DIR__ . '/php/nomina_helper.php';
 require_once __DIR__ . '/php/suplencia_helper.php';
 require_once __DIR__ . '/php/documento_helper.php';
+require_once __DIR__ . '/php/documento_word_helper.php';
 require_once __DIR__ . '/php/venta_producto_helper.php';
 require_once __DIR__ . '/php/manuales_stock_helper.php';
+require_once __DIR__ . '/php/audifonos_helper.php';
 require_once __DIR__ . '/php/certificacion_campos_helper.php';
 require_once __DIR__ . '/php/asesor_helper.php';
 require_once __DIR__ . '/php/comision_cert_helper.php';
@@ -165,7 +167,9 @@ require_once __DIR__ . '/php/aula_helper.php';
 require_once __DIR__ . '/php/rol_aula_helper.php';
 require_once __DIR__ . '/php/cronologia_helper.php';
 require_once __DIR__ . '/php/grupo_fusion_helper.php';
+require_once __DIR__ . '/php/grupo_division_helper.php';
 require_once __DIR__ . '/php/alumno_grupo_acciones_helper.php';
+require_once __DIR__ . '/php/alumno_plantel_transfer_helper.php';
 require_once __DIR__ . '/php/auth_helpers.php';
 require_once __DIR__ . '/php/upload_security_helper.php';
 require_once __DIR__ . '/php/login_security_helper.php';
@@ -202,7 +206,7 @@ hay_utf8_init($pdo);
 
 /** Incrementar al agregar migraciones en hay_bootstrap_schema (fuerza una pasada completa). */
 if (!defined('HAY_SCHEMA_VERSION')) {
-    define('HAY_SCHEMA_VERSION', 9);
+    define('HAY_SCHEMA_VERSION', 11);
 }
 
 /**
@@ -290,6 +294,11 @@ function hay_bootstrap_schema(PDO $pdo): void
                 manuales_stock_ensure_schema($pdo);
             }
         },
+        'audifonos' => static function (PDO $pdo): void {
+            if (function_exists('audifonos_ensure_schema')) {
+                audifonos_ensure_schema($pdo);
+            }
+        },
         'fase' => static function (PDO $pdo): void { fase_ensure_schema($pdo); },
         'academico' => static function (PDO $pdo): void {
             academico_ensure_schema($pdo);
@@ -310,6 +319,9 @@ function hay_bootstrap_schema(PDO $pdo): void
             if (function_exists('grupo_fusion_ensure_schema')) {
                 grupo_fusion_ensure_schema($pdo);
             }
+            if (function_exists('grupo_division_ensure_schema')) {
+                grupo_division_ensure_schema($pdo);
+            }
             if (function_exists('tutor_ensure_schema')) {
                 tutor_ensure_schema($pdo);
             }
@@ -321,6 +333,11 @@ function hay_bootstrap_schema(PDO $pdo): void
             }
             if (function_exists('asesoria_ensure_schema')) {
                 asesoria_ensure_schema($pdo);
+            }
+        },
+        'alumno_transfer' => static function (PDO $pdo): void {
+            if (function_exists('alumno_plantel_transfer_ensure_schema')) {
+                alumno_plantel_transfer_ensure_schema($pdo);
             }
         },
         'calendario' => static function (PDO $pdo): void {

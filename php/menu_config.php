@@ -144,6 +144,8 @@ function menu_cncm_secciones(): array
 
         ['cap' => 'menu_punto_venta', 'seccion' => 'punto_venta', 'icon' => 'fa-cash-register', 'text' => 'Punto de venta', 'title' => 'Punto de venta', 'breadcrumb' => 'PUNTO DE VENTA'],
 
+        ['cap' => 'menu_audifonos', 'seccion' => 'audifonos_control', 'icon' => 'fa-headphones', 'text' => 'Control audífonos', 'title' => 'Préstamo y devolución de audífonos', 'breadcrumb' => 'AUDÍFONOS'],
+
                 ['cap' => 'menu_venta_productos', 'seccion' => 'venta_productos', 'icon' => 'fa-shopping-cart', 'text' => 'Venta de productos', 'title' => 'Venta de productos', 'breadcrumb' => 'VENTA DE PRODUCTOS'],
 
                 ['cap' => 'menu_transferencias_ver', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Transferencias', 'title' => 'Transferencias y comprobantes', 'breadcrumb' => 'TRANSFERENCIAS'],
@@ -202,6 +204,8 @@ function menu_cncm_secciones(): array
 
                 ['cap' => 'menu_alumnos', 'seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
 
+                ['cap' => 'menu_alumno_cambio_plantel', 'seccion' => 'alumno_cambio_plantel', 'icon' => 'fa-exchange-alt', 'text' => 'Cambio de plantel', 'title' => 'Cambio de plantel de alumnos', 'breadcrumb' => 'CAMBIO DE PLANTEL'],
+
             ],
 
         ],
@@ -221,6 +225,8 @@ function menu_cncm_secciones(): array
                 ['cap' => 'menu_asistencia', 'flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
 
                 ['cap' => 'menu_grupos', 'flyout' => 'flyout-grupos', 'icon' => 'fa-users', 'text' => 'Grupos', 'title' => 'Grupos', 'breadcrumb' => 'GRUPOS'],
+
+                ['cap' => 'menu_grupo_division', 'seccion' => 'grupo_division', 'icon' => 'fa-code-branch', 'text' => 'División por edad', 'title' => 'División de grupos por edad', 'breadcrumb' => 'DIVISIÓN GRUPOS'],
 
                 ['cap' => 'menu_especialidades', 'flyout' => 'flyout-especialidades', 'icon' => 'fa-cogs', 'text' => 'Especialidades', 'title' => 'Especialidades', 'breadcrumb' => 'ESPECIALIDADES'],
 
@@ -370,7 +376,11 @@ function menu_cncm_director_items(): array
 
         ['cap' => 'menu_alumnos', 'seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
 
+        ['cap' => 'menu_alumno_cambio_plantel', 'seccion' => 'alumno_cambio_plantel', 'icon' => 'fa-exchange-alt', 'text' => 'Cambio de plantel', 'title' => 'Cambio de plantel de alumnos', 'breadcrumb' => 'CAMBIO DE PLANTEL'],
+
         ['cap' => 'menu_grupos', 'seccion' => 'grupos', 'icon' => 'fa-users', 'text' => 'Grupos', 'title' => 'Ver grupos', 'breadcrumb' => 'GRUPOS'],
+
+        ['cap' => 'menu_grupo_division', 'seccion' => 'grupo_division', 'icon' => 'fa-code-branch', 'text' => 'Dividir grupos', 'title' => 'División de grupos por edad', 'breadcrumb' => 'DIVISIÓN GRUPOS'],
 
         ['callback' => 'supervisor_grupos_historico_puede_ver', 'seccion' => 'supervisor_grupos_historico', 'icon' => 'fa-history', 'text' => 'Carga histórica grupos', 'title' => 'Carga histórica de grupos', 'breadcrumb' => 'CARGA HISTÓRICA'],
 
@@ -379,6 +389,8 @@ function menu_cncm_director_items(): array
         ['callback' => 'operativo_piso_puede_ver', 'seccion' => 'piso_operativo', 'icon' => 'fa-concierge-bell', 'text' => 'Piso operativo', 'title' => 'Entrega documentos y cobranza', 'breadcrumb' => 'PISO OPERATIVO'],
 
         ['cap' => 'menu_punto_venta', 'seccion' => 'punto_venta', 'icon' => 'fa-cash-register', 'text' => 'Punto de venta', 'title' => 'Punto de venta', 'breadcrumb' => 'PUNTO DE VENTA'],
+
+        ['cap' => 'menu_audifonos', 'seccion' => 'audifonos_control', 'icon' => 'fa-headphones', 'text' => 'Control audífonos', 'title' => 'Préstamo y devolución de audífonos', 'breadcrumb' => 'AUDÍFONOS'],
 
         ['cap' => 'menu_transferencias_ver', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Transferencias', 'title' => 'Transferencias y comprobantes', 'breadcrumb' => 'TRANSFERENCIAS'],
 
@@ -610,6 +622,8 @@ function menu_cncm_secciones_compactas(): array
 
                     ['cap' => 'menu_grupos', 'seccion' => 'grupo_fusion_plan', 'icon' => 'fa-object-group', 'text' => 'Planificación de fusiones', 'title' => 'Planificación de fusiones', 'breadcrumb' => 'FUSIONES GRUPOS'],
 
+                    ['cap' => 'menu_grupo_division', 'seccion' => 'grupo_division', 'icon' => 'fa-code-branch', 'text' => 'División por edad', 'title' => 'División de grupos por edad', 'breadcrumb' => 'DIVISIÓN GRUPOS'],
+
                     ['callback' => 'academico_alumno_portal_puede', 'seccion' => 'academico_portal_alumno', 'icon' => 'fa-bullhorn', 'text' => 'Avisos y chat alumno', 'title' => 'Avisos y mensajes alumnos', 'breadcrumb' => 'AVISOS ALUMNO'],
 
                     ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico', 'breadcrumb' => 'TUTOR IA'],
@@ -703,6 +717,8 @@ function menu_cncm_secciones_compactas(): array
                 ['cap' => 'menu_consulta_adeudo', 'seccion' => 'consulta_adeudo', 'icon' => 'fa-calculator', 'text' => 'Consulta de adeudo', 'title' => 'Consulta de adeudo', 'breadcrumb' => 'CONSULTA ADEUDO'],
 
                 ['cap' => 'menu_punto_venta', 'seccion' => 'punto_venta', 'icon' => 'fa-cash-register', 'text' => 'Punto de venta', 'title' => 'Punto de venta', 'breadcrumb' => 'PUNTO DE VENTA'],
+
+                ['cap' => 'menu_audifonos', 'seccion' => 'audifonos_control', 'icon' => 'fa-headphones', 'text' => 'Control audífonos', 'title' => 'Préstamo y devolución de audífonos', 'breadcrumb' => 'AUDÍFONOS'],
 
                 ['cap' => 'menu_venta_productos', 'seccion' => 'venta_productos', 'icon' => 'fa-shopping-cart', 'text' => 'Venta de productos', 'title' => 'Venta de productos', 'breadcrumb' => 'VENTA DE PRODUCTOS'],
 
@@ -912,6 +928,8 @@ function menu_cncm_secciones_por_rol(): array
 
                 ['seccion' => 'punto_venta', 'icon' => 'fa-cash-register', 'text' => 'Punto de venta', 'title' => 'Punto de venta', 'breadcrumb' => 'PUNTO DE VENTA'],
 
+                ['cap' => 'menu_audifonos', 'seccion' => 'audifonos_control', 'icon' => 'fa-headphones', 'text' => 'Control audífonos', 'title' => 'Préstamo y devolución de audífonos', 'breadcrumb' => 'AUDÍFONOS'],
+
                 ['seccion' => 'venta_productos', 'icon' => 'fa-shopping-cart', 'text' => 'Venta de productos', 'title' => 'Venta de productos', 'breadcrumb' => 'VENTA DE PRODUCTOS'],
 
                 ['callback' => 'documento_puede_marcar_pagada', 'seccion' => 'constancia_recepcion', 'icon' => 'fa-file-certificate', 'text' => 'Constancias pendientes', 'title' => 'Constancias pendientes de pago', 'breadcrumb' => 'CONSTANCIAS'],
@@ -995,6 +1013,8 @@ function menu_cncm_secciones_por_rol(): array
                 ['callback' => 'rol_aula_puede_gestionar', 'seccion' => 'rol_aulas_coordinador', 'icon' => 'fa-th-large', 'text' => 'Rol de aulas', 'title' => 'Rol de aulas', 'breadcrumb' => 'ROL DE AULAS'],
 
                 ['seccion' => 'grupo_fusion_plan', 'icon' => 'fa-object-group', 'text' => 'Planificación de fusiones', 'title' => 'Planificación de fusiones', 'breadcrumb' => 'FUSIONES GRUPOS'],
+
+                ['seccion' => 'grupo_division', 'icon' => 'fa-code-branch', 'text' => 'División por edad', 'title' => 'División de grupos por edad', 'breadcrumb' => 'DIVISIÓN GRUPOS'],
 
                 ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico', 'breadcrumb' => 'TUTOR IA'],
 

@@ -73,7 +73,9 @@
     html += '</div>';
     html += `<div style="font-size:0.82rem; color:#888; margin-top:4px;">Emitido: ${esc(fmtFecha(d.pagado_en || d.generado_en))}</div>`;
     html += '</div><div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">';
-    if (d.pdf_url) {
+    if (d.word_url) {
+      html += `<a class="secondary" href="${esc(d.word_url)}"><i class="fas fa-file-word"></i> Descargar Word</a>`;
+    } else if (d.pdf_url) {
       html += `<a class="secondary" href="${esc(d.pdf_url)}" target="_blank" rel="noopener"><i class="fas fa-print"></i> Imprimir</a>`;
     }
     html += `<label style="font-size:0.82rem;">Foto evidencia<br><input type="file" class="piso-evidencia-input" accept="image/*" capture="environment"></label>`;

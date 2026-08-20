@@ -60,6 +60,7 @@ function rbac_cap_academico(): array
         'menu_cert_preregistro',
         'menu_alumnos',
         'menu_grupos',
+        'menu_grupo_division',
         'menu_especialidades',
         'menu_asistencia',
         'menu_grupo_plan',
@@ -110,6 +111,7 @@ function rbac_cap_recepcion(): array
         'expediente_consultar',
         'menu_calendario_consulta',
         'admin_usuarios',
+        'menu_grupo_division',
     ]);
 }
 
@@ -123,6 +125,7 @@ function rbac_cap_caja(): array
         'menu_consulta_adeudo',
         'menu_punto_venta',
         'menu_venta_productos',
+        'menu_audifonos',
         'menu_transferencias_ver',
         'menu_certificaciones',
         'menu_reportes',
@@ -170,6 +173,8 @@ function rbac_cap_director_extra(): array
         'asesoria_autorizar_mismo_dia',
         'asesoria_calendario',
         'menu_transferencias_ver',
+        'menu_alumno_cambio_plantel',
+        'menu_grupo_division',
     ];
 }
 function rbac_cap_solo_supervisor(): array

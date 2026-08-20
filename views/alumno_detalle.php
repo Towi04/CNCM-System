@@ -188,6 +188,7 @@ $puedeEditarFoto = function_exists('usuario_puede_gestionar_alumnos') && usuario
 $puedeEditarDatosAlumno = function_exists('alumno_datos_puede_editar') && alumno_datos_puede_editar();
 $puedeCambioDrasticoNombre = function_exists('alumno_nombre_puede_cambio_drastico') && alumno_nombre_puede_cambio_drastico();
 $puedeTarifaSupervisor = function_exists('alumno_tarifa_supervisor_puede') && alumno_tarifa_supervisor_puede();
+$puedeCambioPlantel = function_exists('alumno_plantel_transfer_puede_solicitar') && alumno_plantel_transfer_puede_solicitar();
 $control = $a['numero_control'] ?? $a['matricula'] ?? $id;
 $puedeSuspenderAlumno = function_exists('usuario_suspension_puede_gestionar_alumno') && usuario_suspension_puede_gestionar_alumno();
 $uAlumnoSusp = null;
@@ -261,6 +262,11 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
       <button type="button" class="primary" style="margin-top:14px; width:100%;" onclick="cargarSeccion('alumno_estado_cuenta', 'id=<?php echo (int)$id; ?>')">
         Estado de cuenta / Adeudo
       </button>
+      <?php if ($puedeCambioPlantel): ?>
+        <button type="button" class="secondary" style="margin-top:8px; width:100%;" onclick="cargarSeccion('alumno_cambio_plantel', 'id_alumno=<?php echo (int)$id; ?>')">
+          <i class="fas fa-exchange-alt"></i> Solicitar cambio de plantel
+        </button>
+      <?php endif; ?>
       <?php if (function_exists('usuario_puede_gestionar_alumnos') && usuario_puede_gestionar_alumnos() && !empty($a['id_usuario'])): ?>
         <button type="button" class="secondary" style="margin-top:8px; width:100%;" id="btn-reset-pass-alumno">
           Restablecer contraseña portal (Cncm*<?php echo htmlspecialchars((string) $control); ?>)

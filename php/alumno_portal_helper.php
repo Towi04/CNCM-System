@@ -278,6 +278,31 @@ function alumno_portal_notificaciones(PDO $pdo, int $idAlumno, int $idPlantel): 
         ];
     }
 
+    try {
+        $st = $pdo->prepare(
+            "SELECT tipo, folio, entregado_en
+             FROM alumno_documento
+             WHERE id_alumno = ? AND id_plantel = ?
+               AND entregado_en IS NOT NULL
+               AND entregado_en >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+             ORDER BY entregado_en DESC"
+        );
+        $st->execute([$idAlumno, $idPlantel]);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $doc) {
+            $tipo = ($doc['tipo'] ?? '') === 'diploma' ? 'Diploma' : 'Constancia';
+            $items[] = [
+                'tipo' => 'documento_entregado',
+                'titulo' => 'Documento entregado',
+                'mensaje' => 'Se entregó su ' . $tipo . ' folio ' . ($doc['folio'] ?? '') . '.',
+                'prioridad' => 'media',
+                'creado' => $doc['entregado_en'] ?? '',
+                'enlace' => $tipo === 'Constancia' ? 'alumno_solicitar_constancia' : 'alumno_portal_inicio',
+            ];
+        }
+    } catch (PDOException $e) {
+        // Instalación anterior sin el módulo de documentos.
+    }
+
     if (function_exists('pago_estado_cuenta')) {
         $ec = pago_estado_cuenta($pdo, $idAlumno);
         if (!empty($ec['ok'])) {

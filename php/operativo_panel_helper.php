@@ -326,6 +326,7 @@ function operativo_busqueda_rapida_alumno(PDO $pdo, string $q, int $idPlantel): 
                 'tipo' => $doc['tipo_label'] ?? '',
                 'estado' => $doc['estado_label'] ?? '',
                 'pdf_url' => $doc['pdf_url'] ?? null,
+                'word_url' => $doc['word_url'] ?? null,
             ];
         }
     }

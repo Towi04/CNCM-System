@@ -74,7 +74,13 @@ function rbac_seccion_caps(): array
 
         'venta_productos' => 'menu_venta_productos',
 
+        'audifonos_control' => 'menu_audifonos',
+
         'consulta_adeudo' => 'menu_consulta_adeudo',
+
+        'alumno_cambio_plantel' => 'menu_alumno_cambio_plantel',
+
+        'grupo_division' => 'menu_grupo_division',
 
         'admin_especialidades' => 'admin_catalogo',
 

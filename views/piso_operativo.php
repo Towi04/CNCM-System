@@ -65,4 +65,4 @@ window.HAY_PISO_CONFIG = <?php echo json_encode([
     'resumen' => $resumen,
 ], JSON_UNESCAPED_UNICODE); ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/piso_operativo.js?v=20260813'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/piso_operativo.js?v=20260820'), ENT_QUOTES, 'UTF-8'); ?>"></script>

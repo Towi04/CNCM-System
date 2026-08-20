@@ -40,7 +40,11 @@
 
     const acciones = [];
 
-    if (d.puede_imprimir && d.pdf_url) {
+    if (d.puede_imprimir && d.word_url) {
+
+      acciones.push(`<a class="primary" href="${esc(d.word_url)}"><i class="fas fa-file-word"></i> Descargar Word</a>`);
+
+    } else if (d.puede_imprimir && d.pdf_url) {
 
       acciones.push(`<a class="primary" href="${esc(d.pdf_url)}" target="_blank" rel="noopener"><i class="fas fa-print"></i> Reimprimir PDF</a>`);
 

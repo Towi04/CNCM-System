@@ -5,6 +5,7 @@
   const api = cfg.api || 'php/documento_api.php';
 
   const pdfBase = cfg.pdf || 'documento_pdf.php';
+  const wordBase = cfg.word || 'php/documento_word.php';
 
   let catalogo = { campos: {}, producto: null };
 
@@ -150,7 +151,8 @@
 
         <div style="font-size:0.88rem;color:#666;">${esc(d.solicitado_en)}</div>
 
-        ${puede ? `<a class="primary" href="${pdfBase}?id=${d.id_documento}" target="_blank" rel="noopener">Ver / descargar PDF</a>` : '<span style="color:#888;">Pendiente de pago en recepción</span>'}
+        ${puede ? `<a class="primary" href="${wordBase}?id_documento=${d.id_documento}"><i class="fas fa-file-word"></i> Descargar Word editable</a>
+          <a class="secondary" href="${pdfBase}?id=${d.id_documento}" target="_blank" rel="noopener">Ver PDF</a>` : '<span style="color:#888;">Pendiente de pago en recepción</span>'}
 
       </div>`;
 

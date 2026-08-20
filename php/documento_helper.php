@@ -187,6 +187,9 @@ function documento_mostrador_enriquecer(array $doc): array
     $doc['pdf_url'] = ($estado === 'pagada')
         ? hay_asset_url('documento_pdf.php?id=' . (int) ($doc['id_documento'] ?? 0))
         : null;
+    $doc['word_url'] = ($estado === 'pagada' && ($doc['tipo'] ?? '') === 'constancia')
+        ? hay_asset_url('php/documento_word.php?id_documento=' . (int) ($doc['id_documento'] ?? 0))
+        : null;
     $doc['verify_url'] = !empty($doc['token_verificacion'])
         ? documento_url_verificacion((string) $doc['token_verificacion'])
         : null;
@@ -593,6 +596,7 @@ function documento_aplicar_pago_pos(
             'message' => 'La constancia ya estaba pagada',
             'id_documento' => $idDocumento,
             'pdf_url' => hay_asset_url('documento_pdf.php?id=' . $idDocumento),
+            'word_url' => hay_asset_url('php/documento_word.php?id_documento=' . $idDocumento),
         ];
     }
     if (($doc['estado'] ?? '') !== 'pendiente_pago') {
@@ -600,7 +604,11 @@ function documento_aplicar_pago_pos(
     }
 
     return documento_marcar_pagada($pdo, $idDocumento, $idPlantel, $idUsuario, $idPago)
-        + ['id_documento' => $idDocumento, 'pdf_url' => hay_asset_url('documento_pdf.php?id=' . $idDocumento)];
+        + [
+            'id_documento' => $idDocumento,
+            'pdf_url' => hay_asset_url('documento_pdf.php?id=' . $idDocumento),
+            'word_url' => hay_asset_url('php/documento_word.php?id_documento=' . $idDocumento),
+        ];
 }
 
 function documento_contar_pendientes_plantel(PDO $pdo, int $idPlantel): int
@@ -710,12 +718,18 @@ function documento_marcar_entregado(PDO $pdo, int $idDocumento, int $idPlantel, 
     if ($evidenciaPath === '') {
         return ['ok' => false, 'message' => 'Adjunte foto de evidencia para entregar el documento'];
     }
+    $evidenciaRel = ltrim(str_replace('\\', '/', $evidenciaPath), '/');
+    $prefijo = DOCUMENTO_EVIDENCIA_DIR . '/';
+    $evidenciaAbs = dirname(__DIR__) . '/' . $evidenciaRel;
+    if (!str_starts_with($evidenciaRel, $prefijo) || !is_file($evidenciaAbs)) {
+        return ['ok' => false, 'message' => 'La evidencia de entrega no es válida'];
+    }
 
     $pdo->prepare(
         'UPDATE alumno_documento
          SET entregado_en = NOW(), entregado_por = ?, evidencia_entrega_path = ?
          WHERE id_documento = ?'
-    )->execute([$idUsuario > 0 ? $idUsuario : null, $evidenciaPath, $idDocumento]);
+    )->execute([$idUsuario > 0 ? $idUsuario : null, $evidenciaRel, $idDocumento]);
 
     $tipo = ($doc['tipo'] ?? '') === 'diploma' ? 'Diploma' : 'Constancia';
 

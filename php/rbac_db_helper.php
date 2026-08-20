@@ -141,6 +141,7 @@ function rbac_privilegios_catalogo(): array
         'menu_transferencias_ver' => ['label' => 'Ver / imprimir transferencias', 'grupo' => 'Caja'],
         'menu_manuales_stock' => ['label' => 'Stock de manuales', 'grupo' => 'Inventario'],
         'menu_manuales_envios' => ['label' => 'Envíos de manuales a planteles', 'grupo' => 'Inventario'],
+        'menu_audifonos' => ['label' => 'Control de audífonos', 'grupo' => 'Caja'],
         'menu_entrega_documentos' => ['label' => 'Entrega de documentos', 'grupo' => 'Caja'],
         'menu_riesgo_reporte' => ['label' => 'Reporte de riesgo académico', 'grupo' => 'Académico'],
         'menu_comisiones_nomina_print' => ['label' => 'Imprimir nómina de comisiones', 'grupo' => 'Ventas'],
@@ -150,9 +151,11 @@ function rbac_privilegios_catalogo(): array
         'menu_comisiones_consulta' => ['label' => 'Consulta de comisiones', 'grupo' => 'Ventas y alumnos'],
         'menu_comisiones_admin' => ['label' => 'Administrar comisiones', 'grupo' => 'Ventas y alumnos'],
         'menu_alumnos' => ['label' => 'Alumnos', 'grupo' => 'Ventas y alumnos'],
+        'menu_alumno_cambio_plantel' => ['label' => 'Cambio de plantel de alumnos', 'grupo' => 'Ventas y alumnos'],
         'menu_consulta_adeudo' => ['label' => 'Consulta de adeudo', 'grupo' => 'Ventas y alumnos'],
         'menu_asistencia' => ['label' => 'Menú asistencias', 'grupo' => 'Académico'],
         'menu_grupos' => ['label' => 'Grupos', 'grupo' => 'Académico'],
+        'menu_grupo_division' => ['label' => 'División de grupos por edad', 'grupo' => 'Académico'],
         'menu_gestion_aulas' => ['label' => 'Catálogo de aulas', 'grupo' => 'Académico'],
         'menu_rol_aulas_gestionar' => ['label' => 'Gestionar rol de aulas', 'grupo' => 'Académico'],
         'menu_rol_aulas_consulta' => ['label' => 'Consultar rol de aulas', 'grupo' => 'Académico'],
@@ -438,21 +441,29 @@ function rbac_db_ensure_mejoras_operativas_lote(PDO $pdo): void
         'menu_transferencias_ver',
         'menu_entrega_documentos',
         'menu_manuales_envios', // confirmar recepción de envíos en plantel
+        'menu_audifonos',
+        'menu_grupo_division',
     ];
     $directorExtras = array_values(array_unique(array_merge($adminExtras, [
         'menu_transferencias_ver',
         'menu_entrega_documentos',
         'menu_riesgo_reporte',
+        'menu_alumno_cambio_plantel',
+        'menu_grupo_division',
+        'menu_audifonos',
     ])));
 
     $tutorCaps = ['menu_tutor', 'tutor_usar'];
     $grants = [
         'admin' => array_merge($adminExtras, $tutorCaps),
         'profesor' => array_merge(['menu_preregistro', 'menu_cert_preregistro'], $tutorCaps),
-        'coordinador' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte'], $tutorCaps),
-        'coordinacion' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte'], $tutorCaps),
+        'coordinador' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte', 'menu_grupo_division'], $tutorCaps),
+        'coordinacion' => array_merge(['menu_preregistro', 'menu_cert_preregistro', 'menu_riesgo_reporte', 'menu_grupo_division'], $tutorCaps),
         'director' => array_merge($directorExtras, $tutorCaps),
-        'supervisor' => array_merge(['menu_transferencias_confirmar', 'menu_transferencias_ver'], $tutorCaps),
+        'supervisor' => array_merge(
+            ['menu_transferencias_confirmar', 'menu_transferencias_ver', 'menu_alumno_cambio_plantel', 'menu_grupo_division', 'menu_audifonos'],
+            $tutorCaps
+        ),
         'gerente' => array_merge(['menu_comisiones_nomina_print', 'menu_preregistro'], $tutorCaps),
         'asesor' => $tutorCaps,
         'alumno' => $tutorCaps,

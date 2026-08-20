@@ -26,7 +26,7 @@ $qInicial = trim($_GET['q'] ?? '');
 
     <h2><i class="fas fa-id-card"></i> Mostrador de documentos</h2>
 
-    <p style="color:#666;">Busque por número de control, nombre del alumno o folio del documento. Reimprima constancias y diplomas emitidos o abra la página de verificación QR.</p>
+    <p style="color:#666;">Busque por número de control, nombre del alumno o folio. Descargue constancias editables en Word, reimprima diplomas en PDF o abra la verificación QR.</p>
 
   </div>
 
@@ -70,5 +70,5 @@ window.HAY_DOC_MOSTRADOR = <?php echo json_encode([
 
 </script>
 
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/documento_mostrador.js?v=20260813'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/documento_mostrador.js?v=20260820'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 
