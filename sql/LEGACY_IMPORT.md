@@ -2,14 +2,17 @@
 
 HAY es la fuente de verdad: **no** se modifica la lógica de negocio del sistema nuevo; solo se cargan datos históricos desde la base restaurada del sistema anterior.
 
+Esquema de tablas del legado: [`sql/cncmedum_legado.sql`](cncmedum_legado.sql) (BD `cncmedum_legado`).  
+Consultas de extracción listas: [`sql/LEGACY_EXTRACT_QUERIES.sql`](LEGACY_EXTRACT_QUERIES.sql).
+
 ## Requisitos
 
-1. Restaurar `cncm/base de datos.dump` en MySQL como base **separada** (recomendado: `cncm_legacy`).
+1. Restaurar el dump legado en MySQL como base **separada** (recomendado: `cncmedum_legado`).
 2. En `config.local.php` definir conexión al legado:
 
 ```php
 define('LEGACY_DB_HOST', 'localhost');
-define('LEGACY_DB_NAME', 'cncm_legacy');
+define('LEGACY_DB_NAME', 'cncmedum_legado');
 define('LEGACY_DB_USER', 'root');
 define('LEGACY_DB_PASS', '');
 ```
@@ -24,14 +27,27 @@ define('LEGACY_DB_PASS', '');
 | `users` + rol Spatie | `usuarios` |
 | `especialidades` | `especialidades` (clave `LEG_{id}` si no hay match) |
 | `productos` | `productos` |
-| `grupos` | `grupos` (clave conservada o `LEG-G{id}`) |
+| `grupos` | `grupos` (clave conservada o `LEG-G{id}`; `clave_anterior` en asistente) |
 | `alumnos` con `status` NULL o `Pre-Registro` | `preregistros` (`estado` = `pendiente`) |
 | `alumnos` con `status` = `Alumno` | `alumnos` |
 | `alumnos_grupos` (pivot `Inscrito`) | `alumno_grupos` |
 | `alumnos_especialidades` | `alumno_especialidades` |
-| `pagos` + `abonos` (no borrados) | `alumno_pagos` (histórico) |
+| `pagos` + `abonos` (+ concepto en `alumnos_pagos`) | `alumno_pagos` (histórico) |
+| `ventas` + `partidas_ventas` | opcional → `alumno_pagos` tipo `producto` (no en importador PHP) |
 
 Registros con `deleted_at` en legado se omiten.
+
+### Columnas confirmadas en `cncmedum_legado.sql`
+
+**`alumnos`**: `status` decide preregistro vs alumno; control en `nuevo_numero_control` / `numero_control`; contacto `telefono`/`celular`; factura en `rfc`,`curp`,`razon_social`, etc.; soft-delete `deleted_at`.
+
+**`grupos`**: `clave`, `id_especialidad`, `id_sucursal`, `horario`+`dias` (no hay `horario_texto` ni `id_profesor` en el dump).
+
+**`pagos`**: `folio`, `fecha`, `monto`, `forma_pago`, `id_alumno`, `id_recibio` (quien cobró), `deleted_at`.
+
+**`abonos`**: `id_pago`, `id_alumno_pago` → une al concepto en `alumnos_pagos.concepto` / `tipo`.
+
+**`ventas`**: productos con `id_recibio` + `fecha`; detalle en `partidas_ventas`.
 
 ## Equivalencias (evitar duplicados)
 
