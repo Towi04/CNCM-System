@@ -275,83 +275,181 @@ function catalog_seed_especialidades(PDO $pdo): void
 }
 
 /**
- * Consolida duplicados por alias (p. ej. ING creado por seed demo cuando ya existe I).
- * Preferencia: clave operativa corta (I/C) o la que no diga "seed demo"; desactiva el resto.
+ * Consolida duplicados del catálogo:
+ * 1) Por alias de clave (I/ING, C/COMP/COMP25, etc.) cuando el duplicado es de seed.
+ * 2) Por nombre normalizado: si hay dos activas con el mismo nombre y una es de seed demo, desactiva la de seed.
+ * Corre una sola vez por versión de meta (bump al ampliar reglas).
  */
 function catalog_dedupe_especialidades_alias(PDO $pdo): void
 {
-    if (function_exists('hay_meta_get') && hay_meta_get($pdo, 'esp_alias_dedupe_v1') === '1') {
+    if (function_exists('hay_meta_get') && hay_meta_get($pdo, 'esp_alias_dedupe_v2') === '1') {
         return;
     }
 
+    // COMP24 (2024) y COMP25 (2025) son años distintos: no van en el mismo grupo de clave.
     $grupos = [
         ['I', 'ING', 'INGLES', 'INGLÉS'],
-        ['C', 'COMP', 'COMP25', 'COMPUTACION', 'INFORMATICA'],
+        ['C', 'COMP', 'COMPUTACION', 'INFORMATICA'],
+        ['COMP25', 'COMP-25', 'COMP_25', 'INFO25', 'INFORMATICA25'],
+        ['COMP24', 'COMP-24', 'COMP_24', 'INFO24', 'INFORMATICA24'],
+        ['PA', 'PREP-AB', 'PREPA-ABIERTA', 'PREPA_ABIERTA'],
+        ['PE', 'PREP-ESC', 'PREPA-ESC', 'PREPA_ESCOLARIZADA'],
+        ['ING-K', 'IK', 'INGLES-K', 'INGLES_K'],
+        ['COMP-K', 'CK', 'COMPUTACION-K'],
     ];
 
     foreach ($grupos as $aliases) {
-        $placeholders = implode(',', array_fill(0, count($aliases), '?'));
-        $st = $pdo->prepare(
-            "SELECT id_especialidad, clave, nombre, descripcion, activo
-             FROM especialidades
-             WHERE UPPER(clave) IN ($placeholders) AND activo = 1
-             ORDER BY id_especialidad ASC"
-        );
-        $st->execute(array_map('strtoupper', $aliases));
-        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
-        if (count($rows) < 2) {
+        catalog_dedupe_especialidades_por_claves($pdo, $aliases);
+    }
+    catalog_dedupe_especialidades_por_nombre($pdo);
+
+    if (function_exists('hay_meta_set')) {
+        hay_meta_set($pdo, 'esp_alias_dedupe_v2', '1');
+        // Evita que v1 bloquee si alguien compara solo esa clave en el futuro.
+        hay_meta_set($pdo, 'esp_alias_dedupe_v1', '1');
+    }
+}
+
+function catalog_especialidad_es_seed_demo(array $row): bool
+{
+    $desc = (string) ($row['descripcion'] ?? '');
+
+    return stripos($desc, 'seed demo') !== false
+        || stripos($desc, 'Creada por seed') !== false;
+}
+
+function catalog_especialidad_nombre_norm(string $nombre): string
+{
+    $n = mb_strtolower(trim($nombre), 'UTF-8');
+    $n = strtr($n, [
+        'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
+    ]);
+    $n = preg_replace('/\s+/', ' ', $n) ?? $n;
+
+    return $n;
+}
+
+/** @param list<string> $aliases */
+function catalog_dedupe_especialidades_por_claves(PDO $pdo, array $aliases): void
+{
+    if ($aliases === []) {
+        return;
+    }
+    $placeholders = implode(',', array_fill(0, count($aliases), '?'));
+    $st = $pdo->prepare(
+        "SELECT id_especialidad, clave, nombre, descripcion, activo
+         FROM especialidades
+         WHERE UPPER(clave) IN ($placeholders) AND activo = 1
+         ORDER BY id_especialidad ASC"
+    );
+    $st->execute(array_map('strtoupper', $aliases));
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+    if (count($rows) < 2) {
+        return;
+    }
+
+    $preferidosCortos = ['I', 'C', 'PA', 'PE', 'IK', 'CK'];
+    $preferida = null;
+    foreach ($rows as $r) {
+        if (!catalog_especialidad_es_seed_demo($r)) {
+            $clave = strtoupper((string) $r['clave']);
+            if (in_array($clave, $preferidosCortos, true)) {
+                $preferida = $r;
+                break;
+            }
+        }
+    }
+    if ($preferida === null) {
+        foreach ($rows as $r) {
+            if (!catalog_especialidad_es_seed_demo($r)) {
+                $preferida = $r;
+                break;
+            }
+        }
+    }
+    if ($preferida === null) {
+        $preferida = $rows[0];
+    }
+
+    catalog_dedupe_desactivar_seeds($pdo, $rows, (int) $preferida['id_especialidad']);
+}
+
+function catalog_dedupe_especialidades_por_nombre(PDO $pdo): void
+{
+    $rows = $pdo->query(
+        'SELECT id_especialidad, clave, nombre, descripcion, activo
+         FROM especialidades
+         WHERE activo = 1
+         ORDER BY id_especialidad ASC'
+    )->fetchAll(PDO::FETCH_ASSOC);
+    if ($rows === []) {
+        return;
+    }
+
+    $porNombre = [];
+    foreach ($rows as $r) {
+        $norm = catalog_especialidad_nombre_norm((string) ($r['nombre'] ?? ''));
+        if ($norm === '') {
+            continue;
+        }
+        $porNombre[$norm][] = $r;
+    }
+
+    foreach ($porNombre as $grupo) {
+        if (count($grupo) < 2) {
+            continue;
+        }
+        $haySeed = false;
+        foreach ($grupo as $r) {
+            if (catalog_especialidad_es_seed_demo($r)) {
+                $haySeed = true;
+                break;
+            }
+        }
+        if (!$haySeed) {
             continue;
         }
 
         $preferida = null;
-        foreach ($rows as $r) {
-            $clave = strtoupper((string) $r['clave']);
-            if (in_array($clave, ['I', 'C'], true)) {
+        foreach ($grupo as $r) {
+            if (!catalog_especialidad_es_seed_demo($r)) {
                 $preferida = $r;
                 break;
             }
         }
         if ($preferida === null) {
-            foreach ($rows as $r) {
-                $desc = (string) ($r['descripcion'] ?? '');
-                if (stripos($desc, 'seed demo') === false) {
-                    $preferida = $r;
-                    break;
-                }
-            }
+            $preferida = $grupo[0];
         }
-        if ($preferida === null) {
-            $preferida = $rows[0];
-        }
-
-        $idKeep = (int) $preferida['id_especialidad'];
-        foreach ($rows as $r) {
-            $id = (int) $r['id_especialidad'];
-            if ($id === $idKeep) {
-                continue;
-            }
-            $desc = (string) ($r['descripcion'] ?? '');
-            $esSeed = stripos($desc, 'seed demo') !== false
-                || stripos($desc, 'Creada por seed') !== false;
-            // Solo auto-desactiva duplicados claramente de seed; el resto se deja al admin.
-            if (!$esSeed) {
-                continue;
-            }
-            try {
-                catalog_especialidad_desactivar_con_sustitucion($pdo, $id, $idKeep);
-            } catch (Throwable $e) {
-                try {
-                    $pdo->prepare('UPDATE especialidades SET activo = 0, visible = 0 WHERE id_especialidad = ?')
-                        ->execute([$id]);
-                } catch (Throwable $e2) {
-                    // ignore
-                }
-            }
-        }
+        catalog_dedupe_desactivar_seeds($pdo, $grupo, (int) $preferida['id_especialidad']);
     }
+}
 
-    if (function_exists('hay_meta_set')) {
-        hay_meta_set($pdo, 'esp_alias_dedupe_v1', '1');
+/**
+ * @param list<array<string, mixed>> $rows
+ */
+function catalog_dedupe_desactivar_seeds(PDO $pdo, array $rows, int $idKeep): void
+{
+    if ($idKeep <= 0) {
+        return;
+    }
+    foreach ($rows as $r) {
+        $id = (int) ($r['id_especialidad'] ?? 0);
+        if ($id <= 0 || $id === $idKeep) {
+            continue;
+        }
+        if (!catalog_especialidad_es_seed_demo($r)) {
+            continue;
+        }
+        try {
+            catalog_especialidad_desactivar_con_sustitucion($pdo, $id, $idKeep);
+        } catch (Throwable $e) {
+            try {
+                $pdo->prepare('UPDATE especialidades SET activo = 0, visible = 0 WHERE id_especialidad = ?')
+                    ->execute([$id]);
+            } catch (Throwable $e2) {
+                // ignore
+            }
+        }
     }
 }
 

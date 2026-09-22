@@ -20,7 +20,7 @@ Pulse **Ejecutar seed Guerrero**. Si necesita la URL directa:
 
 Etiqueta idempotente: `seed_guerrero_demo_2026` (no duplica grupos ni preregistros si ya existen).
 
-Especialidades: si ya existe Inglés con clave `I` (u otro alias), **no** crea un segundo `ING`. Tampoco reactiva especialidades que usted haya desactivado u ocultado.
+Especialidades: si ya existe el curso por **clave/alias** o por **mismo nombre** (p. ej. Inglés `I`/`ING`, Informática 2025), **no** crea duplicado. Tampoco reactiva especialidades desactivadas u ocultas. Un dedupe automático desactiva filas de seed demo que repitan nombre o alias.
 
 ## Qué crea
 

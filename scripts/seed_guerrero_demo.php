@@ -81,15 +81,34 @@ function seed_g_especialidad_aliases(string $clave): array
     $map = [
         'ING' => ['ING', 'I', 'INGLES', 'INGLÉS'],
         'I' => ['I', 'ING', 'INGLES', 'INGLÉS'],
-        'COMP' => ['COMP', 'COMP25', 'C', 'COMPUTACION', 'INFORMATICA'],
-        'COMP25' => ['COMP25', 'COMP', 'C', 'COMPUTACION', 'INFORMATICA'],
+        // Informática genérica (no mezclar con COMP24/COMP25 de otro año)
+        'COMP' => ['COMP', 'C', 'COMPUTACION', 'INFORMATICA'],
+        'C' => ['C', 'COMP', 'COMPUTACION', 'INFORMATICA'],
+        'COMP25' => ['COMP25', 'COMP-25', 'COMP_25', 'INFO25', 'INFORMATICA25'],
+        'COMP24' => ['COMP24', 'COMP-24', 'COMP_24', 'INFO24', 'INFORMATICA24'],
         'PREP-AB' => ['PREP-AB', 'PA', 'PREPA-ABIERTA', 'PREPA_ABIERTA'],
         'PREP-ESC' => ['PREP-ESC', 'PE', 'PREPA-ESC', 'PREPA_ESCOLARIZADA'],
+        'ING-K' => ['ING-K', 'IK', 'INGLES-K'],
+        'COMP-K' => ['COMP-K', 'CK'],
     ];
 
     return $map[$clave] ?? [$clave];
 }
 
+function seed_g_especialidad_nombre_norm(string $nombre): string
+{
+    $n = mb_strtolower(trim($nombre), 'UTF-8');
+    $n = strtr($n, [
+        'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
+    ]);
+    $n = preg_replace('/\s+/', ' ', $n) ?? $n;
+
+    return $n;
+}
+
+/**
+ * Busca especialidad activa por clave/alias o, si se indica, por nombre equivalente.
+ */
 function seed_g_especialidad_id(PDO $pdo, string ...$claves): int
 {
     $vistos = [];
@@ -111,8 +130,26 @@ function seed_g_especialidad_id(PDO $pdo, string ...$claves): int
     return 0;
 }
 
+/** Busca por nombre normalizado (activo primero; si no, cualquier fila para no recrear). */
+function seed_g_especialidad_id_por_nombre(PDO $pdo, string $nombre): int
+{
+    $nombre = trim($nombre);
+    if ($nombre === '') {
+        return 0;
+    }
+    $norm = seed_g_especialidad_nombre_norm($nombre);
+    $st = $pdo->query('SELECT id_especialidad, nombre, activo FROM especialidades ORDER BY activo DESC, id_especialidad ASC');
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if (seed_g_especialidad_nombre_norm((string) ($row['nombre'] ?? '')) === $norm) {
+            return (int) $row['id_especialidad'];
+        }
+    }
+
+    return 0;
+}
+
 /**
- * Busca por clave (y alias) aunque esté inactiva; si no existe, la crea.
+ * Busca por clave (y alias) o por nombre; si no existe, la crea.
  * No reactiva especialidades desactivadas/ocultas a propósito.
  * También asegura fases del catálogo cuando faltan.
  *
@@ -129,6 +166,20 @@ function seed_g_ensure_especialidad(PDO $pdo, string $clave, array $meta): int
         if ($found) {
             $row = $found;
             break;
+        }
+    }
+
+    if (!$row) {
+        $nombreBusca = trim((string) ($meta['nombre'] ?? ''));
+        if ($nombreBusca !== '') {
+            $idPorNombre = seed_g_especialidad_id_por_nombre($pdo, $nombreBusca);
+            if ($idPorNombre > 0) {
+                $stId = $pdo->prepare(
+                    'SELECT id_especialidad, clave, activo, visible FROM especialidades WHERE id_especialidad = ? LIMIT 1'
+                );
+                $stId->execute([$idPorNombre]);
+                $row = $stId->fetch(PDO::FETCH_ASSOC) ?: null;
+            }
         }
     }
 
@@ -1065,7 +1116,14 @@ $idIng = seed_g_ensure_especialidad($pdo, 'ING', [
     'duracion_semanas' => 48,
     'duracion_fase_semanas' => 4,
 ]);
-$idComp = seed_g_especialidad_id($pdo, 'COMP25', 'COMP', 'COMP24');
+$idComp = seed_g_especialidad_id($pdo, 'COMP25');
+if ($idComp <= 0) {
+    $idComp = seed_g_especialidad_id_por_nombre($pdo, 'Informática 2025');
+}
+if ($idComp <= 0) {
+    // Fallback: informática genérica ya existente (evita segundo curso demo)
+    $idComp = seed_g_especialidad_id($pdo, 'COMP', 'C');
+}
 if ($idComp <= 0) {
     $idComp = seed_g_ensure_especialidad($pdo, 'COMP25', [
         'nombre' => 'Informática 2025',
