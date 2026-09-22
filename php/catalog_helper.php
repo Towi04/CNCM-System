@@ -87,6 +87,7 @@ function catalog_ensure_schema(PDO $pdo): void
     catalog_seed_especialidades($pdo);
     catalog_ensure_especialidad_operativo($pdo);
     catalog_ensure_producto_operativo($pdo);
+    catalog_dedupe_especialidades_alias($pdo);
 }
 
 function catalog_ensure_producto_operativo(PDO $pdo): void
@@ -270,6 +271,87 @@ function catalog_seed_especialidades(PDO $pdo): void
     ];
     foreach ($rows as $r) {
         $ins->execute($r);
+    }
+}
+
+/**
+ * Consolida duplicados por alias (p. ej. ING creado por seed demo cuando ya existe I).
+ * Preferencia: clave operativa corta (I/C) o la que no diga "seed demo"; desactiva el resto.
+ */
+function catalog_dedupe_especialidades_alias(PDO $pdo): void
+{
+    if (function_exists('hay_meta_get') && hay_meta_get($pdo, 'esp_alias_dedupe_v1') === '1') {
+        return;
+    }
+
+    $grupos = [
+        ['I', 'ING', 'INGLES', 'INGLÉS'],
+        ['C', 'COMP', 'COMP25', 'COMPUTACION', 'INFORMATICA'],
+    ];
+
+    foreach ($grupos as $aliases) {
+        $placeholders = implode(',', array_fill(0, count($aliases), '?'));
+        $st = $pdo->prepare(
+            "SELECT id_especialidad, clave, nombre, descripcion, activo
+             FROM especialidades
+             WHERE UPPER(clave) IN ($placeholders) AND activo = 1
+             ORDER BY id_especialidad ASC"
+        );
+        $st->execute(array_map('strtoupper', $aliases));
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        if (count($rows) < 2) {
+            continue;
+        }
+
+        $preferida = null;
+        foreach ($rows as $r) {
+            $clave = strtoupper((string) $r['clave']);
+            if (in_array($clave, ['I', 'C'], true)) {
+                $preferida = $r;
+                break;
+            }
+        }
+        if ($preferida === null) {
+            foreach ($rows as $r) {
+                $desc = (string) ($r['descripcion'] ?? '');
+                if (stripos($desc, 'seed demo') === false) {
+                    $preferida = $r;
+                    break;
+                }
+            }
+        }
+        if ($preferida === null) {
+            $preferida = $rows[0];
+        }
+
+        $idKeep = (int) $preferida['id_especialidad'];
+        foreach ($rows as $r) {
+            $id = (int) $r['id_especialidad'];
+            if ($id === $idKeep) {
+                continue;
+            }
+            $desc = (string) ($r['descripcion'] ?? '');
+            $esSeed = stripos($desc, 'seed demo') !== false
+                || stripos($desc, 'Creada por seed') !== false;
+            // Solo auto-desactiva duplicados claramente de seed; el resto se deja al admin.
+            if (!$esSeed) {
+                continue;
+            }
+            try {
+                catalog_especialidad_desactivar_con_sustitucion($pdo, $id, $idKeep);
+            } catch (Throwable $e) {
+                try {
+                    $pdo->prepare('UPDATE especialidades SET activo = 0, visible = 0 WHERE id_especialidad = ?')
+                        ->execute([$id]);
+                } catch (Throwable $e2) {
+                    // ignore
+                }
+            }
+        }
+    }
+
+    if (function_exists('hay_meta_set')) {
+        hay_meta_set($pdo, 'esp_alias_dedupe_v1', '1');
     }
 }
 

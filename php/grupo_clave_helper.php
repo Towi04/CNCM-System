@@ -453,10 +453,10 @@ function grupo_area_id_especialidad(PDO $pdo, string $area): ?int
         return grupo_id_especialidad_infantil($pdo, 'ingles');
     }
     $candidatos = match ($area) {
-        'I' => ['ING', 'INGLES', 'INGLÉS', 'ING-K'],
-        'C' => ['COMP', 'COMPUTACION', 'INFORMATICA', 'COMP-K'],
-        'PA' => ['PA', 'PREPA-ABIERTA', 'PREPA_ABIERTA'],
-        'PE' => ['PE', 'PREPA-ESC', 'PREPA_ESCOLARIZADA'],
+        'I' => ['I', 'ING', 'INGLES', 'INGLÉS', 'ING-K'],
+        'C' => ['C', 'COMP', 'COMP25', 'COMPUTACION', 'INFORMATICA', 'COMP-K'],
+        'PA' => ['PA', 'PREP-AB', 'PREPA-ABIERTA', 'PREPA_ABIERTA'],
+        'PE' => ['PE', 'PREP-ESC', 'PREPA-ESC', 'PREPA_ESCOLARIZADA'],
         default => [],
     };
     if ($candidatos === []) {

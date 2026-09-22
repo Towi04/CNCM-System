@@ -603,6 +603,68 @@ operativo_cncm_ensure_schema($pdo);
   document.getElementById('btn-cancelar-esp-sust')?.addEventListener('click', cerrarModalSust);
   document.getElementById('btn-confirmar-esp-sust')?.addEventListener('click', confirmarDesactivarEsp);
 
+  async function iniciarDesactivarEsp(id) {
+    try {
+      const url = espDeleteUrl + (espDeleteUrl.indexOf('?') >= 0 ? '&' : '?') + 'action=preview&id_especialidad=' + encodeURIComponent(id);
+      const res = await fetch(url, { headers: { 'X-Requested-With': 'fetch' } });
+      const data = await res.json();
+      if (data.status !== 'ok') {
+        showMsg(false, data.message || 'No se pudo preparar la desactivación');
+        return;
+      }
+      abrirModalSust(data);
+    } catch (err) {
+      showMsg(false, 'Error de red al preparar desactivación');
+    }
+  }
+
+  document.querySelector('.catalog-wrap')?.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('.btn-esp-toggle');
+    if (!btn || !ev.currentTarget.contains(btn)) return;
+
+    const wrap = btn.closest('.catalog-estado-actions');
+    const tr = btn.closest('tr');
+    const id = wrap ? parseInt(wrap.getAttribute('data-id') || '0', 10) : 0;
+    const campo = btn.getAttribute('data-campo') || '';
+    if (!id || !campo) return;
+
+    if (campo === 'activo' && (btn.getAttribute('title') || '') === 'Desactivar') {
+      await iniciarDesactivarEsp(id);
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append('id_especialidad', String(id));
+    fd.append('campo', campo);
+    btn.disabled = true;
+    try {
+      const res = await fetch(espToggleUrl, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
+      const data = await res.json();
+      if (data.status === 'confirm_desactivar') {
+        await iniciarDesactivarEsp(id);
+        return;
+      }
+      if (data.status !== 'ok') {
+        showMsg(false, data.message || 'No se pudo actualizar');
+        return;
+      }
+      showMsg(true, data.message || 'Actualizado');
+      let row = null;
+      try { row = JSON.parse(tr.getAttribute('data-row') || '{}'); } catch (e) { row = {}; }
+      if (row && data.campo) {
+        row[data.campo] = data.valor;
+        tr.setAttribute('data-row', JSON.stringify(row));
+        refreshEstadoIcons(wrap, row);
+      } else if (typeof cargarSeccion === 'function') {
+        cargarSeccion('admin_especialidades');
+      }
+    } catch (err) {
+      showMsg(false, 'Error de red al actualizar');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);

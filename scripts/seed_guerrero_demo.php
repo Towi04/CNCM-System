@@ -74,43 +74,75 @@ function seed_g_usuario(
     return $id;
 }
 
+/** Alias de claves conocidas (área CNCM vs catálogo HAY). */
+function seed_g_especialidad_aliases(string $clave): array
+{
+    $clave = strtoupper(trim($clave));
+    $map = [
+        'ING' => ['ING', 'I', 'INGLES', 'INGLÉS'],
+        'I' => ['I', 'ING', 'INGLES', 'INGLÉS'],
+        'COMP' => ['COMP', 'COMP25', 'C', 'COMPUTACION', 'INFORMATICA'],
+        'COMP25' => ['COMP25', 'COMP', 'C', 'COMPUTACION', 'INFORMATICA'],
+        'PREP-AB' => ['PREP-AB', 'PA', 'PREPA-ABIERTA', 'PREPA_ABIERTA'],
+        'PREP-ESC' => ['PREP-ESC', 'PE', 'PREPA-ESC', 'PREPA_ESCOLARIZADA'],
+    ];
+
+    return $map[$clave] ?? [$clave];
+}
+
 function seed_g_especialidad_id(PDO $pdo, string ...$claves): int
 {
+    $vistos = [];
     foreach ($claves as $clave) {
-        $st = $pdo->prepare('SELECT id_especialidad FROM especialidades WHERE clave = ? AND activo = 1 LIMIT 1');
-        $st->execute([$clave]);
-        $id = (int) $st->fetchColumn();
-        if ($id > 0) {
-            return $id;
+        foreach (seed_g_especialidad_aliases($clave) as $alias) {
+            $alias = strtoupper(trim($alias));
+            if ($alias === '' || isset($vistos[$alias])) {
+                continue;
+            }
+            $vistos[$alias] = true;
+            $st = $pdo->prepare('SELECT id_especialidad FROM especialidades WHERE UPPER(clave) = ? AND activo = 1 LIMIT 1');
+            $st->execute([$alias]);
+            $id = (int) $st->fetchColumn();
+            if ($id > 0) {
+                return $id;
+            }
         }
     }
     return 0;
 }
 
 /**
- * Busca por clave aunque esté inactiva; si no existe, la crea; si está inactiva, la reactiva.
+ * Busca por clave (y alias) aunque esté inactiva; si no existe, la crea.
+ * No reactiva especialidades desactivadas/ocultas a propósito.
  * También asegura fases del catálogo cuando faltan.
  *
  * @param array{nombre:string,modalidad?:string,costo_inscripcion?:float,costo_mensualidad?:float,costo_pronto_pago?:float,costo_semanal?:float,duracion_meses?:int,duracion_semanas?:?int,duracion_fase_semanas?:int} $meta
  */
 function seed_g_ensure_especialidad(PDO $pdo, string $clave, array $meta): int
 {
-    $st = $pdo->prepare('SELECT id_especialidad, activo, visible FROM especialidades WHERE clave = ? LIMIT 1');
-    $st->execute([$clave]);
-    $row = $st->fetch(PDO::FETCH_ASSOC);
+    $aliases = seed_g_especialidad_aliases($clave);
+    $st = $pdo->prepare('SELECT id_especialidad, clave, activo, visible FROM especialidades WHERE UPPER(clave) = ? LIMIT 1');
+    $row = null;
+    foreach ($aliases as $alias) {
+        $st->execute([strtoupper($alias)]);
+        $found = $st->fetch(PDO::FETCH_ASSOC);
+        if ($found) {
+            $row = $found;
+            break;
+        }
+    }
 
     if ($row) {
         $id = (int) $row['id_especialidad'];
-        if ((int) ($row['activo'] ?? 0) !== 1 || (int) ($row['visible'] ?? 0) !== 1) {
-            try {
-                $pdo->prepare('UPDATE especialidades SET activo = 1, visible = 1 WHERE id_especialidad = ?')
-                    ->execute([$id]);
-                seed_g_log("  · Especialidad {$clave} reactivada (#{$id})");
-            } catch (PDOException $e) {
-                seed_g_log("  (aviso reactivar {$clave}: " . $e->getMessage() . ')');
-            }
+        $claveExistente = (string) ($row['clave'] ?? $clave);
+        if ((int) ($row['activo'] ?? 0) !== 1) {
+            seed_g_log("  · Especialidad {$claveExistente} (#{$id}) existe pero está inactiva; no se reactiva ni se crea duplicado {$clave}");
+            return $id;
         }
-        seed_g_ensure_fases_especialidad($pdo, $id, $clave, $meta);
+        if ((int) ($row['visible'] ?? 0) !== 1) {
+            seed_g_log("  · Especialidad {$claveExistente} (#{$id}) oculta; se respeta visibilidad (sin recrear {$clave})");
+        }
+        seed_g_ensure_fases_especialidad($pdo, $id, $claveExistente, $meta);
         return $id;
     }
 
