@@ -94,12 +94,7 @@ Etiqueta en conceptos: `seed_operativo_2025` (no duplica si ya existen pagos con
 
 ---
 
-## Paso 3 — Demo completo Guerrero (recomendado para recorridos)
+## Notas
 
-Para un dataset amplio **solo en Guerrero** (aulas, varias especialidades, calificaciones por fase, preregistros demográficos, cortes de caja, reporte semanal y rol de aulas):
-
-```bash
-php scripts/seed_guerrero_demo.php
-```
-
-Detalle: [SEED_GUERRERO_DEMO.md](SEED_GUERRERO_DEMO.md).
+El seed demo operativo de Guerrero (`seed_guerrero_demo`) se eliminó del código; ya no se usa en producción.
+Use solo los scripts de este documento (`seed_datos_prueba` / `seed_datos_operativos`) en entornos de desarrollo.
