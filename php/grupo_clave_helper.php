@@ -454,7 +454,7 @@ function grupo_area_id_especialidad(PDO $pdo, string $area): ?int
     }
     $candidatos = match ($area) {
         'I' => ['I', 'ING', 'INGLES', 'INGLÉS', 'ING-K'],
-        'C' => ['C', 'COMP', 'COMP25', 'COMPUTACION', 'INFORMATICA', 'COMP-K'],
+        'C' => ['C', 'COMP', 'COMP25', 'COMP24', 'COMPUTACION', 'INFORMATICA', 'COMP-K'],
         'PA' => ['PA', 'PREP-AB', 'PREPA-ABIERTA', 'PREPA_ABIERTA'],
         'PE' => ['PE', 'PREP-ESC', 'PREPA-ESC', 'PREPA_ESCOLARIZADA'],
         default => [],
