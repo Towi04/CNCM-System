@@ -56,6 +56,9 @@ if (is_file(__DIR__ . '/config.local.php')) {
     require __DIR__ . '/config.local.php';
 }
 
+require_once __DIR__ . '/php/db_config_helper.php';
+hay_load_dotenv_once();
+
 /** Sesión unificada (misma ruta de guardado que login/dashboard). */
 require_once __DIR__ . '/php/session_helper.php';
 hay_session_start();
@@ -66,7 +69,6 @@ if (is_file(__DIR__ . '/config.mail.php')) {
     define('MAIL_DRIVER', 'php');
 }
 
-require_once __DIR__ . '/php/db_config_helper.php';
 require_once __DIR__ . '/php/hay_schema_migrate.php';
 $creds = hay_db_credentials();
 $host = $creds['host'];
@@ -75,8 +77,12 @@ $user = $creds['user'];
 $pass = $creds['pass'];
 $charset = 'utf8mb4';
 $hayLocalConfig = is_file(__DIR__ . '/config.local.php');
+$hayDotEnv = is_file(__DIR__ . '/.env');
 
 try {
+    if ($user === '') {
+        throw new PDOException('Usuario de base de datos vacío (defina HAY_DB_USER)');
+    }
     $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
     /** @var PDO $pdo */
     $pdo = new PDO($dsn, $user, $pass, [
@@ -85,9 +91,13 @@ try {
     ]);
     $GLOBALS['pdo'] = $pdo;
 } catch (PDOException $e) {
-    $hint = $hayLocalConfig
-        ? 'Revise HAY_DB_HOST / HAY_DB_NAME / HAY_DB_USER / HAY_DB_PASS en config.local.php y que MySQL esté activo.'
-        : 'Falta config.local.php en la raíz del proyecto (archivo gitignored). Créelo de nuevo desde config.local.php.example con las credenciales de cPanel; no se regenera al desplegar.';
+    if ($hayLocalConfig) {
+        $hint = 'Revise HAY_DB_* en config.local.php en el servidor Neubox y que MySQL esté activo.';
+    } elseif ($hayDotEnv) {
+        $hint = 'Revise HAY_DB_HOST / HAY_DB_NAME / HAY_DB_USER / HAY_DB_PASS en el archivo .env del servidor.';
+    } else {
+        $hint = 'En Neubox cree config.local.php o .env en la raíz (no van en git). Plantillas: config.local.php.example / .env.example.';
+    }
     http_response_code(503);
     die('Error de conexion: ' . $e->getMessage() . ' — ' . $hint);
 }
