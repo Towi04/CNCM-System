@@ -28,7 +28,21 @@ operativo_cncm_ensure_schema($pdo);
 <div class="catalog-wrap">
   <div class="catalog-header">
     <h2><i class="fas fa-graduation-cap"></i> Especialidades (cursos)</h2>
-    <button type="button" class="primary" id="btn-nueva-especialidad">Nueva especialidad</button>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <?php if ($puedeEditarCostos): ?>
+        <a class="secondary" href="<?php echo htmlspecialchars(hay_asset_url('php/especialidad_csv_api.php?action=download'), ENT_QUOTES, 'UTF-8'); ?>">
+          <i class="fas fa-download"></i> CSV costos
+        </a>
+        <a class="secondary" href="<?php echo htmlspecialchars(hay_asset_url('php/especialidad_csv_api.php?action=plantilla'), ENT_QUOTES, 'UTF-8'); ?>">
+          <i class="fas fa-file-csv"></i> Plantilla CSV
+        </a>
+        <label class="secondary" style="cursor:pointer; margin:0;">
+          <i class="fas fa-upload"></i> Subir CSV
+          <input type="file" id="esp-csv-file" accept=".csv,text/csv" style="display:none;">
+        </label>
+      <?php endif; ?>
+      <button type="button" class="primary" id="btn-nueva-especialidad">Nueva especialidad</button>
+    </div>
   </div>
 
   <p style="color:#666; margin-top:0;">
@@ -104,6 +118,12 @@ operativo_cncm_ensure_schema($pdo);
             $e['cartas_inscripcion_apoyo'] = $cartas['costo_inscripcion_apoyo'] ?? null;
             $e['cartas_mensualidad_ref'] = $cartas['costo_mensualidad_ref'] ?? null;
             $e['cartas_mensualidad_apoyo'] = $cartas['costo_mensualidad_apoyo'] ?? null;
+            $e['cartas_pronto_pago_ref'] = $cartas['costo_pronto_pago_ref'] ?? null;
+            $e['cartas_pronto_pago_apoyo'] = $cartas['costo_pronto_pago_apoyo'] ?? null;
+            $e['cartas_semanal_ref'] = $cartas['costo_semanal_ref'] ?? null;
+            $e['cartas_semanal_apoyo'] = $cartas['costo_semanal_apoyo'] ?? null;
+            $e['cartas_anual_ref'] = $cartas['costo_anual_ref'] ?? null;
+            $e['cartas_anual_apoyo'] = $cartas['costo_anual_apoyo'] ?? null;
             $mod = $e['modalidad'] ?? 'regular';
             $modLabel = $modalidades[$mod] ?? $mod;
             $edadTxt = catalog_edad_rango_texto(
@@ -266,6 +286,21 @@ operativo_cncm_ensure_schema($pdo);
           <label>Mensualidad cartas ref. / apoyo</label>
           <input type="number" name="cartas_mensualidad_ref" id="esp-cartas-men-ref" min="0" step="0.01" <?php echo $puedeEditarCostos ? '' : 'readonly'; ?>>
           <input type="number" name="cartas_mensualidad_apoyo" id="esp-cartas-men-apoyo" min="0" step="0.01" style="margin-top:6px;" <?php echo $puedeEditarCostos ? '' : 'readonly'; ?>>
+        </div>
+        <div>
+          <label>Pronto pago cartas ref. / apoyo</label>
+          <input type="number" name="cartas_pronto_pago_ref" id="esp-cartas-pp-ref" min="0" step="0.01" <?php echo $puedeEditarCostos ? '' : 'readonly'; ?>>
+          <input type="number" name="cartas_pronto_pago_apoyo" id="esp-cartas-pp-apoyo" min="0" step="0.01" style="margin-top:6px;" <?php echo $puedeEditarCostos ? '' : 'readonly'; ?>>
+        </div>
+        <div>
+          <label>Semanal cartas ref. / apoyo</label>
+          <input type="number" name="cartas_semanal_ref" id="esp-cartas-sem-ref" min="0" step="0.01" <?php echo $puedeEditarCostos ? '' : 'readonly'; ?>>
+          <input type="number" name="cartas_semanal_apoyo" id="esp-cartas-sem-apoyo" min="0" step="0.01" style="margin-top:6px;" <?php echo $puedeEditarCostos ? '' : 'readonly'; ?>>
+        </div>
+        <div>
+          <label>Anual cartas ref. / apoyo</label>
+          <input type="number" name="cartas_anual_ref" id="esp-cartas-anual-ref" min="0" step="0.01" <?php echo $puedeEditarCostos ? '' : 'readonly'; ?>>
+          <input type="number" name="cartas_anual_apoyo" id="esp-cartas-anual-apoyo" min="0" step="0.01" style="margin-top:6px;" <?php echo $puedeEditarCostos ? '' : 'readonly'; ?>>
         </div>
         <div class="full" style="border-top:1px dashed #eee; padding-top:10px;">
           <strong>Venta temporal (opcional)</strong>
@@ -476,6 +511,12 @@ operativo_cncm_ensure_schema($pdo);
     set('esp-cartas-insc-apoyo', data?.cartas_inscripcion_apoyo ?? '450');
     set('esp-cartas-men-ref', data?.cartas_mensualidad_ref ?? '');
     set('esp-cartas-men-apoyo', data?.cartas_mensualidad_apoyo ?? '');
+    set('esp-cartas-pp-ref', data?.cartas_pronto_pago_ref ?? '');
+    set('esp-cartas-pp-apoyo', data?.cartas_pronto_pago_apoyo ?? '');
+    set('esp-cartas-sem-ref', data?.cartas_semanal_ref ?? '');
+    set('esp-cartas-sem-apoyo', data?.cartas_semanal_apoyo ?? '');
+    set('esp-cartas-anual-ref', data?.cartas_anual_ref ?? '');
+    set('esp-cartas-anual-apoyo', data?.cartas_anual_apoyo ?? '');
     set('esp-fecha-inicio', data?.fecha_inicio_venta ?? '');
     set('esp-fecha-fin', data?.fecha_fin_venta ?? '');
     document.getElementById('esp-cuatrimestre').value = data && data.costo_cuatrimestre ? data.costo_cuatrimestre : '0';
@@ -686,6 +727,31 @@ operativo_cncm_ensure_schema($pdo);
     if (data.status === 'ok' && data.seccion) {
       cerrarModal();
       cargarSeccion(data.seccion);
+    }
+  });
+
+  const espCsvUrl = <?php echo json_encode(hay_asset_url('php/especialidad_csv_api.php'), JSON_UNESCAPED_UNICODE); ?>;
+  document.getElementById('esp-csv-file')?.addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!file) return;
+    if (!confirm('¿Actualizar costos de especialidades desde «' + file.name + '»?')) return;
+    const fd = new FormData();
+    fd.append('action', 'upload');
+    fd.append('csv', file);
+    try {
+      const res = await fetch(espCsvUrl, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
+      const data = await res.json();
+      let text = data.message || '';
+      if (data.errores && data.errores.length) {
+        text += '\n' + data.errores.slice(0, 5).join('\n');
+      }
+      showMsg(data.status === 'ok', text);
+      if (data.status === 'ok' && typeof cargarSeccion === 'function') {
+        cargarSeccion('admin_especialidades');
+      }
+    } catch (err) {
+      showMsg(false, 'Error de red al subir CSV');
     }
   });
 
