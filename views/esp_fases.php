@@ -61,7 +61,21 @@ $evalIcons = [
 <div class="catalog-wrap">
   <div class="catalog-header">
     <h2><i class="fas fa-layer-group"></i> Fases por especialidad</h2>
-    <button type="button" class="primary" id="btn-nueva-fase" title="Nueva fase"><i class="fas fa-plus"></i> Nueva fase</button>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <?php if ($idEsp > 0): ?>
+        <a class="secondary" href="<?php echo htmlspecialchars(hay_asset_url('php/fase_api.php?action=csv_download&id_especialidad=' . (int) $idEsp), ENT_QUOTES, 'UTF-8'); ?>">
+          <i class="fas fa-download"></i> CSV fases
+        </a>
+        <a class="secondary" href="<?php echo htmlspecialchars(hay_asset_url('php/fase_api.php?action=csv_plantilla&id_especialidad=' . (int) $idEsp), ENT_QUOTES, 'UTF-8'); ?>">
+          <i class="fas fa-file-csv"></i> Plantilla
+        </a>
+        <label class="secondary" style="cursor:pointer; margin:0;">
+          <i class="fas fa-upload"></i> Subir CSV
+          <input type="file" id="fase-csv-file" accept=".csv,text/csv" style="display:none;">
+        </label>
+      <?php endif; ?>
+      <button type="button" class="primary" id="btn-nueva-fase" title="Nueva fase"><i class="fas fa-plus"></i> Nueva fase</button>
+    </div>
   </div>
 
   <div class="catalog-toolbar">
@@ -717,5 +731,30 @@ $evalIcons = [
       cargarSeccion('esp_fases', 'id_especialidad=' + document.getElementById('fase-id-esp').value);
     }
   };
+
+  document.getElementById('fase-csv-file')?.addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!file) return;
+    if (!confirm('¿Actualizar fases desde «' + file.name + '»?')) return;
+    const fd = new FormData();
+    fd.append('action', 'csv_upload');
+    fd.append('id_especialidad', document.getElementById('fase-id-esp').value || '0');
+    fd.append('csv', file);
+    try {
+      const r = await fetch('php/fase_api.php', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
+      const data = await r.json();
+      let text = data.message || '';
+      if (data.errores && data.errores.length) {
+        text += ' — ' + data.errores.slice(0, 3).join('; ');
+      }
+      showMsg(text, data.status === 'ok');
+      if (data.status === 'ok') {
+        cargarSeccion('esp_fases', 'id_especialidad=' + document.getElementById('fase-id-esp').value);
+      }
+    } catch (err) {
+      showMsg('Error de red al subir CSV', false);
+    }
+  });
 })();
 </script>

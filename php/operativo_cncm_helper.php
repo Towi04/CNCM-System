@@ -134,6 +134,14 @@ function operativo_cncm_cartas_schema(PDO $pdo): void
             PRIMARY KEY (id_especialidad)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
+    if (function_exists('plantel_ensure_column')) {
+        plantel_ensure_column($pdo, 'especialidad_tarifa_cartas', 'costo_pronto_pago_ref', 'DECIMAL(12,2) NOT NULL DEFAULT 0', 'costo_mensualidad_apoyo');
+        plantel_ensure_column($pdo, 'especialidad_tarifa_cartas', 'costo_pronto_pago_apoyo', 'DECIMAL(12,2) NOT NULL DEFAULT 0', 'costo_pronto_pago_ref');
+        plantel_ensure_column($pdo, 'especialidad_tarifa_cartas', 'costo_semanal_ref', 'DECIMAL(12,2) NOT NULL DEFAULT 0', 'costo_pronto_pago_apoyo');
+        plantel_ensure_column($pdo, 'especialidad_tarifa_cartas', 'costo_semanal_apoyo', 'DECIMAL(12,2) NOT NULL DEFAULT 0', 'costo_semanal_ref');
+        plantel_ensure_column($pdo, 'especialidad_tarifa_cartas', 'costo_anual_ref', 'DECIMAL(12,2) NOT NULL DEFAULT 0', 'costo_semanal_apoyo');
+        plantel_ensure_column($pdo, 'especialidad_tarifa_cartas', 'costo_anual_apoyo', 'DECIMAL(12,2) NOT NULL DEFAULT 0', 'costo_anual_ref');
+    }
     $pdo->exec(
         'CREATE TABLE IF NOT EXISTS inscripcion_cartas_campana (
             id_campana INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -299,6 +307,12 @@ function operativo_cncm_tarifas_especialidad(array $esp, bool $cartas = false): 
             'inscripcion_apoyo' => (float) ($esp['cartas_inscripcion_apoyo'] ?? 450),
             'mensualidad_ref' => (float) ($esp['cartas_mensualidad_ref'] ?? $esp['costo_mensualidad_referencia'] ?? 0),
             'mensualidad_apoyo' => (float) ($esp['cartas_mensualidad_apoyo'] ?? $esp['costo_mensualidad_apoyo'] ?? 0),
+            'pronto_ref' => (float) ($esp['cartas_pronto_pago_ref'] ?? $esp['costo_pronto_pago_referencia'] ?? 0),
+            'pronto_apoyo' => (float) ($esp['cartas_pronto_pago_apoyo'] ?? $esp['costo_pronto_pago_apoyo'] ?? 0),
+            'semanal_ref' => (float) ($esp['cartas_semanal_ref'] ?? $esp['costo_semanal_referencia'] ?? 0),
+            'semanal_apoyo' => (float) ($esp['cartas_semanal_apoyo'] ?? $esp['costo_semanal_apoyo'] ?? 0),
+            'anual_ref' => (float) ($esp['cartas_anual_ref'] ?? $esp['costo_anual'] ?? 0),
+            'anual_apoyo' => (float) ($esp['cartas_anual_apoyo'] ?? $esp['costo_anual'] ?? 0),
         ];
     }
 
@@ -339,19 +353,34 @@ function operativo_cncm_guardar_cartas(PDO $pdo, int $idEspecialidad, array $dat
     $pdo->prepare(
         'INSERT INTO especialidad_tarifa_cartas (
             id_especialidad, costo_inscripcion_ref, costo_inscripcion_apoyo,
-            costo_mensualidad_ref, costo_mensualidad_apoyo
-        ) VALUES (?,?,?,?,?)
+            costo_mensualidad_ref, costo_mensualidad_apoyo,
+            costo_pronto_pago_ref, costo_pronto_pago_apoyo,
+            costo_semanal_ref, costo_semanal_apoyo,
+            costo_anual_ref, costo_anual_apoyo
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
          ON DUPLICATE KEY UPDATE
             costo_inscripcion_ref = VALUES(costo_inscripcion_ref),
             costo_inscripcion_apoyo = VALUES(costo_inscripcion_apoyo),
             costo_mensualidad_ref = VALUES(costo_mensualidad_ref),
-            costo_mensualidad_apoyo = VALUES(costo_mensualidad_apoyo)'
+            costo_mensualidad_apoyo = VALUES(costo_mensualidad_apoyo),
+            costo_pronto_pago_ref = VALUES(costo_pronto_pago_ref),
+            costo_pronto_pago_apoyo = VALUES(costo_pronto_pago_apoyo),
+            costo_semanal_ref = VALUES(costo_semanal_ref),
+            costo_semanal_apoyo = VALUES(costo_semanal_apoyo),
+            costo_anual_ref = VALUES(costo_anual_ref),
+            costo_anual_apoyo = VALUES(costo_anual_apoyo)'
     )->execute([
         $idEspecialidad,
         catalog_money($data['cartas_inscripcion_ref'] ?? 0),
         catalog_money($data['cartas_inscripcion_apoyo'] ?? 450),
         catalog_money($data['cartas_mensualidad_ref'] ?? 0),
         catalog_money($data['cartas_mensualidad_apoyo'] ?? 0),
+        catalog_money($data['cartas_pronto_pago_ref'] ?? 0),
+        catalog_money($data['cartas_pronto_pago_apoyo'] ?? 0),
+        catalog_money($data['cartas_semanal_ref'] ?? 0),
+        catalog_money($data['cartas_semanal_apoyo'] ?? 0),
+        catalog_money($data['cartas_anual_ref'] ?? 0),
+        catalog_money($data['cartas_anual_apoyo'] ?? 0),
     ]);
 }
 
