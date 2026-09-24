@@ -25,11 +25,15 @@ the non-obvious things a startup script does NOT handle.
    ```
    Login page: `http://127.0.0.1:8000/index.php`, dashboard: `dashboard.php`.
 
-### Required config file (gitignored, must exist)
+### Required config file (gitignored, must exist on the server)
 
-`config.local.php` at the repo root is **required** and gitignored (see
-`config.local.php.example`). It must define `HAY_DB_HOST`/`HAY_DB_NAME`/`HAY_DB_USER`/
-`HAY_DB_PASS`. A dev copy already exists in this VM; recreate it if missing.
+`config.local.php` at the repo root is **required on Neubox/production** and is
+gitignored (see `config.local.php.example`). It must define `HAY_DB_HOST` /
+`HAY_DB_NAME` / `HAY_DB_USER` / `HAY_DB_PASS`.
+
+Do **not** put real passwords in `php/db_config_helper.php` — that file is tracked
+by git. Optional alternative: a root `.env` with the same `HAY_DB_*` keys (also
+gitignored; see `.env.example`).
 
 ### Database setup (fresh DB only) — use `scripts/dev_setup_db.php`
 
