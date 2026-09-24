@@ -3,10 +3,10 @@
 /**
  * Credenciales MySQL — misma lógica que config.php (para diagnósticos y scripts).
  *
+ * NO poner usuario/clave reales en este archivo (está en git).
  * Orden de prioridad:
- * 1) Constantes ya definidas (p. ej. vía config.local.php en Neubox)
- * 2) Variables de entorno / archivo .env (HAY_DB_*)
- * 3) Valores por defecto del hosting (mismo fallback histórico de este helper)
+ * 1) Constantes (config.local.php en el servidor — gitignored)
+ * 2) Variables de entorno / archivo .env (también gitignored)
  *
  * @return array{host:string,db:string,user:string,pass:string}
  */
@@ -21,17 +21,11 @@ function hay_db_credentials(): array
         }
     }
 
-    // Fallback histórico (Neubox): si no hay config.local.php ni .env, usa estos valores.
-    $host = hay_db_resolve_setting('HAY_DB_HOST', 'localhost');
-    $db = hay_db_resolve_setting('HAY_DB_NAME', 'cncmedum_hay_system');
-    $user = hay_db_resolve_setting('HAY_DB_USER', 'cncmedum_tovar');
-    $pass = hay_db_resolve_setting('HAY_DB_PASS', 'ZXCVqwer1234!"#$');
-
     return [
-        'host' => $host,
-        'db' => $db,
-        'user' => $user,
-        'pass' => $pass,
+        'host' => hay_db_resolve_setting('HAY_DB_HOST', 'localhost'),
+        'db' => hay_db_resolve_setting('HAY_DB_NAME', 'cncmedum_hay_system'),
+        'user' => hay_db_resolve_setting('HAY_DB_USER', ''),
+        'pass' => hay_db_resolve_setting('HAY_DB_PASS', ''),
     ];
 }
 

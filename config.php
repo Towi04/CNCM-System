@@ -80,6 +80,11 @@ $hayLocalConfig = is_file(__DIR__ . '/config.local.php');
 $hayDotEnv = is_file(__DIR__ . '/.env');
 
 try {
+    if ($user === '') {
+        throw new PDOException(
+            'Faltan credenciales MySQL: cree config.local.php o .env en la raíz del servidor (no van en git).'
+        );
+    }
     $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
     /** @var PDO $pdo */
     $pdo = new PDO($dsn, $user, $pass, [
@@ -89,11 +94,11 @@ try {
     $GLOBALS['pdo'] = $pdo;
 } catch (PDOException $e) {
     if ($hayLocalConfig) {
-        $hint = 'Revise HAY_DB_* en config.local.php (tiene prioridad sobre db_config_helper.php).';
+        $hint = 'Revise HAY_DB_HOST/NAME/USER/PASS en config.local.php del servidor.';
     } elseif ($hayDotEnv) {
-        $hint = 'Revise HAY_DB_* en .env (tiene prioridad sobre los defaults de php/db_config_helper.php).';
+        $hint = 'Revise HAY_DB_HOST/NAME/USER/PASS en el archivo .env del servidor.';
     } else {
-        $hint = 'Sin config.local.php ni .env: se usan los defaults de php/db_config_helper.php (usuario/clave del hosting). Si cambió la clave en cPanel/Neubox, cree config.local.php o actualice ese helper.';
+        $hint = 'En Neubox cree config.local.php (recomendado) o .env con HAY_DB_*. Plantillas: config.local.php.example / .env.example. No ponga secretos en php/db_config_helper.php (está en git).';
     }
     http_response_code(503);
     die('Error de conexion: ' . $e->getMessage() . ' — ' . $hint);
