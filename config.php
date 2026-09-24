@@ -80,9 +80,6 @@ $hayLocalConfig = is_file(__DIR__ . '/config.local.php');
 $hayDotEnv = is_file(__DIR__ . '/.env');
 
 try {
-    if ($user === '') {
-        throw new PDOException('Usuario de base de datos vacío (defina HAY_DB_USER)');
-    }
     $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
     /** @var PDO $pdo */
     $pdo = new PDO($dsn, $user, $pass, [
@@ -92,11 +89,11 @@ try {
     $GLOBALS['pdo'] = $pdo;
 } catch (PDOException $e) {
     if ($hayLocalConfig) {
-        $hint = 'Revise HAY_DB_* en config.local.php en el servidor Neubox y que MySQL esté activo.';
+        $hint = 'Revise HAY_DB_* en config.local.php (tiene prioridad sobre db_config_helper.php).';
     } elseif ($hayDotEnv) {
-        $hint = 'Revise HAY_DB_HOST / HAY_DB_NAME / HAY_DB_USER / HAY_DB_PASS en el archivo .env del servidor.';
+        $hint = 'Revise HAY_DB_* en .env (tiene prioridad sobre los defaults de php/db_config_helper.php).';
     } else {
-        $hint = 'En Neubox cree config.local.php o .env en la raíz (no van en git). Plantillas: config.local.php.example / .env.example.';
+        $hint = 'Sin config.local.php ni .env: se usan los defaults de php/db_config_helper.php (usuario/clave del hosting). Si cambió la clave en cPanel/Neubox, cree config.local.php o actualice ese helper.';
     }
     http_response_code(503);
     die('Error de conexion: ' . $e->getMessage() . ' — ' . $hint);
