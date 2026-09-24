@@ -29,5 +29,7 @@ try {
 } catch (Throwable $e) {
     http_response_code(500);
     echo 'DB ERROR: ' . $e->getMessage() . "\n";
-    echo "Revise config.local.php: HAY_DB_USER y HAY_DB_PASS (usuario completo de cPanel, ej. cncmedum_tovar).\n";
+    echo "Revise config.local.php o .env: HAY_DB_USER y HAY_DB_PASS (usuario completo de cPanel, ej. cncmedum_tovar).\n";
+    echo 'Fuentes: config.local.php=' . (is_file(dirname(__DIR__) . '/config.local.php') ? 'sí' : 'no')
+        . ' | .env=' . (is_file(dirname(__DIR__) . '/.env') ? 'sí' : 'no') . "\n";
 }
