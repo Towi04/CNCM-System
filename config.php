@@ -74,6 +74,7 @@ $db   = $creds['db'];
 $user = $creds['user'];
 $pass = $creds['pass'];
 $charset = 'utf8mb4';
+$hayLocalConfig = is_file(__DIR__ . '/config.local.php');
 
 try {
     $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
@@ -84,7 +85,11 @@ try {
     ]);
     $GLOBALS['pdo'] = $pdo;
 } catch (PDOException $e) {
-    die("Error de conexion: " . $e->getMessage());
+    $hint = $hayLocalConfig
+        ? 'Revise HAY_DB_HOST / HAY_DB_NAME / HAY_DB_USER / HAY_DB_PASS en config.local.php y que MySQL esté activo.'
+        : 'Falta config.local.php en la raíz del proyecto (archivo gitignored). Créelo de nuevo desde config.local.php.example con las credenciales de cPanel; no se regenera al desplegar.';
+    http_response_code(503);
+    die('Error de conexion: ' . $e->getMessage() . ' — ' . $hint);
 }
 
 require_once __DIR__ . '/php/encoding_helper.php';
