@@ -63,10 +63,10 @@ $evalIcons = [
     <h2><i class="fas fa-layer-group"></i> Fases por especialidad</h2>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
       <?php if ($idEsp > 0): ?>
-        <a class="secondary" href="<?php echo htmlspecialchars(hay_asset_url('php/fase_api.php?action=csv_download&id_especialidad=' . (int) $idEsp), ENT_QUOTES, 'UTF-8'); ?>">
+        <a class="secondary" href="<?php echo htmlspecialchars(hay_asset_url('php/fase_api.php?action=csv_download&id_especialidad=' . (int) $idEsp), ENT_QUOTES, 'UTF-8'); ?>" title="Descarga fases y semanas (tema, objetivo, contenido, proyecto)">
           <i class="fas fa-download"></i> CSV fases
         </a>
-        <a class="secondary" href="<?php echo htmlspecialchars(hay_asset_url('php/fase_api.php?action=csv_plantilla&id_especialidad=' . (int) $idEsp), ENT_QUOTES, 'UTF-8'); ?>">
+        <a class="secondary" href="<?php echo htmlspecialchars(hay_asset_url('php/fase_api.php?action=csv_plantilla&id_especialidad=' . (int) $idEsp), ENT_QUOTES, 'UTF-8'); ?>" title="Plantilla con ejemplos y tipos de cada columna">
           <i class="fas fa-file-csv"></i> Plantilla
         </a>
         <label class="secondary" style="cursor:pointer; margin:0;">
@@ -115,6 +115,12 @@ $evalIcons = [
       <span><?php echo htmlspecialchars($espActual['modalidad']); ?></span>
       <span><i class="far fa-calendar"></i> <?php echo (int)$durHint; ?> semanas por parcial</span>
     </div>
+    <p class="fase-csv-hint" style="margin:8px 0 12px; font-size:0.9rem; color:#555; max-width:920px;">
+      <i class="fas fa-info-circle"></i>
+      El CSV incluye una <strong>fila por semana</strong> con las columnas del formulario Semanas:
+      <code>titulo_leccion</code> (Tema/lección), <code>objetivo_semana</code>, <code>contenido_clase</code>, <code>proyecto_tipo</code>.
+      La plantilla trae una fila de tipos (texto/número) y 4 semanas de ejemplo; las columnas <code>eval_*</code> son texto de criterios, no porcentajes.
+    </p>
   <?php endif; ?>
 
   <div id="resp-fases" class="catalog-alert" style="display:none;"></div>
