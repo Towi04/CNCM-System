@@ -1,0 +1,26 @@
+INSTALACIÓN EN XAMPP (solo extractor, sin el Portal HAY)
+=======================================================
+
+1. Usa UNA carpeta limpia, por ejemplo:
+   C:\xampp\htdocs\migracion_csv\
+
+   Si mezclaste archivos del Portal (index.php de login), verás el error:
+   "session_helper.php" — bórralo y usa SOLO los archivos de esta carpeta.
+
+2. Archivos necesarios aquí:
+   - index.php
+   - export.php
+   - lib.php
+   - config.example.php  → copiar a config.php y editar
+   - grupos_filtro.example.txt → copiar a grupos_filtro.txt y listar grupos
+
+3. En config.php: host, usuario, password y nombre de la BD legado en MySQL local.
+
+4. XAMPP: Apache + MySQL encendidos.
+
+5. Abrir:
+   http://localhost/migracion_csv/
+
+El index.php correcto DEBE empezar con:
+   require_once __DIR__ . '/lib.php';
+NO debe mencionar session_helper.php.
