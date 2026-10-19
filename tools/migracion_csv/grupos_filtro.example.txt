@@ -1,0 +1,5 @@
+# Lista de grupos activos a exportar (un id numérico o clave legado por línea).
+# Copiar a grupos_filtro.txt y editar.
+# Ejemplos:
+# 1234
+# IS-LEGADO-01

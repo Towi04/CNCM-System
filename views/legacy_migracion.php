@@ -17,6 +17,9 @@ $mapeoUrl = hay_asset_url('php/legacy_mapeo_api.php');
     <p style="color:#666; margin:0; max-width:820px;">
       Importe por fases con <strong>previsualización</strong> antes de aplicar. Los planteles y especialidades del nuevo sistema se respetan;
       usted define equivalencias. Los grupos reciben <strong>clave CNCM nueva</strong> y la clave anterior queda en <code>clave_anterior</code>.
+      Si la BD legado no cabe en el servidor, use
+      <a href="#" onclick="cargarSeccion('migracion_csv'); return false;">Migración CSV</a>
+      (extractor local en <code>tools/migracion_csv/</code>).
     </p>
   </div>
 

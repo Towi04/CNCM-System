@@ -393,6 +393,9 @@ function menu_cncm_director_items(): array
 
         ['callback' => 'supervisor_grupos_historico_puede_ver', 'seccion' => 'supervisor_grupos_historico', 'icon' => 'fa-history', 'text' => 'Carga histórica grupos', 'title' => 'Carga histórica de grupos', 'breadcrumb' => 'CARGA HISTÓRICA'],
 
+        ['callback' => 'migracion_csv_puede', 'seccion' => 'migracion_csv', 'icon' => 'fa-file-csv', 'text' => 'Migración CSV', 'title' => 'Migración selectiva legado por CSV', 'breadcrumb' => 'MIGRACIÓN CSV'],
+
+
         ['cap' => 'menu_consulta_adeudo', 'seccion' => 'consulta_adeudo', 'icon' => 'fa-calculator', 'text' => 'Consulta de adeudo', 'title' => 'Consulta de adeudo', 'breadcrumb' => 'CONSULTA ADEUDO'],
 
         ['callback' => 'operativo_piso_puede_ver', 'seccion' => 'piso_operativo', 'icon' => 'fa-concierge-bell', 'text' => 'Piso operativo', 'title' => 'Entrega documentos y cobranza', 'breadcrumb' => 'PISO OPERATIVO'],
@@ -849,7 +852,10 @@ function menu_cncm_secciones_por_rol(): array
 
                 ['seccion' => 'supervisor_grupos_historico', 'icon' => 'fa-history', 'text' => 'Carga histórica grupos', 'title' => 'Carga histórica de grupos', 'breadcrumb' => 'CARGA HISTÓRICA'],
 
+                ['callback' => 'migracion_csv_puede', 'seccion' => 'migracion_csv', 'icon' => 'fa-file-csv', 'text' => 'Migración CSV', 'title' => 'Migración selectiva legado por CSV', 'breadcrumb' => 'MIGRACIÓN CSV'],
+
                 ['seccion' => 'reporte_bajas', 'icon' => 'fa-user-slash', 'text' => 'Reporte de bajas', 'title' => 'Reporte de bajas', 'breadcrumb' => 'REPORTE BAJAS'],
+
 
                 ['seccion' => 'manuales_stock', 'icon' => 'fa-boxes', 'text' => 'Stock manuales', 'title' => 'Stock de manuales', 'breadcrumb' => 'STOCK MANUALES'],
 
