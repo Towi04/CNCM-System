@@ -6,6 +6,9 @@
 config.local.php
 config.mail.php
 google_key.json
+tools/migracion_csv/config.php
+tools/migracion_csv/grupos_filtro.txt
+
 /downloads/**/*.exe
 /downloads/**/*.msi
 
