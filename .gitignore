@@ -1,6 +1,7 @@
 /vendor/
 /uploads/examenes/*.pdf
 /uploads/examenes/*.csv
+.env
 .env.local
 config.local.php
 config.mail.php

@@ -1,7 +1,12 @@
 <?php
 /**
- * Copie como config.local.php en la raíz de HAY (no subir a producción con datos locales).
- * En XAMPP suele bastar definir la base de datos; HAY_WEB_ROOT solo si las rutas CSS/JS fallan.
+ * Credenciales en el servidor (Neubox) — elija UNA opción:
+ *
+ * A) Este archivo: cópielo como config.local.php en la raíz de HAY (recomendado en PHP).
+ * B) Archivo .env en la raíz con HAY_DB_* (ver .env.example).
+ *
+ * Ninguno de los dos se versiona en git; deben existir solo en el hosting.
+ * En XAMPP local suele bastar definir la base; HAY_WEB_ROOT solo si las rutas CSS/JS fallan.
  */
 
 /** XAMPP: carpeta en htdocs (ej. C:\xampp\htdocs\hay → http://localhost/hay/) */
@@ -11,8 +16,8 @@
 // define('HAY_WEB_ROOT', '');
 
 /**
- * MySQL — en cPanel use el usuario COMPLETO (ej. cncmedum_tovar), no solo "cncmedum".
- * Las cuatro líneas son obligatorias en producción.
+ * MySQL — en cPanel/Neubox use el usuario COMPLETO (ej. cncmedum_tovar), no solo "cncmedum".
+ * Las cuatro líneas son obligatorias si no usa .env.
  */
 define('HAY_DB_HOST', 'localhost');
 define('HAY_DB_NAME', 'cncmedum_hay_system');
