@@ -1,4 +1,8 @@
 <?php
+if (!defined('HAY_ROOT')) {
+    define('HAY_ROOT', __DIR__);
+}
+require_once __DIR__ . '/php/maintenance_guard.php';
 require_once __DIR__ . '/php/session_helper.php';
 hay_session_start();
 

@@ -1,11 +1,13 @@
 <?php
 /**
- * Credenciales en el servidor (Neubox) — elija UNA opción:
+ * Credenciales en el servidor (GCP / local) — elija UNA opción:
  *
  * A) Este archivo: cópielo como config.local.php en la raíz de HAY (recomendado en PHP).
  * B) Archivo .env en la raíz con HAY_DB_* (ver .env.example).
  *
  * Ninguno de los dos se versiona en git; deben existir solo en el hosting.
+ * Producción GCP: /var/www/sistema + BD hay_system
+ * Pruebas GCP:    /var/www/sistema-pruebas + BD hay_system_pruebas
  * En XAMPP local suele bastar definir la base; HAY_WEB_ROOT solo si las rutas CSS/JS fallan.
  */
 
@@ -48,23 +50,25 @@ define('HAY_DB_PASS', 'PONER_AQUI_LA_CLAVE_DE_CPANEL');
 // define('MOODLE_URL', 'https://www.cncm.edu.mx/courses');
 // define('MOODLE_TOKEN', '');
 
-/** Sugerencias de planeación con IA */
-// Proveedor: 'openrouter' | 'gemini' | 'auto' (auto = OpenRouter si hay clave, si no Gemini)
-// define('HAY_AI_PROVIDER', 'openrouter');
+/** Sugerencias de planeación + Tutor IA para alumnos */
+// En GCP se recomienda Gemini (cuota gratuita en AI Studio) con prioridad al tutor de alumnos.
+// Proveedor: 'gemini' | 'openrouter' | 'auto' (auto = OpenRouter si hay clave, si no Gemini)
+// define('HAY_AI_PROVIDER', 'gemini');
 
-/** OpenRouter — https://openrouter.ai/keys (acceso a OpenAI, Claude, etc.) */
+/** Google Gemini — https://aistudio.google.com/apikey */
+// define('GEMINI_API_KEY', 'su-clave-de-google-ai-studio');
+
+/** OpenRouter — https://openrouter.ai/keys (pago / modelos varios) */
 // define('OPENROUTER_API_KEY', 'sk-or-v1-...');
 // define('OPENROUTER_MODEL', 'openai/gpt-4o');
 // define('OPENROUTER_SITE_URL', 'https://sistema.cncm.edu.mx');
 // define('OPENROUTER_SITE_NAME', 'Portal CNCM');
 
-/** Google Gemini (alternativa) */
-// define('GEMINI_API_KEY', 'su-clave-de-google-ai-studio');
-
-/** Tutor Académico IA */
+/** Tutor Académico IA (alumnos) */
 // define('OPENROUTER_TUTOR_MODEL', 'openai/gpt-4o');
 // define('OPENROUTER_TUTOR_MAX_TOKENS', 1800);
 // define('TUTOR_MOODLE_API_KEY', 'clave-secreta-para-api-moodle');
+// define('MOODLE_URL', 'https://aula.cncm.edu.mx');
 
 /**
  * Si el token no lista cursos (permisos), mapa shortname/idnumber → ID interno mdl_course.id.
