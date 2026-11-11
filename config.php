@@ -56,6 +56,8 @@ if (is_file(__DIR__ . '/config.local.php')) {
     require __DIR__ . '/config.local.php';
 }
 
+require_once __DIR__ . '/php/maintenance_guard.php';
+
 require_once __DIR__ . '/php/db_config_helper.php';
 hay_load_dotenv_once();
 

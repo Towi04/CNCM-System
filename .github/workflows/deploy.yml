@@ -1,14 +1,78 @@
-name: Trigger Server Update
+name: Deploy GCP
 
 on:
   push:
     branches:
+      - develop
       - main
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Entorno a desplegar"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: deploy-${{ github.event.inputs.target || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  refresh:
+  deploy-staging:
+    name: Deploy staging
+    if: >
+      github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'staging'
+      || github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
+    environment: staging
     steps:
-      - name: Call Deployment Script
-        run: |
-          curl -s "http://sistema.cncm.edu.mx/upload_version.php?run=${{ github.run_id }}"
+      - name: Deploy to staging via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.GCP_SSH_HOST }}
+          username: ${{ secrets.GCP_SSH_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            export TARGET=staging
+            export REF=develop
+            cd /var/www/sistema-pruebas
+            if [ -f scripts/gcp/deploy_release.sh ]; then
+              bash scripts/gcp/deploy_release.sh
+            else
+              # First deploy after bootstrap, before script exists on disk
+              git fetch --prune origin
+              git checkout -B develop origin/develop
+              git reset --hard origin/develop
+              sudo systemctl reload apache2 || true
+            fi
+
+  deploy-production:
+    name: Deploy production
+    if: >
+      github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'production'
+      || github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy to production via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.GCP_SSH_HOST }}
+          username: ${{ secrets.GCP_SSH_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            export TARGET=production
+            export REF=main
+            cd /var/www/sistema
+            if [ -f scripts/gcp/deploy_release.sh ]; then
+              bash scripts/gcp/deploy_release.sh
+            else
+              echo "Falta scripts/gcp/deploy_release.sh en producción. Convierta /var/www/sistema a clone git primero." >&2
+              exit 1
+            fi
