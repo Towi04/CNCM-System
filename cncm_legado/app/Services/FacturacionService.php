@@ -9,27 +9,49 @@ class FacturacionService
 {
     protected $cliente;
 
-    protected $facturacom;
+    protected $facturacom = [];
+
+    /** false si falta FACTURACOM_ENVIRONMENT / config; evita 500 en pantallas que solo listan CFDI. */
+    protected $configured = false;
 
     public function __construct()
     {
         $enviroment = env('FACTURACOM_ENVIRONMENT');
 
-        if(empty($enviroment)) {
-            throw new \Exception("No has definio FACTURACOM_ENVIRONMENT", 1);
+        if (empty($enviroment)) {
+            \Log::warning('FacturacionService: FACTURACOM_ENVIRONMENT no definido');
+            return;
         }
 
         $this->facturacom = config('facturacom')[$enviroment] ?? [];
 
-        if (empty($this->facturacom)) {
-            throw new \Exception("El entorno {$enviroment} para facturacion no esta definido", 1);
+        if (empty($this->facturacom) || empty($this->facturacom['url'] ?? null)) {
+            \Log::warning("FacturacionService: entorno {$enviroment} no configurado en config/facturacom.php");
+            return;
         }
 
         $this->cliente = new Client(['base_uri' => $this->facturacom['url']]);
+        $this->configured = true;
+    }
+
+    public function estaConfigurado(): bool
+    {
+        return $this->configured;
+    }
+
+    protected function requireConfigured(string $accion): void
+    {
+        if (!$this->configured || !$this->cliente) {
+            throw new \RuntimeException("Facturación no configurada (FACTURACOM_ENVIRONMENT). No se puede {$accion}.");
+        }
     }
 
     public function usosCfdi()
     {
+        if (!$this->configured) {
+            return new Collection();
+        }
+
         $response = $this->cliente->get($this->facturacom['url'] . '/api/v3/catalogo/UsoCfdi', [
             'headers' => $this->facturacom['headers'],
         ]);
@@ -41,6 +63,7 @@ class FacturacionService
 
     public function metodoPago()
     {
+        $this->requireConfigured('consultar métodos de pago');
         $response = $this->cliente->get($this->facturacom['url'] . '/api/v3/catalogo/MetodoPago', [
             'headers' => $this->facturacom['headers'],
         ]);
@@ -52,6 +75,7 @@ class FacturacionService
 
     public function formaPago()
     {
+        $this->requireConfigured('consultar formas de pago');
         $response = $this->cliente->get($this->facturacom['url'] . '/api/v3/catalogo/FormaPago', [
             'headers' => $this->facturacom['headers'],
         ]);
@@ -63,6 +87,7 @@ class FacturacionService
 
     public function claveUnidad()
     {
+        $this->requireConfigured('consultar claves de unidad');
         $response = $this->cliente->get($this->facturacom['url'] . '/api/v3/catalogo/ClaveUnidad', [
             'headers' => $this->facturacom['headers'],
         ]);
@@ -74,6 +99,7 @@ class FacturacionService
 
     public function getInfoCliente(string $rfc)
     {
+        $this->requireConfigured('consultar cliente');
         $client = new Client(['base_uri' => $this->facturacom['url']]);
 
         $response = $client->get("{$this->facturacom['url']}/api/v1/clients/{$rfc}", [
@@ -100,6 +126,7 @@ class FacturacionService
 
     public function crearCliente(array $fields)
     {
+        $this->requireConfigured('crear cliente');
         $ch = curl_init();
 
         $jsonfield = json_encode($fields);
@@ -150,6 +177,7 @@ class FacturacionService
 
     public function timbrar(array $fields)
     {
+        $this->requireConfigured('timbrar CFDI');
         $ch = curl_init();
 
         $jsonfield = json_encode($fields);
@@ -205,6 +233,7 @@ class FacturacionService
 
     public function descargar(string $uid,string $filename, string $tipo)
     {
+        $this->requireConfigured('descargar CFDI');
         $ch = curl_init();
 
         curl_setopt($ch, CURLOPT_URL, $this->facturacom['url'] . "/api/v3/cfdi33/{$uid}/{$tipo}");
@@ -230,6 +259,7 @@ class FacturacionService
 
     public function cancelacion(string $uid)
     {
+        $this->requireConfigured('cancelar CFDI');
         $client = new Client(['base_uri' => $this->facturacom['url']]);
 
         $request = $client->get("{$this->facturacom['url']}/api/v3/cfdi33/{$uid}/cancel", [
