@@ -6,6 +6,8 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="{{ asset('icon.jpeg') }}" rel="shortcut icon">
     <link href="{{ asset('icon.jpeg') }}" rel="apple-touch-icon">
     <title>{{ config('app.name') }}</title>
