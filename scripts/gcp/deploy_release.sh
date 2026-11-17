@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Deploy HAY System on the GCP VM.
-# Usage (on the server, as a user with write access to the target dir):
+# Usage (on the server, as deploy user with passwordless sudo for chown/chmod/systemctl):
 #   TARGET=staging REF=develop bash scripts/gcp/deploy_release.sh
 #   TARGET=production REF=main bash scripts/gcp/deploy_release.sh
 set -euo pipefail
 
 TARGET="${TARGET:-staging}"
 REF="${REF:-}"
-REPO_SSH_URL="${REPO_SSH_URL:-git@github.com:Towi04/CNCM-System.git}"
 REPO_HTTPS_URL="${REPO_HTTPS_URL:-https://github.com/Towi04/CNCM-System.git}"
 
 if [[ "$TARGET" == "production" ]]; then
@@ -24,8 +23,10 @@ fi
 REF="${REF:-$DEFAULT_REF}"
 MAINT_FLAG="${APP_DIR}/storage/maintenance.flag"
 WEB_USER="${WEB_USER:-www-data}"
+# User that runs git (GitHub Actions SSH user). Defaults to current user.
+DEPLOY_USER="${DEPLOY_USER:-$(id -un)}"
 
-echo "==> Deploy target=${TARGET} ref=${REF} dir=${APP_DIR}"
+echo "==> Deploy target=${TARGET} ref=${REF} dir=${APP_DIR} as ${DEPLOY_USER}"
 
 if [[ ! -d "$APP_DIR/.git" ]]; then
   echo "ERROR: ${APP_DIR} is not a git checkout. Clone first (see scripts/gcp/bootstrap_staging.sh)." >&2
@@ -34,57 +35,71 @@ fi
 
 cd "$APP_DIR"
 
-# Preserve server-only files
+# Ensure deploy can write the tree (previous runs may have left www-data ownership)
+sudo chown -R "${DEPLOY_USER}:${WEB_USER}" "$APP_DIR"
+sudo chmod -R u+rwX,g+rwX "$APP_DIR"
+
+# Preserve server-only files (may be mode 640 / not readable by deploy)
 preserve=(config.local.php config.mail.php .env google_key.json)
+PRESERVE_DIR="/tmp/hay-preserve-${TARGET}-$$"
+mkdir -p "$PRESERVE_DIR"
 for f in "${preserve[@]}"; do
-  if [[ -f "$f" ]]; then
-    cp -a "$f" "/tmp/hay-preserve-${TARGET}-${f//\//_}"
+  if sudo test -f "$APP_DIR/$f"; then
+    sudo cp -a "$APP_DIR/$f" "$PRESERVE_DIR/$f"
+    sudo chown "${DEPLOY_USER}:${DEPLOY_USER}" "$PRESERVE_DIR/$f"
   fi
 done
 
 if [[ "$TARGET" == "production" ]]; then
   mkdir -p storage
-  date -Is > "$MAINT_FLAG"
+  date -Is | sudo tee "$MAINT_FLAG" >/dev/null
+  sudo chown "${DEPLOY_USER}:${WEB_USER}" "$MAINT_FLAG"
   echo "==> Maintenance ON"
 fi
 
-# Prefer origin; fall back quietly
 git remote get-url origin >/dev/null 2>&1 || git remote add origin "$REPO_HTTPS_URL"
 git fetch --prune origin
 git checkout -B "$REF" "origin/$REF"
 git reset --hard "origin/$REF"
 
 for f in "${preserve[@]}"; do
-  bak="/tmp/hay-preserve-${TARGET}-${f//\//_}"
-  if [[ -f "$bak" ]]; then
-    cp -a "$bak" "$f"
-    rm -f "$bak"
+  if [[ -f "$PRESERVE_DIR/$f" ]]; then
+    # Restore with sudo so mode/owner of directory cannot block write
+    sudo cp -a "$PRESERVE_DIR/$f" "$APP_DIR/$f"
   fi
 done
+rm -rf "$PRESERVE_DIR"
 
 if command -v composer >/dev/null 2>&1; then
   if [[ -f composer.json ]]; then
     echo "==> composer install"
-    sudo -u "$WEB_USER" composer install --no-dev --optimize-autoloader --no-interaction || \
-      composer install --no-dev --optimize-autoloader --no-interaction
+    sudo -u "$WEB_USER" composer install --no-dev --optimize-autoloader --no-interaction 2>/dev/null \
+      || composer install --no-dev --optimize-autoloader --no-interaction \
+      || true
   fi
 fi
 
-# Permissions: keep config private; web tree readable by Apache
-sudo chown -R "$WEB_USER:$WEB_USER" "$APP_DIR"
-sudo find "$APP_DIR" -type d -exec chmod 755 {} \;
-sudo find "$APP_DIR" -type f -exec chmod 644 {} \;
-[[ -f "$APP_DIR/config.local.php" ]] && sudo chmod 640 "$APP_DIR/config.local.php"
+# deploy owns the tree (so next git deploy works); www-data group can read/write app data
+sudo chown -R "${DEPLOY_USER}:${WEB_USER}" "$APP_DIR"
+sudo find "$APP_DIR" -type d -exec chmod 775 {} \;
+sudo find "$APP_DIR" -type f -exec chmod 664 {} \;
+# Secrets: owner deploy, group www-data (Apache can read; deploy can update next run)
+for f in config.local.php config.mail.php .env google_key.json; do
+  if [[ -f "$APP_DIR/$f" ]]; then
+    sudo chown "${DEPLOY_USER}:${WEB_USER}" "$APP_DIR/$f"
+    sudo chmod 640 "$APP_DIR/$f"
+  fi
+done
 [[ -d "$APP_DIR/uploads" ]] && sudo chmod -R ug+rwX "$APP_DIR/uploads"
 [[ -d "$APP_DIR/storage" ]] && sudo chmod -R ug+rwX "$APP_DIR/storage"
 
-# Reload PHP OPcache (validate_timestamps=0 in prod)
-if systemctl is-active --quiet apache2; then
+# Reload PHP OPcache / Apache
+if systemctl is-active --quiet apache2 2>/dev/null; then
   sudo systemctl reload apache2 || true
 fi
 
 if [[ "$TARGET" == "production" ]]; then
-  rm -f "$MAINT_FLAG"
+  sudo rm -f "$MAINT_FLAG"
   echo "==> Maintenance OFF"
 fi
 
