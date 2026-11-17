@@ -212,6 +212,8 @@ require_once __DIR__ . '/php/soporte_helper.php';
 require_once __DIR__ . '/php/legacy_import_helper.php';
 require_once __DIR__ . '/php/legacy_migracion_helper.php';
 require_once __DIR__ . '/php/migracion_csv_helper.php';
+require_once __DIR__ . '/php/maintenance_helper.php';
+require_once __DIR__ . '/php/supervisor_deploy_helper.php';
 
 require_once __DIR__ . '/php/operativo_cncm_helper.php';
 require_once __DIR__ . '/php/plan_version_helper.php';

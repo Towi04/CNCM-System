@@ -323,9 +323,9 @@ function rbac_departamento_para_rol(PDO $pdo, string $claveRol, int $idRol = 0):
     }
 
     return match ($claveRol) {
-        'asesor' => 'ventas',
-        'profesor' => 'ingles',
-        'admin', 'gerente', 'supervisor' => 'administrativo',
+        'asesor', 'gerente', 'marketing' => 'ventas',
+        'profesor', 'coordinador', 'coordinacion' => 'ingles',
+        'admin', 'recepcion', 'imagen', 'manuales', 'supervisor', 'director' => 'administrativo',
         default => 'administrativo',
     };
 }

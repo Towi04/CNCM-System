@@ -886,6 +886,8 @@ function menu_cncm_secciones_por_rol(): array
 
                 ['callback' => 'migracion_csv_puede', 'seccion' => 'migracion_csv', 'icon' => 'fa-file-csv', 'text' => 'Migración CSV', 'title' => 'Migración selectiva legado por CSV', 'breadcrumb' => 'MIGRACIÓN CSV'],
 
+                ['callback' => 'supervisor_deploy_puede', 'seccion' => 'supervisor_deploy', 'icon' => 'fa-rocket', 'text' => 'Mantenimiento / promote', 'title' => 'Modo mantenimiento y promote develop→main', 'breadcrumb' => 'MANTENIMIENTO / PROMOTE'],
+
                 ['seccion' => 'reporte_bajas', 'icon' => 'fa-user-slash', 'text' => 'Reporte de bajas', 'title' => 'Reporte de bajas', 'breadcrumb' => 'REPORTE BAJAS'],
 
 

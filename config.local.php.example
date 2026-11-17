@@ -90,6 +90,14 @@ define('HAY_DB_PASS', 'PONER_AQUI_LA_CLAVE_DE_CPANEL');
 // define('GOOGLE_ADMIN_EMAIL', 'englishcoordinator@cncm.edu.mx');
 // define('GOOGLE_WORKSPACE_DOMAIN', 'cncm.edu.mx');
 
+/**
+ * Promote develop → main desde el panel de supervisión (solo producción/ops).
+ * Cree un fine-grained o classic PAT con permiso Contents: Read and write (o repo)
+ * y Actions: Read (opcional). No suba el token a git.
+ */
+// define('HAY_GITHUB_TOKEN', 'ghp_...');
+// define('HAY_GITHUB_REPO', 'Towi04/CNCM-System');
+
 /** Clave opcional para php/moodle_test.php?paso=crear&key=... sin sesión (solo servidor / ops). */
 // define('MOODLE_DIAG_KEY', 'cambie-esta-clave-larga-y-secreta');
 // Si vendor está en otra ruta en el hosting:
