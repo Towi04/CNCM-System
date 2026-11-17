@@ -10,9 +10,13 @@ class TrustProxies extends Middleware
     /**
      * The trusted proxies for this application.
      *
+     * Behind Apache/Certbot (or any TLS terminator), Laravel must trust
+     * X-Forwarded-Proto or it thinks the request is HTTP. That breaks
+     * Secure session cookies and causes 419 on mobile browsers.
+     *
      * @var array|string|null
      */
-    protected $proxies;
+    protected $proxies = '*';
 
     /**
      * The headers that should be used to detect proxies.

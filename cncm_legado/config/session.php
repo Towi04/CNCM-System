@@ -155,6 +155,9 @@ return [
     |
     */
 
+    // null = host-only cookie for adn.cncm.edu.mx (recommended).
+    // Do NOT use ".cncm.edu.mx" unless you intentionally share cookies
+    // across sistema/aula/adn — that often causes 419 on mobile.
     'domain' => env('SESSION_DOMAIN', null),
 
     /*
@@ -168,7 +171,8 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    // Default true for production HTTPS. Override with SESSION_SECURE_COOKIE=false only on plain HTTP local.
+    'secure' => filter_var(env('SESSION_SECURE_COOKIE', true), FILTER_VALIDATE_BOOLEAN),
 
     /*
     |--------------------------------------------------------------------------
@@ -196,6 +200,6 @@ return [
     |
     */
 
-    'same_site' => 'lax',
+    'same_site' => env('SESSION_SAME_SITE', 'lax'),
 
 ];
