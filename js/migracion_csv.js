@@ -79,12 +79,15 @@
 
   $('migcsv-preview')?.addEventListener('click', async () => {
     const file = $('migcsv-file')?.files?.[0];
+    const tipo = $('migcsv-tipo')?.value || '';
     if (!file) {
       showMsg('Seleccione un archivo CSV', false);
       return;
     }
     const fd = new FormData();
     fd.append('action', 'preview');
+    fd.append('tipo', tipo);
+    fd.append('id_plantel', String(idPlantel));
     fd.append('csv', file);
     try {
       const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
@@ -93,7 +96,11 @@
         showMsg(data.message || 'Error', false);
         return;
       }
-      showMsg('Vista previa: ' + data.total_filas + ' fila(s)', true);
+      let text = 'Vista previa: ' + data.total_filas + ' fila(s)';
+      if (data.errores && data.errores.length) {
+        text += ' — ' + data.errores.slice(0, 2).join('; ');
+      }
+      showMsg(text, true);
       renderPreview(data.headers || [], data.muestra || [], data.total_filas || 0);
     } catch (e) {
       showMsg('Error de red', false);
@@ -107,7 +114,10 @@
       showMsg('Seleccione un archivo CSV', false);
       return;
     }
-    if (!confirm('¿Importar «' + file.name + '» como ' + tipo + '?')) return;
+    const aviso = tipo === 'staff_emails'
+      ? '¿Importar personal y provisionar Google/Moodle?\nSe creará el correo en Google Workspace si no existe.'
+      : '¿Importar «' + file.name + '» como ' + tipo + '?';
+    if (!confirm(aviso)) return;
     const fd = new FormData();
     fd.append('action', 'import');
     fd.append('tipo', tipo);
@@ -127,8 +137,12 @@
     }
   });
 
+  $('migcsv-template')?.addEventListener('click', () => {
+    window.location.href = api + '?action=staff_template';
+  });
+
   $('migcsv-provision')?.addEventListener('click', async () => {
-    if (!confirm('¿Crear correos institucionales y usuarios Moodle para lo ya importado (plantel actual)?')) return;
+    if (!confirm('¿Crear correos institucionales (si faltan) y usuarios Moodle para lo ya importado (plantel actual)?')) return;
     const fd = new FormData();
     fd.append('action', 'provision');
     fd.append('id_plantel', String(idPlantel));

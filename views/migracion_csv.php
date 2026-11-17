@@ -14,9 +14,9 @@ $idPlantel = (int) plantel_id_activo();
   <div class="catalog-header">
     <h2><i class="fas fa-file-csv"></i> Migración CSV (legado → HAY)</h2>
     <p style="color:#666; margin:0; max-width:900px;">
-      Suba los CSV generados con el extractor local (<code>tools/migracion_csv/</code> en XAMPP).
-      Orden recomendado: <strong>personal → aulas → grupos → alumnos → pagos → provisión de cuentas</strong>.
-      Los kids crean pareja IK+CK; la fase se toma de <code>clave_fase_estimada</code> / fecha de inicio.
+      Para personal activo use <strong>Personal por correos</strong> (email + plantel): completa nombre desde Google o legado,
+      crea el usuario en HAY, crea la cuenta en Google Workspace si no existe, y provisiona Moodle.
+      Después podrá importar alumnos activos por grupos.
     </p>
   </div>
 
@@ -27,7 +27,8 @@ $idPlantel = (int) plantel_id_activo();
     <div class="field">
       <label>Tipo de CSV</label>
       <select id="migcsv-tipo">
-        <option value="personal">01 Personal</option>
+        <option value="staff_emails">Personal por correos (recomendado)</option>
+        <option value="personal">01 Personal (legado completo)</option>
         <option value="aulas">02 Aulas</option>
         <option value="grupos">03 Grupos activos</option>
         <option value="alumnos">04 Alumnos</option>
@@ -40,8 +41,11 @@ $idPlantel = (int) plantel_id_activo();
     </div>
     <button type="button" class="secondary" id="migcsv-preview"><i class="fas fa-search"></i> Vista previa</button>
     <button type="button" class="primary" id="migcsv-import"><i class="fas fa-upload"></i> Importar</button>
+    <button type="button" class="secondary" id="migcsv-template" title="Descargar plantilla CSV">
+      <i class="fas fa-download"></i> Plantilla correos
+    </button>
     <button type="button" class="secondary" id="migcsv-provision" title="Google Workspace + Moodle para registros mapeados">
-      <i class="fas fa-user-plus"></i> Provisionar correos / Moodle
+      <i class="fas fa-user-plus"></i> Re-provisionar mapeados
     </button>
   </div>
 
@@ -55,17 +59,24 @@ $idPlantel = (int) plantel_id_activo();
   </div>
 
   <div style="margin-top:16px; font-size:0.9rem; color:#555; max-width:900px;">
-    <p><strong>Claves especialidad:</strong>
+    <p><strong>Personal por correos:</strong> columnas mínimas <code>email</code>, <code>plantel_slug</code>.
+      Opcionales: <code>rol</code> (default <code>profesor</code>), <code>nombres</code>, <code>apellido_paterno</code>, <code>apellido_materno</code>.
+      Si el nombre viene vacío se toma de Google Workspace, luego del legado (<code>LEGACY_DB_*</code>), luego del correo.
+    </p>
+    <p><strong>Planteles (slug):</strong>
+      <?php
+        $slugs = [];
+        if (function_exists('plantel_list')) {
+            foreach (plantel_list($pdo, true) as $p) {
+                $slugs[] = '<code>' . htmlspecialchars($p['slug'], ENT_QUOTES, 'UTF-8') . '</code>';
+            }
+        }
+        echo $slugs !== [] ? implode(', ', $slugs) : 'configure planteles en HAY';
+      ?>
+    </p>
+    <p><strong>Claves especialidad (alumnos/grupos):</strong>
       <code>ING</code>, <code>ING-EXT</code>, <code>ING-K</code>, <code>COMP</code>/<code>COMP24</code>/<code>COMP25</code>,
       <code>COMP-EXT</code>, <code>COMP-K</code>, <code>PREP-AB</code>, <code>PREP-ESC</code>.
-    </p>
-    <p><strong>Días:</strong> <code>0</code>=domingo … <code>6</code>=sábado (ej. <code>6</code> o <code>2,4</code>).</p>
-    <p>
-      Extractor local:
-      <a href="<?php echo htmlspecialchars(hay_asset_url('tools/migracion_csv/'), ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener">
-        tools/migracion_csv/
-      </a>
-      (en el servidor solo sirve de documentación; ejecútelo en XAMPP contra el legado).
     </p>
   </div>
 </div>
@@ -76,4 +87,4 @@ window.HAY_MIGCSV = <?php echo json_encode([
     'id_plantel' => $idPlantel,
 ], JSON_UNESCAPED_UNICODE); ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261019'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261117a'), ENT_QUOTES, 'UTF-8'); ?>"></script>

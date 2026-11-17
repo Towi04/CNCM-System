@@ -2,14 +2,14 @@
 define('HAY_SKIP_SCHEMA_BOOTSTRAP', true);
 require_once __DIR__ . '/../config.php';
 
-header('Content-Type: application/json; charset=utf-8');
-
 if (!isset($_SESSION['user_id'])) {
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['status' => 'error', 'message' => 'Sesión no válida'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 if (!function_exists('migracion_csv_puede') || !migracion_csv_puede()) {
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['status' => 'error', 'message' => 'No autorizado'], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -17,6 +17,22 @@ if (!function_exists('migracion_csv_puede') || !migracion_csv_puede()) {
 migracion_csv_ensure_schema($pdo);
 $action = trim((string) ($_POST['action'] ?? $_GET['action'] ?? ''));
 $idPlantel = (int) ($_POST['id_plantel'] ?? plantel_id_activo());
+
+if ($action === 'staff_template') {
+    $planteles = function_exists('plantel_list') ? plantel_list($pdo, true) : [];
+    $slugEj = $planteles[0]['slug'] ?? 'guerrero';
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="plantilla_personal_correos.csv"');
+    $out = fopen('php://output', 'w');
+    fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+    fputcsv($out, migracion_csv_staff_emails_headers());
+    fputcsv($out, ['nombre.apellido@cncm.edu.mx', $slugEj, 'profesor', '', '', '']);
+    fputcsv($out, ['otro.usuario@cncm.edu.mx', $slugEj, 'asesor', '', '', '']);
+    fclose($out);
+    exit;
+}
+
+header('Content-Type: application/json; charset=utf-8');
 
 try {
     if ($action === 'estado') {
@@ -44,6 +60,23 @@ try {
             echo json_encode(['status' => 'error', 'message' => 'Adjunte un CSV'], JSON_UNESCAPED_UNICODE);
             exit;
         }
+        $tipoPreview = strtolower(trim((string) ($_POST['tipo'] ?? '')));
+        if ($tipoPreview === 'staff_emails') {
+            $res = migracion_csv_preview_staff_emails(
+                $pdo,
+                $_FILES['csv']['tmp_name'],
+                $idPlantel > 0 ? $idPlantel : null
+            );
+            echo json_encode([
+                'status' => !empty($res['ok']) ? 'ok' : 'error',
+                'message' => $res['message'] ?? '',
+                'headers' => $res['headers'] ?? [],
+                'total_filas' => $res['total_filas'] ?? 0,
+                'muestra' => $res['muestra'] ?? [],
+                'errores' => $res['errores'] ?? [],
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         $parsed = migracion_csv_leer_archivo($_FILES['csv']['tmp_name']);
         if (!empty($parsed['error'])) {
             echo json_encode(['status' => 'error', 'message' => $parsed['error']], JSON_UNESCAPED_UNICODE);
@@ -65,12 +98,23 @@ try {
             echo json_encode(['status' => 'error', 'message' => 'Adjunte un CSV'], JSON_UNESCAPED_UNICODE);
             exit;
         }
-        $res = migracion_csv_importar_tipo($pdo, $tipo, $_FILES['csv']['tmp_name'], $idPlantel > 0 ? $idPlantel : null);
+        if ($tipo === 'staff_emails') {
+            $res = migracion_csv_importar_staff_emails(
+                $pdo,
+                $_FILES['csv']['tmp_name'],
+                $idPlantel > 0 ? $idPlantel : null,
+                true
+            );
+        } else {
+            $res = migracion_csv_importar_tipo($pdo, $tipo, $_FILES['csv']['tmp_name'], $idPlantel > 0 ? $idPlantel : null);
+        }
         echo json_encode([
             'status' => !empty($res['ok']) ? 'ok' : 'error',
             'message' => $res['message'] ?? '',
             'creados' => $res['creados'] ?? null,
             'actualizados' => $res['actualizados'] ?? null,
+            'google_creados' => $res['google_creados'] ?? null,
+            'moodle_ok' => $res['moodle_ok'] ?? null,
             'vinculados' => $res['vinculados'] ?? null,
             'omitidos' => $res['omitidos'] ?? null,
             'errores' => $res['errores'] ?? [],
