@@ -110,6 +110,11 @@ function catalog_ensure_especialidad_operativo(PDO $pdo): void
     if (!function_exists('plantel_ensure_column')) {
         return;
     }
+    // Columnas base que CREATE TABLE IF NOT EXISTS no agrega en tablas ya existentes.
+    plantel_ensure_column($pdo, 'especialidades', 'visible', 'TINYINT(1) NOT NULL DEFAULT 1', 'es_fija');
+    plantel_ensure_column($pdo, 'especialidades', 'orden', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0', 'visible');
+    plantel_ensure_column($pdo, 'especialidades', 'activo', 'TINYINT(1) NOT NULL DEFAULT 1', 'orden');
+
     plantel_ensure_column($pdo, 'especialidades', 'modalidad', "ENUM('regular','kids','prep_abierta','prep_escolarizada','extensivo') NOT NULL DEFAULT 'regular'", 'descripcion');
     plantel_ensure_column($pdo, 'especialidades', 'duracion_fase_semanas', 'SMALLINT UNSIGNED NOT NULL DEFAULT 4', 'modalidad');
     plantel_ensure_column($pdo, 'especialidades', 'inscripcion_por_cuatrimestre', 'TINYINT(1) NOT NULL DEFAULT 0', 'duracion_fase_semanas');
@@ -120,8 +125,16 @@ function catalog_ensure_especialidad_operativo(PDO $pdo): void
     plantel_ensure_column($pdo, 'especialidades', 'costo_anual', 'DECIMAL(12,2) NULL', 'costo_cuatrimestre');
     plantel_ensure_column($pdo, 'especialidades', 'inscripcion_abierta', 'TINYINT(1) NOT NULL DEFAULT 1', 'visible');
 
-    catalog_sync_edades_especialidades($pdo);
-    catalog_tarifa_historial_ensure_schema($pdo);
+    try {
+        catalog_sync_edades_especialidades($pdo);
+    } catch (Throwable $e) {
+        error_log('catalog_sync_edades_especialidades: ' . $e->getMessage());
+    }
+    try {
+        catalog_tarifa_historial_ensure_schema($pdo);
+    } catch (Throwable $e) {
+        error_log('catalog_tarifa_historial_ensure_schema: ' . $e->getMessage());
+    }
 }
 
 /** @return array<string, string> */
