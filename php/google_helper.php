@@ -313,11 +313,11 @@ function google_parse_api_error(Throwable $e): string
 }
 
 /**
- * Comprueba si un correo ya existe en Google Workspace.
+ * Obtiene datos de un usuario en Google Workspace (si existe).
  *
- * @return array{ok:bool,existe:bool,message?:string}
+ * @return array{ok:bool,existe:bool,message?:string,email?:string,nombre?:string,apellido?:string,suspendido?:bool}
  */
-function google_usuario_existe(string $email): array
+function google_usuario_obtener(string $email): array
 {
     $email = strtolower(trim($email));
     if ($email === '') {
@@ -335,19 +335,58 @@ function google_usuario_existe(string $email): array
             return ['ok' => false, 'existe' => false, 'message' => 'No se pudo inicializar el cliente de Google.'];
         }
 
-        $dir->users->get($email);
+        $user = $dir->users->get($email);
+        $nombre = '';
+        $apellido = '';
+        if (is_object($user) && method_exists($user, 'getName')) {
+            $name = $user->getName();
+            if (is_object($name)) {
+                if (method_exists($name, 'getGivenName')) {
+                    $nombre = trim((string) $name->getGivenName());
+                }
+                if (method_exists($name, 'getFamilyName')) {
+                    $apellido = trim((string) $name->getFamilyName());
+                }
+            }
+        }
+        $suspendido = false;
+        if (is_object($user) && method_exists($user, 'getSuspended')) {
+            $suspendido = (bool) $user->getSuspended();
+        }
 
-        return ['ok' => true, 'existe' => true];
+        return [
+            'ok' => true,
+            'existe' => true,
+            'email' => $email,
+            'nombre' => $nombre,
+            'apellido' => $apellido,
+            'suspendido' => $suspendido,
+        ];
     } catch (Google_Service_Exception $e) {
         $code = (int) $e->getCode();
         if ($code === 404) {
-            return ['ok' => true, 'existe' => false];
+            return ['ok' => true, 'existe' => false, 'email' => $email];
         }
 
         return ['ok' => false, 'existe' => false, 'message' => google_parse_api_error($e)];
     } catch (Throwable $e) {
         return ['ok' => false, 'existe' => false, 'message' => google_parse_api_error($e)];
     }
+}
+
+/**
+ * Comprueba si un correo ya existe en Google Workspace.
+ *
+ * @return array{ok:bool,existe:bool,message?:string}
+ */
+function google_usuario_existe(string $email): array
+{
+    $info = google_usuario_obtener($email);
+    if (empty($info['ok'])) {
+        return ['ok' => false, 'existe' => false, 'message' => $info['message'] ?? 'No se pudo consultar Google'];
+    }
+
+    return ['ok' => true, 'existe' => !empty($info['existe'])];
 }
 
 /**

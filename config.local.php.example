@@ -46,8 +46,14 @@ define('HAY_DB_PASS', 'PONER_AQUI_LA_CLAVE_DE_CPANEL');
  * NO ponga HAY_FORCE_SCHEMA_BOOTSTRAP al final de config.php (no tiene efecto).
  */
 
-/** Legado / Moodle (opcional en desarrollo) */
-// define('MOODLE_URL', 'https://www.cncm.edu.mx/courses');
+/** Legado Laravel (misma MariaDB en GCP: cncm_legado) — enriquece nombres al importar personal por correo */
+// define('LEGACY_DB_HOST', '127.0.0.1');
+// define('LEGACY_DB_NAME', 'cncm_legado');
+// define('LEGACY_DB_USER', 'cncm');
+// define('LEGACY_DB_PASS', '');
+
+/** Moodle */
+// define('MOODLE_URL', 'https://aula.cncm.edu.mx');
 // define('MOODLE_TOKEN', '');
 
 /** Sugerencias de planeación + Tutor IA para alumnos */
