@@ -10,17 +10,21 @@ function hay_session_bootstrap_config(): void
 
 {
 
-    if (defined('HAY_WEB_ROOT')) {
+    static $done = false;
+
+    if ($done) {
 
         return;
 
     }
 
+    $done = true;
+
     $local = dirname(__DIR__) . '/config.local.php';
 
     if (is_file($local)) {
 
-        require $local;
+        require_once $local;
 
     }
 
@@ -36,28 +40,14 @@ function hay_app_cookie_path(): string
 
 
 
-    if (defined('HAY_WEB_ROOT') && HAY_WEB_ROOT !== '') {
-
-        $root = (string) HAY_WEB_ROOT;
-
-        if ($root[0] !== '/') {
-
-            $root = '/' . $root;
-
-        }
-
-        return rtrim($root, '/') . '/';
-
-    }
-
-
-
     $script = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
 
     $dir = str_replace('\\', '/', dirname($script));
 
-    if ($dir === '/' || $dir === '.') {
+    if ($dir === '/' || $dir === '.' || $dir === '') {
 
+        // App served at domain root (GCP staging/prod): always cookie path "/"
+        // Ignore legacy HAY_WEB_ROOT=/hay/ copied from Neubox.
         return '/';
 
     }
@@ -71,6 +61,35 @@ function hay_app_cookie_path(): string
     if (substr($dir, -6) === '/views') {
 
         $dir = dirname($dir);
+
+    }
+
+    if ($dir === '/' || $dir === '.' || $dir === '') {
+
+        return '/';
+
+    }
+
+
+
+    if (defined('HAY_WEB_ROOT') && HAY_WEB_ROOT !== '') {
+
+        $root = (string) HAY_WEB_ROOT;
+
+        if ($root[0] !== '/') {
+
+            $root = '/' . $root;
+
+        }
+
+        $normalized = rtrim($root, '/') . '/';
+
+        // Only honor HAY_WEB_ROOT when the script actually lives under it
+        if ($normalized !== '/' && str_starts_with($dir . '/', rtrim($normalized, '/') . '/')) {
+
+            return $normalized;
+
+        }
 
     }
 
@@ -110,26 +129,39 @@ function hay_session_save_path(): ?string
 
 {
 
+    $candidates = [];
+
     $dir = dirname(__DIR__) . '/storage/sessions';
 
-    $parent = dirname($dir);
+    $candidates[] = $dir;
 
-    if (!is_dir($parent)) {
+    $tmp = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . '/hay_sessions_' . substr(md5(dirname(__DIR__)), 0, 12);
 
-        @mkdir($parent, 0775, true);
+    $candidates[] = $tmp;
 
-    }
 
-    if (!is_dir($dir)) {
 
-        // Prefer 0770 so www-data (owner or group) can write after deploys
-        @mkdir($dir, 0770, true);
+    foreach ($candidates as $path) {
 
-    }
+        $parent = dirname($path);
 
-    if (is_dir($dir) && is_writable($dir)) {
+        if (!is_dir($parent)) {
 
-        return $dir;
+            @mkdir($parent, 0775, true);
+
+        }
+
+        if (!is_dir($path)) {
+
+            @mkdir($path, 0770, true);
+
+        }
+
+        if (is_dir($path) && is_writable($path)) {
+
+            return $path;
+
+        }
 
     }
 
@@ -427,6 +459,16 @@ function hay_session_start(): void
     $secure = hay_request_is_https();
 
     $path = hay_app_cookie_path();
+
+    // Reinforce via ini (some SAPIs ignore late session_set_cookie_params)
+    @ini_set('session.use_strict_mode', '1');
+    @ini_set('session.use_only_cookies', '1');
+    @ini_set('session.cookie_httponly', '1');
+    @ini_set('session.cookie_path', $path);
+    @ini_set('session.cookie_samesite', 'Lax');
+    if ($secure) {
+        @ini_set('session.cookie_secure', '1');
+    }
 
 
 
