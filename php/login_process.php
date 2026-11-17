@@ -82,10 +82,19 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
     usuario_actualizar_acceso($pdo, $idUsuario);
     $_SESSION['debe_cambiar_password'] = (int) ($usuario['debe_cambiar_password'] ?? 0);
 
-    session_regenerate_id(true);
+    if (session_status() !== PHP_SESSION_ACTIVE || empty($_SESSION['user_id'])) {
+        header('Location: ../index.php?error=sesion&msg=' . urlencode('La sesión PHP no quedó activa tras el login.'));
+        exit;
+    }
+    @session_regenerate_id(true);
     hay_session_no_cache_headers();
     if (function_exists('session_write_close')) {
-        session_write_close();
+        @session_write_close();
+    }
+    $savePath = function_exists('hay_session_save_path') ? hay_session_save_path() : null;
+    if ($savePath === null) {
+        header('Location: ../index.php?error=sesion&msg=' . urlencode('storage/sessions no es escribible por el usuario de PHP.'));
+        exit;
     }
     if (!empty($usuario['debe_cambiar_password'])) {
         header('Location: ../dashboard.php?cambiar_password=1');
