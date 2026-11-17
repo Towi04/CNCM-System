@@ -9,13 +9,25 @@ if (!preregistro_puede_acceder()) {
 
 }
 
-
+// Asegura columnas de especialidades/preregistros (modalidad, edades, costos, etc.)
+// antes del SELECT; sin esto, instalaciones antiguas responden HTTP 500 al abrir "Nuevo".
+if (function_exists('preregistro_ensure_schema')) {
+    preregistro_ensure_schema($pdo);
+}
 
 $labels = preregistro_labels();
 
 $idPlantel = plantel_scope_id($pdo);
 
-$escuelasPrereg = function_exists('escuelas_listar') ? escuelas_listar($pdo, $idPlantel) : [];
+$escuelasPrereg = [];
+if (function_exists('escuelas_listar')) {
+    try {
+        $escuelasPrereg = escuelas_listar($pdo, $idPlantel);
+    } catch (Throwable $e) {
+        error_log('pre_registro_nuevo escuelas_listar: ' . $e->getMessage());
+        $escuelasPrereg = [];
+    }
+}
 
 $idEdit = (int) ($_GET['id'] ?? 0);
 
@@ -46,19 +58,33 @@ if ($idEdit > 0) {
 
 }
 
-
-
-$especialidades = $pdo->query(
-
-    'SELECT id_especialidad, nombre, clave, inscripcion_abierta, modalidad,
-            edad_min, edad_max, costo_inscripcion, inscripcion_por_cuatrimestre,
-            costo_mensualidad, costo_cuatrimestre, costo_anual, parciales_por_cuatrimestre
-     FROM especialidades
-     WHERE activo = 1 AND visible = 1 ORDER BY orden ASC, nombre ASC'
-
-)->fetchAll(PDO::FETCH_ASSOC);
-
-
+$especialidades = [];
+try {
+    $especialidades = $pdo->query(
+        'SELECT id_especialidad, nombre, clave, inscripcion_abierta, modalidad,
+                edad_min, edad_max, costo_inscripcion, inscripcion_por_cuatrimestre,
+                costo_mensualidad, costo_cuatrimestre, costo_anual, parciales_por_cuatrimestre
+         FROM especialidades
+         WHERE activo = 1 AND visible = 1 ORDER BY orden ASC, nombre ASC'
+    )->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    error_log('pre_registro_nuevo especialidades (full): ' . $e->getMessage());
+    // Fallback si aún falta alguna columna operativa en BD antigua.
+    try {
+        $especialidades = $pdo->query(
+            'SELECT id_especialidad, nombre, clave,
+                    COALESCE(inscripcion_abierta, 1) AS inscripcion_abierta,
+                    COALESCE(costo_inscripcion, 0) AS costo_inscripcion,
+                    COALESCE(costo_mensualidad, 0) AS costo_mensualidad
+             FROM especialidades
+             WHERE activo = 1
+             ORDER BY nombre ASC'
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e2) {
+        error_log('pre_registro_nuevo especialidades (fallback): ' . $e2->getMessage());
+        $especialidades = [];
+    }
+}
 
 $r = $row ?: [];
 if (!$row) {
@@ -72,7 +98,15 @@ $idEntrevistaVinculo = (int) ($_GET['id_entrevista'] ?? 0);
 
 $puedeComision = preregistro_puede_reasignar_comision();
 
-$asesoresComision = $puedeComision ? preregistro_asesores_comision_opciones($pdo, $idPlantel) : [];
+$asesoresComision = [];
+if ($puedeComision) {
+    try {
+        $asesoresComision = preregistro_asesores_comision_opciones($pdo, $idPlantel);
+    } catch (Throwable $e) {
+        error_log('pre_registro_nuevo asesores_comision: ' . $e->getMessage());
+        $asesoresComision = [['id_usuario' => 0, 'nombre' => 'CNCM (sin comisión a asesor)', 'activo' => true]];
+    }
+}
 
 $gradoActual = $r['grado_estudios'] ?? '';
 
