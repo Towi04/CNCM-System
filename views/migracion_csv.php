@@ -49,6 +49,18 @@ $idPlantel = (int) plantel_id_activo();
     </button>
   </div>
 
+  <div class="catalog-toolbar" style="margin-top:8px; gap:10px; align-items:center; flex-wrap:wrap;">
+    <label for="migcsv-page-size" style="margin:0;">Filas por página</label>
+    <select id="migcsv-page-size">
+      <option value="25">25</option>
+      <option value="50" selected>50</option>
+      <option value="100">100</option>
+    </select>
+    <button type="button" class="secondary" id="migcsv-prev" disabled>← Anterior</button>
+    <span id="migcsv-pager-info" style="color:#555; font-size:0.9rem;"></span>
+    <button type="button" class="secondary" id="migcsv-next" disabled>Siguiente →</button>
+  </div>
+
   <div class="catalog-table-wrap" style="margin-top:14px; overflow-x:auto;">
     <table class="catalog-table" id="migcsv-tabla" style="width:100%; min-width:960px; table-layout:auto; border-collapse:collapse;">
       <thead id="migcsv-thead">
@@ -63,13 +75,15 @@ $idPlantel = (int) plantel_id_activo();
   <div style="margin-top:16px; font-size:0.9rem; color:#555; max-width:900px;">
     <p><strong>Personal por correos:</strong> columnas mínimas <code>email</code>, <code>plantel_slug</code>.
       Opcionales: <code>rol</code> (default <code>profesor</code>), <code>nombres</code>, <code>apellido_paterno</code>, <code>apellido_materno</code>.
-      Si el nombre viene vacío se toma de Google Workspace, luego del legado (<code>LEGACY_DB_*</code>), luego del correo.
+      Orden del nombre: CSV → Google → legado → inferido del correo (<code>fuente_nombre=email</code>).
+      En la tabla puede editar <strong>rol</strong>, <strong>nombres</strong> y <strong>apellido</strong> antes de Importar (útil si Google va a crear la cuenta).
+    </p>
+    <p><strong>Al Importar:</strong> crea/actualiza usuario en HAY, crea Google si no existe (con esos nombres) y provisiona Moodle.
     </p>
     <p><strong>Columna Google:</strong>
-      <code>existe</code> = ya hay cuenta Workspace (no se crea de nuevo);
+      <code>existe</code> = ya hay cuenta Workspace;
       <code>crear</code> = se creará al importar;
-      <code>error: …</code> = falló la consulta a la API (clave/delegación), <em>no</em> significa que el correo ya exista.
-      Configure <code>google_key.json</code> + <code>GOOGLE_*</code> en <code>config.local.php</code> de pruebas.
+      <code>error: …</code> = fallo de API (no confundir con “ya existe”).
     </p>
     <p><strong>Planteles (slug):</strong>
       <?php
@@ -93,6 +107,9 @@ $idPlantel = (int) plantel_id_activo();
 window.HAY_MIGCSV = <?php echo json_encode([
     'api' => $apiUrl,
     'id_plantel' => $idPlantel,
+    'roles' => function_exists('migracion_csv_staff_roles_opciones')
+        ? migracion_csv_staff_roles_opciones()
+        : ['profesor', 'asesor', 'gerente', 'coordinador', 'admin', 'director', 'supervisor', 'manuales'],
 ], JSON_UNESCAPED_UNICODE); ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261117b'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261117c'), ENT_QUOTES, 'UTF-8'); ?>"></script>

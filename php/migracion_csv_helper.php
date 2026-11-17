@@ -1238,12 +1238,30 @@ function migracion_csv_resolver_identidad_staff(array $row): array
 }
 
 /**
+ * Roles sugeridos en la vista previa / import de personal por correos.
+ *
+ * @return list<string>
+ */
+function migracion_csv_staff_roles_opciones(): array
+{
+    return ['profesor', 'asesor', 'gerente', 'coordinador', 'admin', 'director', 'supervisor', 'manuales'];
+}
+
+/**
  * Vista previa enriquecida del CSV de personal por correos.
  *
- * @return array{ok:bool, message?:string, headers?:list<string>, muestra?:list<array<string,string>>, total_filas?:int, errores?:list<string>}
+ * @return array{
+ *   ok:bool, message?:string, headers?:list<string>, muestra?:list<array<string,string>>,
+ *   total_filas?:int, offset?:int, limit?:int, errores?:list<string>, roles?:list<string>
+ * }
  */
-function migracion_csv_preview_staff_emails(PDO $pdo, string $tmpPath, ?int $idPlantel = null): array
-{
+function migracion_csv_preview_staff_emails(
+    PDO $pdo,
+    string $tmpPath,
+    ?int $idPlantel = null,
+    int $offset = 0,
+    int $limit = 50
+): array {
     if (!migracion_csv_puede()) {
         return ['ok' => false, 'message' => 'No autorizado'];
     }
@@ -1256,14 +1274,18 @@ function migracion_csv_preview_staff_emails(PDO $pdo, string $tmpPath, ?int $idP
         return ['ok' => false, 'message' => 'Sin filas de datos'];
     }
 
+    $total = count($rows);
+    $limit = max(10, min(100, $limit));
+    $offset = max(0, min($offset, max(0, $total - 1)));
+
     $headers = [
         'email', 'plantel_slug', 'rol', 'nombres', 'apellido', 'fuente_nombre',
         'google', 'hay', 'accion',
     ];
     $muestra = [];
     $errores = [];
-    $limit = min(25, count($rows));
-    for ($i = 0; $i < $limit; $i++) {
+    $end = min($total, $offset + $limit);
+    for ($i = $offset; $i < $end; $i++) {
         $r = $rows[$i];
         $id = migracion_csv_resolver_identidad_staff($r);
         $email = $id['email'];
@@ -1311,6 +1333,7 @@ function migracion_csv_preview_staff_emails(PDO $pdo, string $tmpPath, ?int $idP
             'google' => $googleLabel,
             'hay' => $hayId ? ('#' . $hayId) : 'nuevo',
             'accion' => $accion,
+            'fila' => $i + 2,
         ];
     }
 
@@ -1318,9 +1341,12 @@ function migracion_csv_preview_staff_emails(PDO $pdo, string $tmpPath, ?int $idP
         'ok' => true,
         'headers' => $headers,
         'muestra' => $muestra,
-        'total_filas' => count($rows),
+        'total_filas' => $total,
+        'offset' => $offset,
+        'limit' => $limit,
         'errores' => $errores,
-        'message' => count($rows) . ' fila(s); vista previa de ' . count($muestra),
+        'roles' => migracion_csv_staff_roles_opciones(),
+        'message' => $total . ' fila(s); mostrando ' . ($offset + 1) . '–' . $end,
     ];
 }
 
@@ -1329,11 +1355,18 @@ function migracion_csv_preview_staff_emails(PDO $pdo, string $tmpPath, ?int $idP
  *
  * CSV mínimo: email, plantel_slug
  * Opcional: rol, nombres, apellido_paterno, apellido_materno
+ * $overrides: mapa email → {rol?, nombres?, apellido?} desde la UI de vista previa
  *
+ * @param array<string, array{rol?:string, nombres?:string, apellido?:string}> $overrides
  * @return array{ok:bool,message:string,creados?:int,actualizados?:int,google_creados?:int,moodle_ok?:int,errores?:list<string>}
  */
-function migracion_csv_importar_staff_emails(PDO $pdo, string $tmpPath, ?int $idPlantel = null, bool $provisionar = true): array
-{
+function migracion_csv_importar_staff_emails(
+    PDO $pdo,
+    string $tmpPath,
+    ?int $idPlantel = null,
+    bool $provisionar = true,
+    array $overrides = []
+): array {
     if (!migracion_csv_puede()) {
         return ['ok' => false, 'message' => 'No autorizado'];
     }
@@ -1354,6 +1387,7 @@ function migracion_csv_importar_staff_emails(PDO $pdo, string $tmpPath, ?int $id
         return ['ok' => false, 'message' => 'Sin filas de datos'];
     }
 
+    $rolesOk = migracion_csv_staff_roles_opciones();
     $creados = 0;
     $actualizados = 0;
     $googleCreados = 0;
@@ -1368,18 +1402,35 @@ function migracion_csv_importar_staff_emails(PDO $pdo, string $tmpPath, ?int $id
             $errores[] = "Línea {$line}: correo inválido";
             continue;
         }
+        $ov = $overrides[$email] ?? $overrides[strtolower($email)] ?? [];
+        if (!is_array($ov)) {
+            $ov = [];
+        }
         $plantelRaw = trim((string) ($r['plantel_slug'] ?? $r['plantel'] ?? ''));
         $idP = migracion_csv_resolver_plantel($pdo, $plantelRaw, $idPlantel);
         if ($idP === null || $idP <= 0) {
             $errores[] = "Línea {$line}: plantel no resuelto ({$plantelRaw})";
             continue;
         }
-        $rol = trim((string) ($r['rol'] ?? ''));
+        $rol = trim((string) ($ov['rol'] ?? $r['rol'] ?? ''));
         if ($rol === '') {
             $rol = 'profesor';
         }
-        $nombres = $id['nombres'];
-        $apellido = $id['apellido'];
+        if (function_exists('rbac_normalizar_rol_clave')) {
+            $rol = rbac_normalizar_rol_clave($rol);
+        }
+        if (!in_array($rol, $rolesOk, true)) {
+            $errores[] = "Línea {$line}: rol no permitido ({$rol})";
+            continue;
+        }
+        $nombres = trim((string) ($ov['nombres'] ?? ''));
+        if ($nombres === '') {
+            $nombres = $id['nombres'];
+        }
+        $apellido = trim((string) ($ov['apellido'] ?? ''));
+        if ($apellido === '') {
+            $apellido = $id['apellido'];
+        }
         $username = strtolower((string) (explode('@', $email, 2)[0] ?? ''));
         $username = preg_replace('/[^a-z0-9._-]/', '', $username) ?? '';
         if ($username === '') {

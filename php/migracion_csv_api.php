@@ -62,18 +62,25 @@ try {
         }
         $tipoPreview = strtolower(trim((string) ($_POST['tipo'] ?? '')));
         if ($tipoPreview === 'staff_emails') {
+            $offset = (int) ($_POST['offset'] ?? 0);
+            $limit = (int) ($_POST['limit'] ?? 50);
             $res = migracion_csv_preview_staff_emails(
                 $pdo,
                 $_FILES['csv']['tmp_name'],
-                $idPlantel > 0 ? $idPlantel : null
+                $idPlantel > 0 ? $idPlantel : null,
+                $offset,
+                $limit
             );
             echo json_encode([
                 'status' => !empty($res['ok']) ? 'ok' : 'error',
                 'message' => $res['message'] ?? '',
                 'headers' => $res['headers'] ?? [],
                 'total_filas' => $res['total_filas'] ?? 0,
+                'offset' => $res['offset'] ?? $offset,
+                'limit' => $res['limit'] ?? $limit,
                 'muestra' => $res['muestra'] ?? [],
                 'errores' => $res['errores'] ?? [],
+                'roles' => $res['roles'] ?? migracion_csv_staff_roles_opciones(),
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -99,11 +106,30 @@ try {
             exit;
         }
         if ($tipo === 'staff_emails') {
+            $overrides = [];
+            $rawOv = trim((string) ($_POST['overrides'] ?? ''));
+            if ($rawOv !== '') {
+                $decoded = json_decode($rawOv, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $em => $vals) {
+                        $emKey = strtolower(trim((string) $em));
+                        if ($emKey === '' || !is_array($vals)) {
+                            continue;
+                        }
+                        $overrides[$emKey] = [
+                            'rol' => trim((string) ($vals['rol'] ?? '')),
+                            'nombres' => trim((string) ($vals['nombres'] ?? '')),
+                            'apellido' => trim((string) ($vals['apellido'] ?? '')),
+                        ];
+                    }
+                }
+            }
             $res = migracion_csv_importar_staff_emails(
                 $pdo,
                 $_FILES['csv']['tmp_name'],
                 $idPlantel > 0 ? $idPlantel : null,
-                true
+                true,
+                $overrides
             );
         } else {
             $res = migracion_csv_importar_tipo($pdo, $tipo, $_FILES['csv']['tmp_name'], $idPlantel > 0 ? $idPlantel : null);
