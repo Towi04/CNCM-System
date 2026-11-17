@@ -59,8 +59,10 @@ fi
 
 git remote get-url origin >/dev/null 2>&1 || git remote add origin "$REPO_HTTPS_URL"
 git fetch --prune origin
-git checkout -B "$REF" "origin/$REF"
+# -f discards local edits on the server (e.g. manual tweaks to this script)
+git checkout -f -B "$REF" "origin/$REF"
 git reset --hard "origin/$REF"
+git clean -fd --exclude=config.local.php --exclude=config.mail.php --exclude=.env --exclude=google_key.json --exclude=uploads --exclude=storage --exclude=vendor
 
 for f in "${preserve[@]}"; do
   if [[ -f "$PRESERVE_DIR/$f" ]]; then
