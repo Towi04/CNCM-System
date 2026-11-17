@@ -45,11 +45,16 @@
   function renderPreview(headers, rows, total) {
     const thead = $('migcsv-thead');
     const tbody = $('migcsv-tbody');
+    if (!thead || !tbody) return;
+    // thead debe ser <thead>; no anidar <tr> dentro de otro <tr>
     thead.innerHTML = '';
     const trh = document.createElement('tr');
     (headers || []).forEach((h) => {
       const th = document.createElement('th');
       th.textContent = h;
+      th.style.whiteSpace = 'nowrap';
+      th.style.textAlign = 'left';
+      th.style.padding = '8px 10px';
       trh.appendChild(th);
     });
     thead.appendChild(trh);
@@ -63,7 +68,22 @@
       headers.forEach((h) => {
         const td = document.createElement('td');
         const v = row[h] == null ? '' : String(row[h]);
-        td.textContent = v.length > 80 ? v.slice(0, 80) + '…' : v;
+        td.textContent = v.length > 120 ? v.slice(0, 120) + '…' : v;
+        td.style.whiteSpace = 'nowrap';
+        td.style.textAlign = 'left';
+        td.style.padding = '8px 10px';
+        td.style.verticalAlign = 'top';
+        if (h === 'google' && /^error/i.test(v)) {
+          td.style.color = '#b00020';
+          td.title = v;
+        } else if (h === 'google' && v === 'existe') {
+          td.style.color = '#0a7a32';
+        } else if (h === 'google' && v === 'crear') {
+          td.style.color = '#0b57d0';
+        }
+        if (h === 'accion' && /^ERROR/i.test(v)) {
+          td.style.color = '#b00020';
+        }
         tr.appendChild(td);
       });
       tbody.appendChild(tr);

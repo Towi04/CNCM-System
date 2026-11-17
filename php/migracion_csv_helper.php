@@ -1171,7 +1171,9 @@ function migracion_csv_resolver_identidad_staff(array $row): array
     $googleError = null;
     $idLegado = null;
 
-    if (($nombres === '' || $apellido === '') && $email !== '' && function_exists('google_usuario_obtener')) {
+    // Siempre consultar Google en preview/import para saber existe|crear|error de API
+    // (no confundir "error" con "ya existe": existe se muestra como "existe").
+    if ($email !== '' && function_exists('google_usuario_obtener')) {
         $g = google_usuario_obtener($email);
         if (!empty($g['ok'])) {
             $googleExiste = !empty($g['existe']);
@@ -1280,9 +1282,17 @@ function migracion_csv_preview_staff_emails(PDO $pdo, string $tmpPath, ?int $idP
                 $hayId = (int) $ex;
             }
         }
-        $googleLabel = $id['google_existe'] === null
-            ? ($id['google_error'] ? 'error' : '?')
-            : ($id['google_existe'] ? 'existe' : 'crear');
+        if ($id['google_existe'] === null) {
+            $gErr = trim((string) ($id['google_error'] ?? ''));
+            $googleLabel = $gErr !== ''
+                ? ('error: ' . (function_exists('mb_substr') ? mb_substr($gErr, 0, 80) : substr($gErr, 0, 80)))
+                : '?';
+            if ($gErr !== '' && count($errores) < 5) {
+                $errores[] = 'Google API: ' . $gErr;
+            }
+        } else {
+            $googleLabel = $id['google_existe'] ? 'existe' : 'crear';
+        }
         $accion = $hayId ? 'actualizar+provisionar' : 'crear+provisionar';
         if ($email === '' || !str_contains($email, '@')) {
             $accion = 'ERROR: email';
