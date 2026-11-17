@@ -112,16 +112,18 @@ function hay_session_save_path(): ?string
 
     $dir = dirname(__DIR__) . '/storage/sessions';
 
-    if (!is_dir($dir)) {
+    $parent = dirname($dir);
 
-        // 0770: owner + group (deploy:www-data) can write after GCP deploys
-        @mkdir($dir, 0770, true);
+    if (!is_dir($parent)) {
+
+        @mkdir($parent, 0775, true);
 
     }
 
-    if (is_dir($dir)) {
+    if (!is_dir($dir)) {
 
-        @chmod($dir, 0770);
+        // Prefer 0770 so www-data (owner or group) can write after deploys
+        @mkdir($dir, 0770, true);
 
     }
 

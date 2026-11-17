@@ -59,8 +59,10 @@ fi
 
 git remote get-url origin >/dev/null 2>&1 || git remote add origin "$REPO_HTTPS_URL"
 git fetch --prune origin
-git checkout -B "$REF" "origin/$REF"
+# -f discards local edits on the server (e.g. manual tweaks to this script)
+git checkout -f -B "$REF" "origin/$REF"
 git reset --hard "origin/$REF"
+git clean -fd --exclude=config.local.php --exclude=config.mail.php --exclude=.env --exclude=google_key.json --exclude=uploads --exclude=storage --exclude=vendor
 
 for f in "${preserve[@]}"; do
   if [[ -f "$PRESERVE_DIR/$f" ]]; then
@@ -92,11 +94,12 @@ for f in config.local.php config.mail.php .env google_key.json; do
 done
 [[ -d "$APP_DIR/uploads" ]] && sudo chmod -R ug+rwX "$APP_DIR/uploads"
 
-# PHP sessions: must stay group-writable for www-data after every deploy
-sudo mkdir -p "$APP_DIR/storage/sessions"
+# PHP sessions: Apache/php must OWN this dir (group write alone was not enough on GCP)
+sudo mkdir -p "$APP_DIR/storage/sessions" "$APP_DIR/storage"
 sudo chown -R "${DEPLOY_USER}:${WEB_USER}" "$APP_DIR/storage"
 sudo chmod -R ug+rwX "$APP_DIR/storage"
-sudo chmod 2775 "$APP_DIR/storage" "$APP_DIR/storage/sessions"
+sudo chown -R "${WEB_USER}:${WEB_USER}" "$APP_DIR/storage/sessions"
+sudo chmod 770 "$APP_DIR/storage/sessions"
 # Drop stale session files that can block regenerate_id after ownership flips
 sudo find "$APP_DIR/storage/sessions" -type f -name 'sess_*' -delete 2>/dev/null || true
 
