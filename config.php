@@ -53,7 +53,9 @@ if (!defined('HAY_FINGERJET_MATCHER_KEY')) {
 }
 
 if (is_file(__DIR__ . '/config.local.php')) {
-    require __DIR__ . '/config.local.php';
+    // require_once: session_helper may already have loaded it; a second
+    // require() re-runs define() and emits Notices that break Set-Cookie.
+    require_once __DIR__ . '/config.local.php';
 }
 
 require_once __DIR__ . '/php/maintenance_guard.php';

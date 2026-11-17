@@ -2,7 +2,14 @@
 require_once __DIR__ . '/php/session_helper.php';
 hay_session_start();
 if (!isset($_SESSION['user_id'])) {
-    header('Location: index.php?error=sesion');
+    $hasCookie = !empty($_COOKIE[hay_session_name()]);
+    $savePath = hay_session_save_path();
+    $hint = $hasCookie
+        ? ('Cookie presente pero sin user_id. save_path=' . ($savePath ?? 'NO_ESCRIBIBLE')
+            . ' cookie_path=' . hay_app_cookie_path())
+        : ('No llegó cookie ' . hay_session_name() . '. cookie_path=' . hay_app_cookie_path()
+            . ' https=' . (hay_request_is_https() ? '1' : '0'));
+    header('Location: index.php?error=sesion&msg=' . urlencode($hint));
     exit();
 }
 /** Migraciones solo al entrar al panel (no en login). */
