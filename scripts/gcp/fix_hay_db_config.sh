@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Recreate HAY config.local.php on the GCP VM for prod + staging.
 # Run once as a sudo-capable user:
-#   sudo bash scripts/gcp/fix_hay_db_config.sh
-# Or copy-paste after cloning develop.
 #
-# Optional env:
-#   DB_PASS='tu_clave'   — if omitted, tries Moodle config.php then prompts
-#   DB_USER=cncm
+#   # Preferido (sudo limpia el entorno; NO uses `sudo DB_PASS=... bash` por pipe):
+#   curl -fsSL .../fix_hay_db_config.sh -o /tmp/fix_hay_db_config.sh
+#   sudo bash /tmp/fix_hay_db_config.sh 'tu_clave'
+#
+#   # Alternativa con env preservado:
+#   sudo env DB_PASS='tu_clave' bash /tmp/fix_hay_db_config.sh
+#
+# Si se omite la clave: intenta Moodle config.php; si no, pide input (solo TTY).
+#   DB_USER=cncm (default)
 set -euo pipefail
 
 DB_USER="${DB_USER:-cncm}"
@@ -15,9 +19,13 @@ STAGING_DIR="${STAGING_DIR:-/var/www/sistema-pruebas}"
 DB_PROD="${DB_PROD:-hay_system}"
 DB_STAGING="${DB_STAGING:-hay_system_pruebas}"
 MOODLE_CFG="${MOODLE_CFG:-/var/www/moodle/config.php}"
+# argv[1] beats env (sudo often strips DB_PASS from the environment)
+if [[ -n "${1:-}" ]]; then
+  DB_PASS="$1"
+fi
 
 if [[ "$(id -u)" -ne 0 ]]; then
-  echo "Ejecute con sudo: sudo bash $0" >&2
+  echo "Ejecute con sudo: sudo bash $0 'tu_clave'" >&2
   exit 1
 fi
 
@@ -37,7 +45,12 @@ detect_pass() {
       return
     fi
   fi
-  echo "==> No se encontró clave. Introduzca la de MariaDB para ${DB_USER}@localhost:" >&2
+  if [[ ! -t 0 ]]; then
+    echo "ERROR: falta la clave. Use: sudo bash $0 'tu_clave'" >&2
+    echo "  (sudo limpia DB_PASS del entorno; no pegue la clave en el chat)." >&2
+    exit 1
+  fi
+  echo "==> Introduzca la clave MariaDB para ${DB_USER}@localhost:" >&2
   read -r -s pass
   echo >&2
   echo "$pass"
@@ -102,18 +115,29 @@ EOF
 write_config "$PROD_DIR" "$DB_PROD"
 write_config "$STAGING_DIR" "$DB_STAGING"
 
-echo "==> Probar PDO staging"
-sudo -u www-data php -r "
-require '${STAGING_DIR}/config.local.php';
-\$pdo = new PDO('mysql:host='.HAY_DB_HOST.';dbname='.HAY_DB_NAME.';charset=utf8mb4', HAY_DB_USER, HAY_DB_PASS);
-echo 'OK staging: '.HAY_DB_NAME.' as '.HAY_DB_USER.PHP_EOL;
-"
+for dir in "$STAGING_DIR" "$PROD_DIR"; do
+  if grep -q 'cncmedum_tovar\|cncmedum_hay_system' "$dir/config.local.php" 2>/dev/null; then
+    echo "ERROR: $dir/config.local.php aún tiene credenciales Neubox" >&2
+    exit 1
+  fi
+  if [[ -f "$dir/.env" ]] && grep -q 'cncmedum_tovar\|cncmedum_hay_system' "$dir/.env" 2>/dev/null; then
+    echo "ERROR: $dir/.env aún tiene Neubox — muévalo a un .bak" >&2
+    exit 1
+  fi
+done
 
-echo "==> Probar PDO prod"
-sudo -u www-data php -r "
-require '${PROD_DIR}/config.local.php';
-\$pdo = new PDO('mysql:host='.HAY_DB_HOST.';dbname='.HAY_DB_NAME.';charset=utf8mb4', HAY_DB_USER, HAY_DB_PASS);
-echo 'OK prod: '.HAY_DB_NAME.' as '.HAY_DB_USER.PHP_EOL;
-"
+echo "==> Probar PDO staging + prod (como www-data)"
+for pair in "${STAGING_DIR}|staging" "${PROD_DIR}|prod"; do
+  dir="${pair%%|*}"
+  label="${pair##*|}"
+  sudo -u www-data php -r "
+  require '${dir}/config.local.php';
+  echo '${label}: user='.HAY_DB_USER.' db='.HAY_DB_NAME.PHP_EOL;
+  if (HAY_DB_USER === 'cncmedum_tovar') { fwrite(STDERR, \"ERROR Neubox user\\n\"); exit(1); }
+  \$pdo = new PDO('mysql:host='.HAY_DB_HOST.';dbname='.HAY_DB_NAME.';charset=utf8mb4', HAY_DB_USER, HAY_DB_PASS);
+  echo 'OK ${label}'.PHP_EOL;
+  "
+done
 
-echo "Listo. Recargue https://pruebas.sistema.cncm.edu.mx/"
+systemctl reload apache2 2>/dev/null || true
+echo "Listo. Recargue https://pruebas.sistema.cncm.edu.mx/ (Ctrl+F5)."
