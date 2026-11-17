@@ -91,7 +91,14 @@ for f in config.local.php config.mail.php .env google_key.json; do
   fi
 done
 [[ -d "$APP_DIR/uploads" ]] && sudo chmod -R ug+rwX "$APP_DIR/uploads"
-[[ -d "$APP_DIR/storage" ]] && sudo chmod -R ug+rwX "$APP_DIR/storage"
+
+# PHP sessions: must stay group-writable for www-data after every deploy
+sudo mkdir -p "$APP_DIR/storage/sessions"
+sudo chown -R "${DEPLOY_USER}:${WEB_USER}" "$APP_DIR/storage"
+sudo chmod -R ug+rwX "$APP_DIR/storage"
+sudo chmod 2775 "$APP_DIR/storage" "$APP_DIR/storage/sessions"
+# Drop stale session files that can block regenerate_id after ownership flips
+sudo find "$APP_DIR/storage/sessions" -type f -name 'sess_*' -delete 2>/dev/null || true
 
 # Reload PHP OPcache / Apache
 if systemctl is-active --quiet apache2 2>/dev/null; then

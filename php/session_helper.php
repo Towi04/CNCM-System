@@ -114,7 +114,14 @@ function hay_session_save_path(): ?string
 
     if (!is_dir($dir)) {
 
-        @mkdir($dir, 0700, true);
+        // 0770: owner + group (deploy:www-data) can write after GCP deploys
+        @mkdir($dir, 0770, true);
+
+    }
+
+    if (is_dir($dir)) {
+
+        @chmod($dir, 0770);
 
     }
 
