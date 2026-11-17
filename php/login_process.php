@@ -58,6 +58,21 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
 
     login_security_registrar_exito($pdo, $idUsuario);
 
+    if (!function_exists('hay_maintenance_activo') && is_file(__DIR__ . '/maintenance_helper.php')) {
+        require_once __DIR__ . '/maintenance_helper.php';
+    }
+    if (function_exists('hay_maintenance_activo') && hay_maintenance_activo()) {
+        $rolLogin = function_exists('rbac_normalizar_rol_clave')
+            ? rbac_normalizar_rol_clave((string) ($usuario['rol'] ?? ''))
+            : strtolower(trim((string) ($usuario['rol'] ?? '')));
+        if ($rolLogin !== 'supervisor') {
+            header('Location: ../index.php?error=1&msg=' . urlencode(
+                'Sistema en actualización. Solo supervisión puede iniciar sesión ahora.'
+            ));
+            exit;
+        }
+    }
+
     if (ini_get('session.use_cookies')) {
         hay_session_preparar_nuevo_login();
     } else {

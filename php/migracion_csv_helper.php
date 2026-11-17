@@ -373,6 +373,12 @@ function migracion_csv_importar_personal(PDO $pdo, array $rows, ?int $forzarPlan
             $actualizados++;
         } else {
             $pass = function_exists('cuenta_password_inicial') ? cuenta_password_inicial() : 'Cncm*1234';
+            $depto = function_exists('rbac_departamento_para_rol')
+                ? rbac_departamento_para_rol($pdo, $rol)
+                : 'administrativo';
+            if (!in_array($depto, ['ingles', 'computacion', 'administrativo', 'ventas', 'otro'], true)) {
+                $depto = 'administrativo';
+            }
             $pdo->prepare(
                 'INSERT INTO usuarios (nombre, apellido, username, email, password, rol, departamento, id_plantel, fecha_creacion)
                  VALUES (?,?,?,?,?,?,?,?,NOW())'
@@ -383,7 +389,7 @@ function migracion_csv_importar_personal(PDO $pdo, array $rows, ?int $forzarPlan
                 $email,
                 password_hash($pass, PASSWORD_BCRYPT),
                 $rol,
-                '',
+                $depto,
                 $idPlantel,
             ]);
             $idHay = (int) $pdo->lastInsertId();
@@ -1455,11 +1461,17 @@ function migracion_csv_importar_staff_emails(
         $idHay = $existing !== false ? (int) $existing : 0;
 
         $passPlain = function_exists('cuenta_password_inicial') ? cuenta_password_inicial() : 'Cncm*1234';
+        $depto = function_exists('rbac_departamento_para_rol')
+            ? rbac_departamento_para_rol($pdo, $rol)
+            : 'administrativo';
+        if (!in_array($depto, ['ingles', 'computacion', 'administrativo', 'ventas', 'otro'], true)) {
+            $depto = 'administrativo';
+        }
 
         if ($idHay > 0) {
             $pdo->prepare(
-                'UPDATE usuarios SET nombre=?, apellido=?, rol=?, id_plantel=?, email=?, username=? WHERE id_usuario=?'
-            )->execute([$nombres, $apellido, $rol, $idP, $email, $username, $idHay]);
+                'UPDATE usuarios SET nombre=?, apellido=?, rol=?, departamento=?, id_plantel=?, email=?, username=? WHERE id_usuario=?'
+            )->execute([$nombres, $apellido, $rol, $depto, $idP, $email, $username, $idHay]);
             $actualizados++;
         } else {
             // Evitar choque de username
@@ -1478,7 +1490,7 @@ function migracion_csv_importar_staff_emails(
                 $email,
                 password_hash($passPlain, PASSWORD_BCRYPT),
                 $rol,
-                '',
+                $depto,
                 $idP,
             ]);
             $idHay = (int) $pdo->lastInsertId();
