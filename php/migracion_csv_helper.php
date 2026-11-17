@@ -1244,7 +1244,11 @@ function migracion_csv_resolver_identidad_staff(array $row): array
  */
 function migracion_csv_staff_roles_opciones(): array
 {
-    return ['profesor', 'asesor', 'gerente', 'coordinador', 'admin', 'director', 'supervisor', 'manuales'];
+    return [
+        'profesor', 'asesor', 'gerente', 'coordinador',
+        'recepcion', 'imagen', 'marketing',
+        'admin', 'director', 'supervisor', 'manuales',
+    ];
 }
 
 /**
@@ -1337,6 +1341,13 @@ function migracion_csv_preview_staff_emails(
         ];
     }
 
+    $roles = migracion_csv_staff_roles_opciones();
+    $labels = function_exists('rbac_roles_etiquetas') ? rbac_roles_etiquetas() : [];
+    $roleLabels = [];
+    foreach ($roles as $clave) {
+        $roleLabels[$clave] = $labels[$clave] ?? $clave;
+    }
+
     return [
         'ok' => true,
         'headers' => $headers,
@@ -1345,7 +1356,8 @@ function migracion_csv_preview_staff_emails(
         'offset' => $offset,
         'limit' => $limit,
         'errores' => $errores,
-        'roles' => migracion_csv_staff_roles_opciones(),
+        'roles' => $roles,
+        'role_labels' => $roleLabels,
         'message' => $total . ' fila(s); mostrando ' . ($offset + 1) . '–' . $end,
     ];
 }

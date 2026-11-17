@@ -104,12 +104,21 @@ $idPlantel = (int) plantel_id_activo();
 </div>
 
 <script>
-window.HAY_MIGCSV = <?php echo json_encode([
+window.HAY_MIGCSV = <?php
+$migRoles = function_exists('migracion_csv_staff_roles_opciones')
+    ? migracion_csv_staff_roles_opciones()
+    : ['profesor', 'asesor', 'gerente', 'coordinador', 'recepcion', 'imagen', 'marketing', 'admin', 'director', 'supervisor', 'manuales'];
+$migLabels = function_exists('rbac_roles_etiquetas') ? rbac_roles_etiquetas() : [];
+$migRoleLabels = [];
+foreach ($migRoles as $claveRol) {
+    $migRoleLabels[$claveRol] = $migLabels[$claveRol] ?? $claveRol;
+}
+echo json_encode([
     'api' => $apiUrl,
     'id_plantel' => $idPlantel,
-    'roles' => function_exists('migracion_csv_staff_roles_opciones')
-        ? migracion_csv_staff_roles_opciones()
-        : ['profesor', 'asesor', 'gerente', 'coordinador', 'admin', 'director', 'supervisor', 'manuales'],
-], JSON_UNESCAPED_UNICODE); ?>;
+    'roles' => $migRoles,
+    'role_labels' => $migRoleLabels,
+], JSON_UNESCAPED_UNICODE);
+?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261117c'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261117d'), ENT_QUOTES, 'UTF-8'); ?>"></script>

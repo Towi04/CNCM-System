@@ -81,6 +81,7 @@ try {
                 'muestra' => $res['muestra'] ?? [],
                 'errores' => $res['errores'] ?? [],
                 'roles' => $res['roles'] ?? migracion_csv_staff_roles_opciones(),
+                'role_labels' => $res['role_labels'] ?? [],
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
