@@ -6,10 +6,13 @@
   const api = cfg.api || 'php/migracion_csv_api.php';
   const idPlantel = cfg.id_plantel || 0;
   const defaultRoles = cfg.roles || [
-    'profesor', 'asesor', 'gerente', 'coordinador', 'admin', 'director', 'supervisor', 'manuales',
+    'profesor', 'asesor', 'gerente', 'coordinador',
+    'recepcion', 'imagen', 'marketing',
+    'admin', 'director', 'supervisor', 'manuales',
   ];
+  const defaultRoleLabels = cfg.role_labels || {};
 
-  /** @type {{headers:string[], rows:object[], total:number, offset:number, limit:number, roles:string[]}|null} */
+  /** @type {{headers:string[], rows:object[], total:number, offset:number, limit:number, roles:string[], roleLabels:object}|null} */
   let previewState = null;
   /** Overrides por email (persisten al cambiar de página) */
   const overrides = Object.create(null);
@@ -126,17 +129,18 @@
           const sel = document.createElement('select');
           sel.className = 'migcsv-rol';
           sel.dataset.email = email;
+          const labels = (previewState && previewState.roleLabels) || defaultRoleLabels;
           roles.forEach((r) => {
             const opt = document.createElement('option');
             opt.value = r;
-            opt.textContent = r;
+            opt.textContent = labels[r] ? (labels[r] + ' (' + r + ')') : r;
             if (r === String(row.rol || 'profesor')) opt.selected = true;
             sel.appendChild(opt);
           });
           if (roles.indexOf(String(row.rol || '')) < 0 && row.rol) {
             const opt = document.createElement('option');
             opt.value = row.rol;
-            opt.textContent = row.rol;
+            opt.textContent = labels[row.rol] ? (labels[row.rol] + ' (' + row.rol + ')') : row.rol;
             opt.selected = true;
             sel.appendChild(opt);
           }
@@ -213,6 +217,7 @@
         offset: data.offset || 0,
         limit: data.limit || limit,
         roles: data.roles || defaultRoles,
+        roleLabels: data.role_labels || defaultRoleLabels,
       };
       let text = data.message || ('Vista previa: ' + previewState.total + ' fila(s)');
       if (data.errores && data.errores.length) {

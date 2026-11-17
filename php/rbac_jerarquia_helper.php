@@ -119,6 +119,53 @@ function rbac_cap_recepcion(): array
     ]);
 }
 
+/**
+ * Imagen / diseño: portal interno sin alumnos ni caja.
+ * (Contenido visual / soporte; no ve expediente académico ni cobros.)
+ */
+function rbac_cap_imagen(): array
+{
+    return [
+        'menu_tareas',
+        'menu_soporte',
+        'menu_tutor',
+        'tutor_usar',
+        'menu_calendario_consulta',
+        'menu_mi_evaluacion',
+        'menu_matriz_entrenamiento',
+        'menu_mi_expediente',
+    ];
+}
+
+/**
+ * Marketing: estadísticas de captación (como gerencia) + consulta de alumnos,
+ * banners; sin caja / punto de venta / reportes financieros / comisiones operativas.
+ */
+function rbac_cap_marketing(): array
+{
+    $statsGerente = [
+        'menu_gerente_dashboard',
+        'menu_gerente_reportes',
+        'menu_gerente_pendientes',
+        'menu_gerente_perdidos',
+        'menu_gerente_cartas',
+        'menu_gerente_escuelas',
+        'menu_reporte_escuelas',
+        'menu_reporte_presentados',
+        'menu_gerente_matriz',
+        'menu_podio_ventas',
+    ];
+
+    return rbac_merge_caps(rbac_cap_asesor(), $statsGerente, [
+        'menu_alumnos',
+        'menu_credenciales',
+        'menu_cronologia',
+        'menu_marketing_banners',
+        'menu_reporte_bajas',
+        'menu_mi_expediente',
+    ]);
+}
+
 /** Recepción / caja: pagos y finanzas. */
 function rbac_cap_caja(): array
 {
@@ -309,7 +356,10 @@ function rbac_db_mapa_jerarquia(): array
         'gerente' => rbac_merge_caps($asesor, $ventas),
         'coordinador' => rbac_cap_academico(),
         'coordinacion' => rbac_cap_academico(),
-        'admin' => rbac_cap_recepcion(),
+        'admin' => rbac_cap_recepcion(), // legacy = mismos caps que recepción
+        'recepcion' => rbac_cap_recepcion(),
+        'imagen' => rbac_cap_imagen(),
+        'marketing' => rbac_cap_marketing(),
         'profesor' => rbac_cap_profesor(),
         'manuales' => rbac_cap_manuales(),
         'director' => rbac_merge_caps($asesor, $acad, $caja, $ventas, $dir),

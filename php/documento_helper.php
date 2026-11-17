@@ -154,7 +154,7 @@ function documento_puede_marcar_pagada(): bool
     if (function_exists('reporte_financiero_puede_ver') && reporte_financiero_puede_ver()) {
         return true;
     }
-    return in_array(rbac_rol_efectivo(), ['director', 'supervisor', 'admin', 'gerente'], true);
+    return in_array(rbac_rol_efectivo(), ['director', 'supervisor', 'admin', 'recepcion', 'gerente'], true);
 }
 
 function documento_puede_mostrador(): bool

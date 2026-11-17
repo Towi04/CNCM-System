@@ -15,15 +15,20 @@ function rbac_normalizar_rol_clave(string $rol): string
     }
     static $map = [
         'coordinacion' => 'coordinador',
-        'recepcion' => 'admin',
-        'imagen' => 'admin',
+        'recepcionista' => 'recepcion',
+        'recepción' => 'recepcion',
+        'caja' => 'recepcion',
         'ventas' => 'asesor',
         'asesor ventas' => 'asesor',
         'asesor de ventas' => 'asesor',
-        'caja' => 'admin',
         'supervisora' => 'supervisor',
         'supervisora general' => 'supervisor',
         'direccion general' => 'supervisor',
+        'diseño' => 'imagen',
+        'diseno' => 'imagen',
+        'diseñadora' => 'imagen',
+        'diseñador' => 'imagen',
+        // imagen y marketing son roles propios (ya no se colapsan a admin)
     ];
 
     return $map[$rol] ?? $rol;
@@ -106,7 +111,10 @@ function rbac_roles_etiquetas(): array
         'director' => 'Director de plantel',
         'gerente' => 'Gerente de ventas',
         'coordinador' => 'Coordinador académico',
-        'admin' => 'Recepción / Caja',
+        'admin' => 'Recepción / Caja (legacy)',
+        'recepcion' => 'Recepción / Caja',
+        'imagen' => 'Imagen / Diseño',
+        'marketing' => 'Marketing',
         'profesor' => 'Profesor',
         'manuales' => 'Inventario / Manuales',
         'asesor' => 'Asesor de ventas',
@@ -261,9 +269,9 @@ function rbac_roles_para_simular(): array
 {
     $real = rbac_rol_real();
     return match ($real) {
-        'supervisor' => ['director', 'gerente', 'coordinador', 'admin', 'asesor', 'profesor', 'alumno'],
-        'director' => ['gerente', 'coordinador', 'admin', 'asesor', 'profesor', 'alumno'],
-        'gerente' => ['asesor', 'alumno'],
+        'supervisor' => ['director', 'gerente', 'coordinador', 'recepcion', 'admin', 'imagen', 'marketing', 'asesor', 'profesor', 'alumno'],
+        'director' => ['gerente', 'coordinador', 'recepcion', 'admin', 'imagen', 'marketing', 'asesor', 'profesor', 'alumno'],
+        'gerente' => ['asesor', 'marketing', 'alumno'],
         'coordinador' => ['profesor', 'alumno'],
         default => [],
     };

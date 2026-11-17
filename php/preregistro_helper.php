@@ -588,7 +588,7 @@ function preregistro_puede_cobrar(): bool
         return true;
     }
 
-    return in_array($rol, ['admin', 'supervisor'], true);
+    return in_array($rol, ['admin', 'recepcion', 'supervisor'], true);
 }
 
 /** Completar datos fiscales, quitar marca de factura o activar factura post-inscripción. */
@@ -599,7 +599,7 @@ function preregistro_puede_gestionar_factura(): bool
     }
     $rol = function_exists('rbac_rol_efectivo') ? rbac_rol_efectivo() : ($_SESSION['rol'] ?? '');
 
-    return in_array($rol, ['admin', 'supervisor'], true);
+    return in_array($rol, ['admin', 'recepcion', 'supervisor'], true);
 }
 
 /** Resaltar fila en lista (factura pendiente solo para recepción). */
