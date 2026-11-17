@@ -1,0 +1,69 @@
+// main: ../style.scss
+/********************************
+*********************************
+Accordions
+*********************************
+*********************************/
+.accordion {
+  .card {
+    margin-bottom: em(5, $font-size-base-px);
+    .card-header {
+      padding: 0;
+      a {
+        display: block;
+        padding: em(15,18) em(35,18) em(15,18) em(15,18);
+        position: relative;
+        &:after {
+          content: "\e92b";
+          font-family: "feather";
+          font-size: rem(18);
+          @include position(absolute, 50% null null null);
+          right: rem(15);
+          transform: translateY(-50%);
+        }
+        &.collapsed::after {
+          content: "\e928";
+        }
+      }
+    }
+
+    .card-title {
+      font-size: em(15);
+      margin-bottom: 0;
+      padding: em(6,16) em(6,16);
+    }
+  }
+
+  [class*="card-outline-"], .card-inverse {
+    .card-header a {
+      color: #fff;
+    }
+  }
+
+  body.rtl & {
+    .card .card-header a:after {
+      right: auto;
+      left: rem(15);
+    }
+  }
+}
+
+.accordion-minimal {
+  .card { border: none }
+  .card-header {
+    background: none;
+    border-bottom-color: $theme-border-color;
+  }
+  .card-title {
+    a {
+      color: $content-color;
+      &:hover, &:focus { color: $primary; }
+      &[aria-expanded="true"] {
+        color: $headings-color;
+      }
+    }
+  }
+  .card-block {
+    padding: em(25,$font-size-base-px);
+  }
+}

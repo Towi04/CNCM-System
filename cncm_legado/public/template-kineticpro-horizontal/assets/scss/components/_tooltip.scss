@@ -1,0 +1,155 @@
+// main: ../style.scss
+/********************************
+*********************************
+Tooltips
+*********************************
+*********************************/
+
+.fancy-tooltip {
+  display: inline-block;
+  position: relative;
+  font-weight: 700;
+
+  .list-icon {
+    vertical-align: bottom;
+  }
+}
+
+.tooltip-item {
+  cursor: pointer;
+  display: inline-block;
+  font-weight: 500;
+
+  .fancy-tooltip:not(a) & {
+    padding: 0 em(10);
+    background: rgba(0, 0, 0, 0.1);
+  }
+}
+
+.tooltip-content {
+  font-weight: 500;
+  border-radius: rem(5);
+  position: absolute;
+  z-index: 99;
+  width: rem(300);
+  left: 50%;
+  margin: 0 0 rem(20) rem(-150);
+  bottom: 100%;
+  text-align: left;
+  box-shadow: -5px -5px 15px rgba(48, 54, 61, 0.2);
+  background: #2b2b2b;
+  color: #fff;
+  opacity: 0;
+  cursor: default;
+  pointer-events: none;
+
+  img {
+    position: relative;
+    border-top-left-radius: rem(5);
+    border-bottom-left-radius: rem(5);
+    height: em(140);
+    display: block;
+    float: left;
+    margin-right: 1em;
+  }
+
+  &::after {
+    content: '';
+    top: 95%;
+    left: 50%;
+    border: solid transparent;
+    height: em(15);
+    width: em(15);
+    transform: rotate(45deg);
+    position: absolute;
+    pointer-events: none;
+    border-color: transparent;
+    background: inherit;
+    margin-left: em(-10);
+  }
+
+
+  /* SlideInDown Effect
+  ========================*/
+  .tooltip-effect-slideInDown & {
+    transform: translate3d(0, em(-10), 0);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+
+
+  /* SlideInUp Effect
+  ========================*/
+  .tooltip-effect-slideInUp & {
+    transform-origin: 50% calc(110%);
+    transform: perspective( em(1000) ) rotate3d(1, 0, 0, 45deg);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+
+
+  /* Rotate Effect
+  ========================*/
+  .tooltip-effect-rotate & {
+    transform-origin: 50% calc(106%);
+    transform: rotate3d(0, 0, 1, 15deg);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+
+  .icon-tooltip.tooltip-effect-rotate & {
+    transform: translate3d(0,em(10),0) rotate3d(1,1,1,45deg);
+    transform-origin: 50% 100%;
+  }
+
+
+  /* Spin Effect
+  ========================*/
+  .tooltip-effect-spin & {
+    transform: translate3d(0,em(10),0) rotate3d(0,1,0,90deg);
+    transform-origin: 50% 100%;
+    transition: opacity .3s, transform .3s;
+  }
+
+  .fancy-tooltip:hover &,
+  .fancy-tooltip:active & {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate3d(0, 0, 0, 0);
+  }
+}
+
+.tooltip-text {
+  display: block;
+  font-size: em(16);
+  padding: em(20,16);
+}
+
+
+/* Icon Tooltips
+========================*/
+.icon-tooltip {
+  .tooltip-text {
+    padding: 0;
+  }
+
+  .tooltip-content {
+    padding: 0;
+    text-align: center;
+    border-radius: 50%;
+    width: em(80);
+    height: em(80);
+    line-height: em(80);
+    margin-left: em(-40);
+    box-shadow: none;
+    background: $primary;
+    color: #fff;
+
+    .list-icon {
+      line-height: em(80,20);
+      font-size: em(20);
+    }
+
+    &::after {
+      top: em(78);
+      border-top-color: $primary;
+    }
+  }
+}

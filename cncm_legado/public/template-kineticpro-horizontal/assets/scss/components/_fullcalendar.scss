@@ -1,0 +1,202 @@
+// main: ../style.scss
+
+/* Fullcalendar
+========================*/
+.custom-fullcalendar {
+  justify-content: flex-end;
+  @include margin( null 0 );
+
+  .fc-toolbar {
+    @extend .col-12;
+    height: rem(110);
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 0 rem(20);
+    margin-bottom: 0;
+    border-bottom: 1px solid $theme-border-color;
+    .fc-left { order: 0 }
+    .fc-center { order: 1; flex: 1; display: flex; justify-content: center; }
+    .fc-right { order: 2 }
+
+    @include mobile {
+      flex-direction: column;
+      height: auto;
+      padding: rem(20) rem(20);
+
+      .fc-center {
+        margin: em(15) 0;
+      }
+    }
+
+    h2 {
+      font-size: em(30);
+    }
+    .fc-icon {
+      opacity: 0;
+      visibility: hidden;
+    }
+    .fc-next-button::after {
+      content: '\e92a';
+      font-family: 'feather';
+      font-size: em(20);
+      @include position(absolute, 50% 50% null null);
+      transform: translateX(50%) translateY(-50%);
+      color: $text-muted;
+    }
+
+    .fc-prev-button::after {
+      content: '\e929';
+      font-size: em(20);
+      font-family: 'feather';
+      @include position(absolute, 50% 50% null null);
+      transform: translateX(50%) translateY(-50%);
+      color: $text-muted;
+    }
+    .fc-today-button {
+      font-family: $headings-font-family;
+      @include padding( null #{$spacer * 1.25});
+    }
+  }
+
+  &.fc-unthemed td.fc-today { background: rgba($warning, .05) }
+  &.fc-unthemed td.fc-day-top.fc-today { background: none }
+
+  .fc-view-container {
+    @extend .col-md-9;
+    border-left: 1px solid $theme-border-color;
+    padding: 0;
+  }
+
+  &-sidebar {
+    top: rem(110);
+    z-index: 2;
+  }
+
+  .fc-button { height: rem(30) }
+
+  .fc-view > table {
+    tbody > tr > td:first-child {
+      border-left: 0;
+    }
+  }
+
+  .fc-other-month {
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba( $theme-border-color, .15 ),
+      rgba( $theme-border-color, .15 ) 8px,
+      transparent 8px,
+      transparent 16px
+    );
+  }
+
+  td,
+  tbody {
+    border-color: $theme-border-color;
+  }
+
+  .fc-week table td {
+    &:first-child {
+      border-left: 0;
+    }
+    &:last-child{
+      border-right: 0;
+    }
+  }
+
+  .fc-view > table > thead td  { border-top: 0 }
+
+  .fc-state-default {
+    text-shadow: none;
+  }
+
+  .fc-toolbar .fc-button {
+    background: transparent;
+    border-color: rgba($theme-border-color, 0.5);
+    border-radius: 0;
+    padding: em(10) em(10);
+    box-shadow: none;
+    height: auto;
+    z-index: 1;
+    font-family: $headings-font-family;
+    color: $content-color;
+    &.fc-state-active {
+      @extend .bg-primary-contrast;
+      color: $primary;
+    }
+    &.fc-state-disabled { opacity: 0.4 }
+  }
+
+  .fc-event {
+    font-size: rem(12);
+    border-radius: 0;
+    @include margin( null 0px 0px);
+    @include padding(em(5,12));
+    text-align: center;
+    color: #fff !important;
+    transition: background 0.3s ease, color 0.3s ease;
+    font-family: $headings-font-family;
+  }
+
+  .fc-widget-header {
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .fc-head .fc-axis,
+  .fc-day-header {
+    font-weight: normal;
+    font-size: em(12);
+    letter-spacing: 0.1em;
+    opacity: 0.6;
+    border: 0;
+    padding: em(20, 12) em(10,12);
+    text-transform: uppercase;
+    a { color: #fff }
+  }
+  .fc-body .fc-axis { background: #eee }
+  .fc-day-top {
+    font-size: 1em;
+    a { color: $body-color }
+  }
+
+  .fc-body > tr > td {
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+  }
+}
+
+.fullcalendar-events {
+  .fc-event {
+    background: transparent !important;
+    border: 0 !important;
+    color: $headings-color;
+    cursor: pointer;
+    padding: em(10) em(20);
+    font-size: $font-size-base;
+    font-family: $headings-font-family;
+    display: flex;
+    align-items: center;
+    &:hover{
+      background: $dropdown-link-hover-bg !important;
+    }
+  }
+  .fc-event-text {
+    flex: 1;
+  }
+  i {
+    @include size(em(30));
+    text-align: center;
+    line-height: em(30);
+    border-radius: 3px;
+    margin-right: $spacer * 1.25;
+    background: inherit;
+  }
+  body.rtl & {
+    i {
+      margin-right: 0;
+      margin-left: $spacer * 1.25;
+    }
+  }
+}

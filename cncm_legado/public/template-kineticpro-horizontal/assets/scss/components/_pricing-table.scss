@@ -1,0 +1,151 @@
+// main: ../style.scss
+/********************************
+*********************************
+Pricing Table
+*********************************
+*********************************/
+.pricing-box {
+  border: rem(1) solid $theme-border-color;
+  border-radius: em(4);
+  background: $widget-bg;
+  margin: em(42) 0;
+  padding-bottom: em(15);
+  padding-top: em(10);
+
+  [class^="col-md-"] & {
+    margin-left: em(-5);
+    margin-right: em(-5);
+  }
+
+  .heading-basic {
+    height: em(80);
+    width: em(80);
+    display: inline-block;
+    line-height: em(80);
+    margin: auto;
+  }
+
+  .heading-custom {
+    height: em(80);
+    width: em(80);
+    line-height: em(80);
+    display: inline-block;
+    margin: auto;
+  }
+
+  li {
+    padding: em(7) 0;
+  }
+
+  hr {
+    width: 80%;
+  }
+
+  &.featured-pricing-box{
+    position: relative;
+    z-index: 1;
+    box-shadow: 0px 0px em(9) rgba(0,0,0,.1);
+
+    .heading-featured {
+      height: em(40);
+      width: em(40);
+      line-height: em(40);
+      display: inline-block;
+      margin: 0;
+    }
+
+    [class^=col-md-] & {
+      margin-left: em(-30);
+      margin-right: em(-30);
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+  }
+
+  &.featured-pricing-box-2{
+    // background: rgba(135,206,250,.7) !important;
+    h5,p,a,li {
+      color: #fff;
+    }
+
+
+    li {
+      color: #fff !important;
+    }
+
+    .btn-outline-default:hover {
+      background: #fff;
+      border-color: transparent;
+      color: rgba(135,206,250,.7);
+    }
+
+
+  }
+
+  header {
+    margin-top: em(30);
+
+    h5 {
+      font-weight: 700;
+      margin-bottom: em(20,18);
+    }
+
+    span {
+      sub {
+        font-size: em(15,42);
+        font-weight: 700;
+        position: relative;
+        top: 0;
+      }
+    }
+
+    .header-text {
+      font-size: em(15);
+      font-weight: 500;
+      margin-top: em(28);
+    }
+
+    .triangle-top-right {
+      display: inline-block;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 80px 80px 0;
+      border-color: transparent map-get($theme-colors, success) transparent transparent;
+      position: absolute;
+      top: em(5);
+      right: em(5);
+      &::before {
+        content: "\e9bf";
+        font-family: "feather";
+        color: #fff;
+        font-size: em(20);
+        position: absolute;
+        left: em(45,20);
+        top: em(10,20);
+      }
+    }
+  }
+
+  ul {
+    padding-right: 0;
+  }
+
+  .pricing-box-content {
+
+    li {
+      border: none;
+      color: #aaa;
+      background-color: transparent;
+    }
+
+    .btn {
+      width: 80%;
+      letter-spacing: em(2);
+      font-size: em(11);
+      font-weight: 700;
+      margin-bottom: em(25);
+      text-transform: uppercase;
+    }
+  }
+}

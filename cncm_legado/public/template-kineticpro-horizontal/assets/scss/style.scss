@@ -1,0 +1,71 @@
+// compileExpanded ../css/$1.css
+
+@import "variables";
+@import "color-schemes/horizontal";
+
+/*
+* Name:        	#{ $template-name }
+* Written by:   Unifato - (http://unifato.com)
+* Version:      #{ $template-version }
+*/
+
+@import "toc";
+
+/********************************
+*********************************
+Bootstrap
+*********************************
+*********************************/
+@import "vendors/bootstrap/bootstrap";
+@import "base/mixins";
+@charset "UTF-8";
+@import "vendors/bourbon";
+
+/********************************
+*********************************
+Animate.css
+*********************************
+*********************************/
+@import "base/animations";
+@import "base/base";
+@import "base/helpers";
+
+@import "components/buttons";
+@import "components/progress";
+@import "components/table";
+@import "components/cards";
+@import "components/blog-post";
+@import "components/carousel";
+@import "components/tabs";
+@import "components/accordion";
+@import "components/lists";
+@import "components/modals";
+@import "components/forms";
+@import "components/range-slider";
+@import "components/pagination";
+@import "components/fullcalendar";
+@import "components/clndr";
+@import "components/gmaps";
+@import "components/vmaps";
+@import "components/inbox";
+@import "components/widgets";
+@import "components/pricing-table";
+@import "components/timeline";
+@import "components/icon-box";
+@import "components/media";
+@import "components/contacts";
+@import "components/chats";
+@import "components/site-map";
+@import "components/ecommerce";
+@import "components/weather";
+@import "components/todo";
+@import "components/custom-scroll";
+@import "components/tooltip";
+@import "components/counter";
+
+@import "layout/content";
+@import "layout/header";
+@import "layout/footer";
+@import "layout/sidebar";
+@import "layout/right-sidebar";
+@import "layout/media-queries";

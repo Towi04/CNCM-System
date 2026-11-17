@@ -1,0 +1,176 @@
+// main: ../style.scss
+/********************************
+*********************************
+Weather
+*********************************
+*********************************/
+
+.weather-card-image {
+  figure {
+    overflow: hidden;
+    height: em(290);
+    position: relative;
+    background-size: cover;
+    background-position: center center;
+    margin-bottom: 0;
+  }
+  img {
+    width: 100%;
+  }
+
+  figcaption {
+    @include position(absolute, 0);
+    h6 {
+      position: absolute;
+      bottom: em(10);
+    }
+    span{
+      position: absolute;
+      right: em(20,20);
+      bottom: em(10,20);
+      font-size: em(20);
+      sup {
+        font-size: em(10,20);
+        vertical-align: super;
+      }
+    }
+  }
+
+  .weather-footer {
+    div {
+      padding: 0 em(15);
+      margin: em(30) 0 em(30) 0;
+      border-left: rem(1) solid #eee;
+      &:first-child {
+        border: 0;
+      }
+    }
+  }
+}
+
+
+.weather-card-image-dark {
+  position: relative;
+  height: em(430);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center center;
+
+  i {
+    position: absolute;
+    text-align: center;
+    top: 50%;
+    left: 50%;
+    transform: translateY(-50%) translateX(-50%);
+    font-size: em(50);
+  }
+
+  .weather-caption{
+    position: absolute;
+    bottom: em(30);
+    left: em(20);
+  }
+
+  .weather-date {
+    padding: em(10) em(15);
+    position: absolute;
+    bottom: em(45);
+    right: 0;
+  }
+}
+
+.weather-status {
+  font-size: em(30);
+  margin-left: em(-10,30);
+}
+
+.weather-card-default {
+  table tr td {
+    border: 0;
+  }
+
+  li {
+    padding: 0 em(15,16);
+    font-size: em(16);
+  }
+}
+
+.weather-card-simple {
+  h3 {
+    font-weight: 400;
+  }
+  i {
+    font-size: em(35);
+    margin-top: em(10,35);
+  }
+}
+
+
+// .weather-widget-tablist {
+//   margin-top: -20px;
+//   margin-bottom: -20px;
+//   figure {
+//     img {
+//       height: 285px;
+//     }
+//     position: relative;
+//     figcaption {
+//       position: absolute;
+//       left: 50%;
+//       top: 50%;
+//       transform: translate(-50%,-50%);
+//       h5 {
+//         font-size: 80px;
+//       }
+//       span {
+//         font-size: 20px;
+//       }
+//     }
+//   }
+//
+//   section {
+//     i {
+//       font-size: 60px;
+//     }
+//     li {
+//       line-height: 25px;
+//     }
+//   }
+//
+//   footer {
+//     .carousel {
+//       i {
+//         font-size: 22px;
+//       }
+//       .slick-arrow {
+//         z-index: -1;
+//       }
+//     }
+//
+//     .slick-list {
+//       top: 40px;
+//     }
+//     .slick-dots {
+//       top: 0;
+//       li{
+//         &:first-child {
+//           margin-right: 15px;
+//         }
+//         button {
+//           height: 4px;
+//           width: 30px;
+//           padding: 0;
+//           background-color: #e6e6e6;
+//           &::before {
+//             opacity: 0;
+//           }
+//         }
+//       }
+//       li.slick-active button {
+//         background-color: #9a9a9a;
+//       }
+//     }
+//
+//   }
+//
+// }

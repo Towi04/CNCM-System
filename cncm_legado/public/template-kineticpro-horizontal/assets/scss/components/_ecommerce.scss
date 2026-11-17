@@ -1,0 +1,86 @@
+// main: ../style.scss
+/********************************
+*********************************
+E-Commerce Products
+*********************************
+*********************************/
+.ecommerce-products {
+  .product {
+    margin-bottom: em(30);
+    transition: $transition-base;
+    .card {
+      transition: inherit;
+      border: 0;
+    }
+    .card-header {
+      padding: 0;
+      border: 0;
+      .triangle-top-right {
+        @include position(absolute, 0 0 null null);
+        @include size( 0 );
+        display: inline-block;
+        border-style: solid;
+        border-width: 0 80px 80px 0;
+        border-color: transparent $primary transparent transparent;
+        &::after {
+          content: "done";
+          font-family: "Material Icons";
+          color: #fff;
+          font-size: em(20);
+          @include position(absolute, em(10,20) null null em(45,20));
+        }
+      }
+    }
+    .card-footer {
+      display: flex;
+      background: transparent;
+      padding: 0;
+      .product-info {
+        display: flex;
+        flex: 1;
+        border-right: 1px solid $theme-border-color;
+        > a {
+          flex: 1;
+          text-align: center;
+          line-height: 3.5em;
+          color: $content-color;
+        }
+        .list-icon {
+          font-size: rem(14);
+        }
+      }
+    }
+    .product-title {
+      font-size: rem(20);
+      @include margin( 0 auto null null);
+    }
+    .product-price {
+      font-size: $h5-font-size;
+      color: $primary;
+      line-height: 1;
+    }
+
+    &:hover {
+      transform: scale(1.02);
+      .card {
+        box-shadow: 0 0 10px 0 rgba(0,0,0,0.1);
+      }
+    }
+  }
+
+  body.rtl & {
+    .product {
+      .product-title {
+        @include margin(null 0 null auto);
+      }
+    }
+  }
+}
+
+.invoice-sum {
+  li {
+    background: rgba(0,0,0,.05);
+    margin-bottom: em(2);
+    padding: em(5) em(10);
+  }
+}

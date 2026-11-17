@@ -1,0 +1,127 @@
+// main: ../style.scss
+
+/* Media Elements
+========================*/
+.mejs__container {
+  max-width: 100%;
+  width: 100% !important;
+  font-family: $font-family-base;
+  &.mejs__video {
+    background: none;
+  }
+}
+
+.mejs__overlay {
+  width: 100% !important;
+}
+
+.mejs__mediaelement * {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+.mejs__overlay-button {
+  background: none;
+  color: #fff;
+  @include size(rem(60));
+  &:before {
+    content: '\e99e';
+    font-family: 'feather';
+    font-size: rem(60);
+    line-height: rem(60);
+  }
+}
+
+.video {
+  max-width: 100%;
+}
+
+.no-control-onstart.mejs__video--playing {
+  .mejs__controls {
+    display: block;
+  }
+}
+
+.no-controls-onstart:not(.mejs__video--playing) {
+  .mejs__controls {
+    display: none;
+  }
+}
+
+.mejs__container.style-2 {
+  .mejs__controls {
+    background: $headings-color;
+  }
+  .mejs__time-rail {
+    @include position(absolute, -7px 0 null);
+    width: 100% !important;
+    height: 3px;
+    margin: 0;
+    padding: 0;
+  }
+  .mejs__time-buffering, .mejs__time-current, .mejs__time-float, .mejs__time-float-corner, .mejs__time-float-current, .mejs__time-hovered, .mejs__time-loaded, .mejs__time-marker, .mejs__time-total {
+    height: 3px;
+  }
+  .mejs__time-total { background: #fff }
+  .mejs__time-loaded { background: rgba($primary, .4) }
+  .mejs__time-current { background: $primary }
+  .mejs__time-hovered { background: darken($primary, 10%) }
+  .mejs__time-float,
+  .mejs__time-handle {
+    display: none !important;
+  }
+  .mejs__volume-button,
+  .mejs__playpause-button,
+  .mejs__fullscreen-button {
+    > button {
+      background: none;
+      &::before {
+        font-family: 'Material Icons';
+        vertical-align: middle;
+        text-rendering: optimizeLegibility;
+        font-feature-settings: 'liga';
+        font-size: rem(24);
+        @include size(1em);
+        color: #fff;
+      }
+    }
+  }
+  .mejs__fullscreen-button {
+    float: right;
+    > button::before {
+      content: 'fullscreen';
+    }
+    &.mejs__unfullscreen > button::before {
+      content: 'fullscreen_exit';
+    }
+  }
+  .mejs__playpause-button {
+    &.mejs__play > button::before {
+      content: 'play_arrow';
+    }
+    &.mejs__pause > button::before {
+      content: 'pause';
+    }
+  }
+  .mejs__volume-button {
+    padding-left: 0;
+    padding-right: 0;
+    > button::before {
+      content: 'volume_up';
+    }
+    &.mejs__unmute > button::before {
+      content: 'volume_off';
+    }
+  }
+  .mejs__overlay-button:before {
+    font-family: 'Material Icons';
+    content: 'play_arrow';
+  }
+  .mejs__duration-container {
+    opacity: 0.5;
+    &:before {
+      content: '\002f ';
+      margin-right: .5em;
+    }
+  }
+}

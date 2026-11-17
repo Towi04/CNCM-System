@@ -1,0 +1,334 @@
+// main: ../style.scss
+
+/* Right Sidebar
+========================*/
+.scrollbar-enabled {
+  position: relative;
+  padding-right: 15px;
+
+  .left-scroll & {
+    padding-right: 0;
+    padding-left: 15px;
+  }
+}
+
+.sidebar-dark .site-sidebar,
+.right-sidebar-dark .right-sidebar {
+  .ps-scrollbar-y-rail,
+  .ps-scrollbar-x {
+    background: transparent !important;
+  }
+
+  .ps-scrollbar-y {
+    background: rgb(220,220,220) !important;
+    right: 0 !important;
+    width: rem(5) !important;
+  }
+}
+
+.right-sidebar {
+	@include position(fixed, $nav-height 0 null null);
+	width: $right-sidebar-width;
+	background: #fff;
+  height: calc(100vh - #{$nav-height});
+	border-left: 1px solid $theme-border-color;
+  border-top: 1px solid $theme-border-color;
+  transform: translateX(100%);
+  padding: em(15);
+  z-index: 9;
+
+  .right-sidebar-expand & {
+    transform: translateY(0);
+  }
+
+  @include tablet {
+    .right-sidebar {
+      width: 100%;
+      height: auto;
+    }
+  }
+
+  body.rtl & {
+    left: 0;
+    right: auto;
+    transform: translateX(-100%);
+    border-left: 0;
+    border-right: 1px solid $theme-border-color;
+  }
+  body.rtl.right-sidebar-expand & {
+    transform: translateX(0);
+  }
+}
+
+.sidebar-chat-info {
+  color: $nav-link-color;
+  font-size: em(13);
+}
+
+
+/* Sidebar Chat
+========================*/
+.sidebar-chat {
+  z-index: 9999999;
+
+  .list-group {
+    margin-left: em(-15);
+    margin-right: em(-15);
+  }
+
+	.list-group-item {
+		background: none;
+		border: 0;
+    border-top: 1px solid $theme-border-color;
+		@include padding(1em em(15));
+		overflow: hidden;
+    color: $body-color;
+    display: flex;
+    align-items: center;
+
+    &:hover,
+    &.chat-active,
+    &.active,
+    &.active:focus,
+    &.active:hover {
+      background: #f9f9f9;
+      color: $body-color;
+      z-index: auto;
+    }
+
+    figure {
+      margin-bottom: 0;
+    }
+
+		> span {
+      line-height: 1em;
+      display: flex;
+      justify-content: flex-end;
+      flex-direction: column;
+		}
+
+    .name {
+      font-size: em(13);
+      font-family: $headings-font-family;
+      color: $headings-color;
+      font-weight: 500;
+      top: em(9,13);
+      margin-bottom: em(5,13);
+      margin-top: em(4,13);
+    }
+
+    .username {
+      opacity: 0.7;
+      font-size: em(12);
+      top: em(-1,12);
+    }
+	}
+
+	.list-group-item:first-child {
+		border-radius: 0;
+	}
+
+	[class*="user-"]:after {
+		@include position(absolute, calc(50% + 15px) null null 0);
+		transform: translateY(-50%);
+	}
+}
+
+.sidebar-chat-subtitle {
+	text-transform: uppercase;
+	margin-top: em(40);
+  color: #bbb;
+  font-weight: 700;
+  letter-spacing: em(1);
+}
+
+
+/* Chat Panel
+========================*/
+.chat-panel {
+	@include position(fixed, calc(100vh) calc( #{$right-sidebar-width} + 15px) null null);
+	width: em(340);
+  transform: translateY(-100%) translateX(#{$right-sidebar-width});
+	z-index: 9999;
+
+  .right-sidebar-expand & {
+    transform: translateY(-100%) translateX(0);
+  }
+
+  .minimize {
+    border: 0;
+    background: none;
+    @include size(auto);
+    padding: 0;
+    margin: 0;
+    margin-right: em(5);
+    line-height: 1em;
+    position: relative;
+    top: em(-1);
+    float: right;
+    color: #000;
+    opacity: 0.2;
+
+    &:hover {
+      opacity: 0.5;
+    }
+  }
+
+  .user-name {
+    color: $headings-color;
+  }
+
+  .close {
+    opacity: 0.2;
+    &:hover {
+      opacity: 0.5;
+    }
+  }
+
+	.card{
+		border-radius: 10px;
+    border: none;
+    box-shadow: 0 4px 8px 3px rgba(0,0,0,.2);
+    margin-bottom: em(20);
+	}
+
+  .card-header {
+    background: none;
+    padding: em(15) em(20);
+    font-size: em(16);
+    border-bottom: 1px solid rgba(#999,0.2);
+    button { cursor: pointer; }
+  }
+
+  .card-body {
+    padding: em(15);
+  }
+
+  .card-footer {
+    background: none;
+    padding: em(15) em(20);
+    border-top: 1px solid rgba(#999,0.2);
+
+    a {
+      i {
+        color: #bbb;
+        position: relative;
+        top: 4px;
+      }
+    }
+
+    textarea {
+      @include placeholder {
+        color: #bbb;
+      }
+    }
+  }
+
+  .messages {
+    position: relative;
+    max-height: em(300);
+    overflow-y: scroll;
+    @include margin(em(-15) em(-15) null em(-15));
+    @include padding(em(15) em(15) null em(15));
+  }
+
+  body.rtl & {
+    right: auto;
+    left: calc(#{$right-sidebar-width} + 15px;
+  }
+
+  .right-sidebar-dark & {
+    .card {
+      background: $primary-dark;
+    }
+  }
+}
+
+
+/* Dark Right Sidebar
+========================*/
+.right-sidebar-dark {
+
+  .right-sidebar {
+    background: $primary-dark;
+    border-color: rgba(255,255,255, 0.2);
+    .list-group-item {
+      border-color: rgba(204,204,204,0.2);
+  		&:hover,
+      &.chat-active,
+      &.active,
+      &.active:focus,
+      &.active:hover {
+        background: $primary-dark;
+
+        .name {
+          color: #fff;
+        }
+      }
+
+      span {
+        color: #afb2ba;
+      }
+    }
+
+    [class*="user--"]::after {
+      box-shadow: 0 0 0 2px $primary-dark;
+    }
+  }
+
+  .right-sidebar h6, .sidebar-chat-subtitle {
+    color: #fff;
+  }
+
+
+  .sidebar-chat-info {
+    color: #afb2ba;
+  }
+
+  .chat-panel {
+    .minimize,
+    button.close {
+      color: #fff;
+      opacity: .4;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    .message p {
+      background: $primary;
+      color: #fff;
+    }
+
+    .message.reply p {
+      background: $primary-hover;
+      border: $primary-hover;
+
+      &:first-child::after { border-right-color: $primary-hover }
+      &:first-child::before { border-right-color: $primary-hover }
+    }
+
+    .chat-extra-buttons {
+      a {
+        transition: all 0.3s ease;
+        color: #fff;
+        &:hover {
+          opacity: 0.6;
+          border: 0;
+        }
+      }
+    }
+
+    textarea {
+      border-color: rgba(255,255,255,.2);
+      color: #fff;
+      background: transparent;
+
+      @include placeholder {
+        color: #fff;
+        opacity: .7;
+      }
+    }
+  }
+}

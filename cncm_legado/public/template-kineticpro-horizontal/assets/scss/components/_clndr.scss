@@ -1,0 +1,136 @@
+// main: ../style.scss
+
+/* CLNDR
+========================*/
+.clndr {
+  padding: em(25) em(30);
+  position: relative;
+
+  .day-number {
+    position: relative;
+    z-index: 2;
+  }
+
+  .clndr-grid {
+    @include clearfix;
+    .days {
+      display: block;
+      > .day {
+        display: inline-block;
+        width: 14.28571%;
+        float: left;
+        padding: 0 em(10);
+        line-height: 3em;
+        cursor: pointer;
+        position: relative;
+        z-index: 0;
+
+        &.event::before,
+        &.today::before {
+          content: "";
+          @include position(absolute, 50% 50% null null);
+          transform: translateY(-50%) translateX(50%);
+          background: rgba($body-color, 0.1);
+          z-index: 1;
+          @include size(2.5em);
+          border-radius: 100px;
+          display: block;
+          opacity: 0;
+          transition: all $transition-duration $transition-function;
+        }
+
+        &.event::before {
+          background: none;
+          border:1px solid rgba($body-color,0.3);
+        }
+
+        &.event::before { opacity: 1 }
+        &.last-month,
+        &.next-month {
+          color: rgba($body-color, 0.2);
+        }
+      }
+    }
+  }
+
+  .event-listing {
+    @include clearfix();
+    @include margin( null em(-32) em(-26));
+    margin-top: em(35);
+    padding: em(20) 0 em(20);
+    color: $body-color;
+    background: #fff;
+    // border: 1px solid rgba($body-color, 0.2);
+    // border-top: 0;
+
+    .selected-date {
+      position: relative;
+      text-align: center;
+      display: block;
+      .date {
+        vertical-align: top;
+        font-size: em(30);
+        line-height: 1em;
+      }
+    }
+
+    .event-item {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: em(10);
+      margin-bottom: em(10);
+      &:last-child { border-bottom: 0; margin-bottom: 0 }
+    }
+
+    .event-item-time {
+      opacity: 0.5;
+    }
+
+    .event-item-title {
+      margin-left: em(10);
+    }
+
+    .event-item-icon {
+      vertical-align: sub;
+      float: right;
+    }
+  }
+
+  .clndr-previous-button,
+  .clndr-today-button,
+  .clndr-next-button {
+    cursor: pointer;
+    position: relative;
+    top: em(-2);
+  }
+}
+
+.color-white .clndr{
+
+  &,
+  .clndr-title,
+  .curront-month,
+  .days .day {
+    color: #fff;
+  }
+
+  .days .day {
+    &.last-month,
+    &.next-month {
+      color: rgba(255,255,255,0.3);
+    }
+
+    &.event::before {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+  }
+
+  .days .day.today {
+    color: $primary;
+    &::before {
+      background: white;
+      opacity: 1;
+      border-color: transparent;
+    }
+  }
+}

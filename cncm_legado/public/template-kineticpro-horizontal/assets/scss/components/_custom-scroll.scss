@@ -1,0 +1,35 @@
+// main: ../style.scss
+/********************************
+*********************************
+Custom Scroll
+*********************************
+*********************************/
+
+.custom-scroll-content {
+  height: em(230);
+}
+
+.left-scroll {
+  .ps.ps--active-x>.ps__scrollbar-x-rail, .ps.ps--active-y>.ps__scrollbar-y-rail {
+    left: 0;
+  }
+}
+
+.color-scroll {
+  .ps > .ps__scrollbar-y-rail {
+    &:hover .ps__scrollbar-y {
+      background: rgba(0, 0, 255, .7);
+    }
+
+    > .ps__scrollbar-y {
+      background: rgba(0, 0, 255, .7);
+      &:hover {
+        background: rgba(0, 0, 255, .7);
+      }
+    }
+  }
+}
+
+.ps:hover > .ps__scrollbar-y-rail:hover {
+  background: transparent;
+}

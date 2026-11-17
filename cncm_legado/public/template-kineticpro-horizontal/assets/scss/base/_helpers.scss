@@ -1,0 +1,605 @@
+/********************************
+*********************************
+HELPER CLASSES
+*********************************
+*********************************/
+
+/* Colors
+========================*/
+@mixin theme_colors_func($col, $val) {
+	.progress-bar-#{$col},
+	.bg-#{$col} {
+		background-color: $val !important;
+		border-color: $val !important;
+    color: #fff;
+	}
+
+	.bg-#{$col}-dark {
+		background-color: darken($val, 10%);
+		border-color: darken($val, 10%);
+	}
+
+	.bg-#{$col}-light {
+		background-color: lighten($val, 15%);
+		border-color: lighten($val, 15%);
+	}
+
+  .bg-#{$col}-contrast {
+    background-color: rgba($val,.1);
+    color: $val;
+  }
+
+  a.bg-#{$col}-contrast:hover {
+    background: $val;
+  }
+
+  %color-#{$col},
+	.color-#{$col},
+	.color-hover-#{$col}:hover,
+	.color-focus-#{$col}:hover,
+	.color-active-#{$col}:hover,
+	.text-#{$col} {
+		color: $val !important;
+	}
+
+	.border-color-#{$col} {
+		border-color: $val !important;
+	}
+}
+
+
+@each $col, $val in $theme-colors {
+  @include theme_colors_func($col, $val);
+}
+
+@each $col, $val in $colors {
+  @include theme_colors_func($col, $val);
+}
+
+.bg-none {
+  background: none !important;
+}
+
+.content-color { color: $content-color !important }
+.headings-color { color: $headings-color !important }
+
+/* Basic
+========================*/
+@mixin hidden {display: none}
+%block, .block {display: block}
+%inline, .inline {display: inline}
+%inline-block, .inline-block {display: inline-block}
+
+%overflow-hidden, .overflow-hidden {overflow: hidden}
+%overflow-scroll, .overflow-scroll {overflow: scroll}
+%overflow-auto, .overflow-auto {overflow: auto}
+
+%pre, .pre {white-space: pre}
+%nowrap, .nowrap {white-space: nowrap}
+%resize-none, .resize-none {resize: none}
+%resize-vertical, .resize-vertical {resize: vertical}
+%resize-horizontal, .resize-horizontal {resize: horizontal}
+%cursor-pointer, .cursor-pointer {cursor: pointer}
+%no-pointer-events, .no-pointer-events { pointer-events: none}
+%border-0, .border-0 {border: 0;}
+%vertical-middle, .vertical-middle { vertical-align: middle !important }
+
+%disabled,
+.disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+%fullscreen,
+.fullscreen {
+	min-height: 100vh;
+	min-width: 100%;
+}
+
+%scroll-horizontal,
+.scroll-horizontal {
+	overflow-x: scroll;
+	overflow-y: hidden;
+}
+
+%scroll-vertical,
+.scroll-vertical {
+	overflow-x: hidden;
+	overflow-y: scroll;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+	background: transparent;
+}
+
+
+/* Position
+========================*/
+%pos-static, .pos-static {position: static}
+%pos-fixed, .pos-fixed {position: fixed}
+%pos-relative, .pos-relative {position: relative}
+%pos-absolute, .pos-absolute {position: absolute}
+%pos-top, .pos-top {top: 0}
+%pos-right, .pos-right {right: 0}
+%pos-left, .pos-left {left: 0}
+%pos-bottom, .pos-bottom {bottom: 0}
+%pos-left, .pos-left {left: 0}
+%pos-0, .pos-0 {
+  @extend .pos-absolute;
+  @extend .pos-left;
+  @extend .pos-right;
+  @extend .pos-bottom;
+  @extend .pos-top;
+}
+
+%horizontal-center,
+.horizontal-center {
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+}
+
+%vertical-center,
+.vertical-center {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+%absolute-center,
+.absolute-center {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+
+/* Opacity
+=========================*/
+%opacity-0 , .opacity-0-hover:hover,  .opacity-0  {opacity: 0}
+%opacity-01, .opacity-01-hover:hover, .opacity-01 {opacity: 0.1}
+%opacity-02, .opacity-02-hover:hover, .opacity-02 {opacity: 0.2}
+%opacity-03, .opacity-03-hover:hover, .opacity-03 {opacity: 0.3}
+%opacity-04, .opacity-04-hover:hover, .opacity-04 {opacity: 0.4}
+%opacity-05, .opacity-05-hover:hover, .opacity-05 {opacity: 0.5}
+%opacity-06, .opacity-06-hover:hover, .opacity-06 {opacity: 0.6}
+%opacity-07, .opacity-07-hover:hover, .opacity-07 {opacity: 0.7}
+%opacity-08, .opacity-08-hover:hover, .opacity-08 {opacity: 0.8}
+%opacity-09, .opacity-09-hover:hover, .opacity-09 {opacity: 0.9}
+%opacity-1 , .opacity-1-hover:hover,  .opacity-1  {opacity: 1}
+
+
+/* Width
+=========================*/
+%width-100, .width-100 {width: 100%}
+%width-80 , .width-80 {width: 80%}
+%width-75 , .width-75 {width: 75%}
+%width-67 , .width-67 {width: 66.66666666666667%}
+%width-50 , .width-50 {width: 50%}
+%width-33 , .width-33 {width: 33.33333333333333%}
+%width-25 , .width-25 {width: 25%}
+%width-20 , .width-20 {width: 20%}
+
+/* Font Weight
+========================*/
+@for $i from 0 through 9 {
+  %flex-#{$i},
+  .flex-#{$i} { flex: #{$i} !important }
+}
+
+.flex-none { flex: none !important }
+
+/* Font Weight
+========================*/
+@for $i from 1 through 9 {
+  %fw-#{$i}00,
+	.fw-#{$i}00 {
+		font-weight: #{$i * 100} !important;
+	}
+}
+%fw-normal, .fw-normal {font-weight: $font-weight-normal;}
+%fw-medium, .fw-medium{font-weight: $font-weight-medium;}
+%fw-semibold, .fw-semibold{font-weight: $font-weight-semibold;}
+%fw-bold, .fw-bold{font-weight: $font-weight-bold;}
+%italic, .italic {font-style: italic;}
+
+.text-indent-full {
+  text-indent: -9999px;
+}
+
+/* Z Index
+========================*/
+@for $i from 0 through 9 {
+  %zi-#{$i},
+	.zi-#{$i} {
+		z-index: #{$i} !important;
+	}
+}
+.zi-n-1 {
+  z-index: -1 !important;
+}
+
+/* Font Size
+========================*/
+$font-sizes: 9;
+
+@while $font-sizes <= 60 {
+  %fs-#{$font-sizes},
+	.fs-#{$font-sizes} {
+		font-size: rem($font-sizes) !important;
+	}
+
+	@if $font-sizes < 16 {
+		$font-sizes: $font-sizes + 1;
+	} @else {
+		$font-sizes: $font-sizes + 2;
+	}
+}
+
+.fs-base {
+  font-size: $font-size-base !important;
+}
+
+/* Letter Spacing
+========================*/
+.letter-spacing-minus {
+  letter-spacing: em(-.8,16px);
+}
+
+.letter-spacing-plus {
+  letter-spacing: em(.8,16px);
+}
+
+/* Text Helpers
+========================*/
+.text-underline {
+  text-decoration: underline;
+}
+
+/* Line Height
+========================*/
+@for $i from 10 through 45 {
+  %lh-#{$i},
+	.lh-#{$i} {
+		line-height: #{$i/10}em;
+	}
+
+  %lhr-#{$i},
+	.lhr-#{$i} {
+		line-height: #{$i/16}rem;
+	}
+}
+
+/* Border Helpers
+=========================*/
+%border-left, .border-left { border-left: $border-width solid $theme-border-color }
+%border-top, .border-top { border-top: $border-width solid $theme-border-color }
+%border-right, .border-right { border-right: $border-width solid $theme-border-color }
+%border-bottom, .border-bottom{ border-bottom: $border-width solid $theme-border-color }
+%border-left-rtl, body.rtl .border-left-rtl { border-left: $border-width solid $theme-border-color }
+%border-top-rtl, body.rtl .border-top-rtl { border-top: $border-width solid $theme-border-color }
+%border-right-rtl, body.rtl .border-right-rtl { border-right: $border-width solid $theme-border-color }
+%border-bottom-rtl, body.rtl .border-bottom-rtl { border-bottom: $border-width solid $theme-border-color }
+%border-all, .border-all {
+  @extend .border-left;
+  @extend .border-right;
+  @extend .border-top;
+  @extend .border-bottom;
+}
+
+%border-left-dotted,  .border-left-dotted { border-left-style: dotted }
+%border-left-dashed,  .border-left-dashed { border-left-style: dashed }
+%border-left-solid,   .border-left-solid  { border-left-style: solid }
+%border-left-double,  .border-left-double { border-left-style: double }
+%border-left-groove,  .border-left-groove { border-left-style: groove }
+%border-left-ridge,   .border-left-ridge  { border-left-style: ridge }
+%border-left-inset,   .border-left-inset  { border-left-style: ridge }
+%border-left-outset,  .border-left-outset { border-left-style: outset }
+%border-left-none,    .border-left-none   { border-left-style: none }
+%border-left-hidden,  .border-left-hidden { border-left-style: hidden }
+
+%border-right-dotted, .border-right-dotted { border-right-style: dotted }
+%border-right-dashed, .border-right-dashed { border-right-style: dashed }
+%border-right-solid , .border-right-solid  { border-right-style: solid }
+%border-right-double, .border-right-double { border-right-style: double }
+%border-right-groove, .border-right-groove { border-right-style: groove }
+%border-right-ridge , .border-right-ridge  { border-right-style: ridge }
+%border-right-inset , .border-right-inset  { border-right-style: ridge }
+%border-right-outset, .border-right-outset { border-right-style: outset }
+%border-right-none  , .border-right-none   { border-right-style: none }
+%border-right-hidden, .border-right-hidden { border-right-style: hidden }
+
+%border-top-dotted, .border-top-dotted { border-top-style: dotted }
+%border-top-dashed, .border-top-dashed { border-top-style: dashed }
+%border-top-solid , .border-top-solid  { border-top-style: solid }
+%border-top-double, .border-top-double { border-top-style: double }
+%border-top-groove, .border-top-groove { border-top-style: groove }
+%border-top-ridge , .border-top-ridge  { border-top-style: ridge }
+%border-top-inset , .border-top-inset  { border-top-style: ridge }
+%border-top-outset, .border-top-outset { border-top-style: outset }
+%border-top-none  , .border-top-none   { border-top-style: none }
+%border-top-hidden, .border-top-hidden { border-top-style: hidden }
+
+%border-bottom-dotted, .border-bottom-dotted { border-bottom-style: dotted }
+%border-bottom-dashed, .border-bottom-dashed { border-bottom-style: dashed }
+%border-bottom-solid , .border-bottom-solid  { border-bottom-style: solid }
+%border-bottom-double, .border-bottom-double { border-bottom-style: double }
+%border-bottom-groove, .border-bottom-groove { border-bottom-style: groove }
+%border-bottom-ridge , .border-bottom-ridge  { border-bottom-style: ridge }
+%border-bottom-inset , .border-bottom-inset  { border-bottom-style: ridge }
+%border-bottom-outset, .border-bottom-outset { border-bottom-style: outset }
+%border-bottom-none  , .border-bottom-none   { border-bottom-style: none }
+%border-bottom-hidden, .border-bottom-hidden { border-bottom-style: hidden }
+
+%border-y-dotted, .border-y-dotted { @extend .border-top-dotted; @extend .border-bottom-dotted }
+%border-y-dashed, .border-y-dashed { @extend .border-top-dashed; @extend .border-bottom-dashed }
+%border-y-solid , .border-y-solid  { @extend .border-top-solid;  @extend .border-bottom-solid }
+%border-y-double, .border-y-double { @extend .border-top-double; @extend .border-bottom-double }
+%border-y-groove, .border-y-groove { @extend .border-top-groove; @extend .border-bottom-groove }
+%border-y-ridge , .border-y-ridge  { @extend .border-top-ridge;  @extend .border-bottom-ridge }
+%border-y-inset , .border-y-inset  { @extend .border-top-inset;  @extend .border-bottom-inset }
+%border-y-outset, .border-y-outset { @extend .border-top-outset; @extend .border-bottom-outset }
+%border-y-none  , .border-y-none   { @extend .border-top-none;   @extend .border-bottom-none }
+%border-y-hidden, .border-y-hidden { @extend .border-top-hidden; @extend .border-bottom-hidden }
+
+%border-x-dotted, .border-x-dotted { @extend .border-right-dotted; @extend .border-left-dotted }
+%border-x-dashed, .border-x-dashed { @extend .border-right-dashed; @extend .border-left-dashed }
+%border-x-solid , .border-x-solid  { @extend .border-right-solid;  @extend .border-left-solid }
+%border-x-double, .border-x-double { @extend .border-right-double; @extend .border-left-double }
+%border-x-groove, .border-x-groove { @extend .border-right-groove; @extend .border-left-groove }
+%border-x-ridge , .border-x-ridge  { @extend .border-right-ridge;  @extend .border-left-ridge }
+%border-x-inset , .border-x-inset  { @extend .border-right-inset;  @extend .border-left-inset }
+%border-x-outset, .border-x-outset { @extend .border-right-outset; @extend .border-left-outset }
+%border-x-none  , .border-x-none   { @extend .border-right-none;   @extend .border-left-none }
+%border-x-hidden, .border-x-hidden { @extend .border-right-hidden; @extend .border-left-hidden }
+
+%border-dotted, .border-dotted { @extend .border-x-dotted; @extend .border-y-dotted }
+%border-dashed, .border-dashed { @extend .border-x-dashed; @extend .border-y-dashed }
+%border-solid , .border-solid  { @extend .border-x-solid;  @extend .border-y-solid }
+%border-double, .border-double { @extend .border-x-double; @extend .border-y-double }
+%border-groove, .border-groove { @extend .border-x-groove; @extend .border-y-groove }
+%border-ridge , .border-ridge  { @extend .border-x-ridge;  @extend .border-y-ridge }
+%border-inset , .border-inset  { @extend .border-x-inset;  @extend .border-y-inset }
+%border-outset, .border-outset { @extend .border-x-outset; @extend .border-y-outset }
+%border-none  , .border-none   { @extend .border-x-none;   @extend .border-y-none }
+%border-hidden, .border-hidden { @extend .border-x-hidden; @extend .border-y-hidden }
+
+/* Border Width
+=========================*/
+@for $i from 0 through 10 {
+  %bw-y-#{$i},
+  %bw-t-#{$i},
+  .bw-y-#{$i},
+  .bw-t-#{$i},
+  body.rtl .bw-y-#{$i}-rtl,
+  body.rtl .bw-t-#{$i}-rtl {
+    border-top-width: #{$i}px !important;
+  }
+  %bw-y-#{$i},
+  %bw-b-#{$i},
+  .bw-y-#{$i},
+  .bw-b-#{$i},
+  body.rtl .bw-y-#{$i}-rtl,
+  body.rtl .bw-b-#{$i}-rtl {
+    border-bottom-width: #{$i}px !important;
+  }
+  %bw-x-#{$i},
+  %bw-r-#{$i},
+  .bw-x-#{$i},
+  .bw-r-#{$i},
+  body.rtl .bw-x-#{$i}-rtl,
+  body.rtl .bw-r-#{$i}-rtl {
+    border-right-width: #{$i}px !important;
+  }
+  %bw-y-#{$i},
+  %bw-l-#{$i},
+  .bw-y-#{$i},
+  .bw-l-#{$i},
+  body.rtl .bw-y-#{$i}-rtl,
+  body.rtl .bw-l-#{$i}-rtl {
+    border-left-width: #{$i}px !important;
+  }
+  %bw-#{$i},
+	body.rtl .bw-#{$i}-rtl,
+	.bw-#{$i} {
+    @extend .bw-x-#{$i};
+    @extend .bw-y-#{$i};
+  }
+}
+
+/* Border Radius
+=========================*/
+%radius-0, .radius-0 { border-radius: 0; }
+%radius-full, .radius-full { border-radius: 100%; }
+@for $i from 2 through 20 {
+	%radius-#{$i}, .radius-#{$i} {
+		border-radius: #{$i}px !important;
+    overflow: hidden;
+	}
+}
+
+/* Padding & Margin
+=========================*/
+%padded-reverse, .padded-reverse {	margin: 0 -20px}
+
+%mr-lr-auto, .mr-lr-auto {
+	margin-left: auto;
+	margin-right: auto;
+}
+
+$num-list: 0 5 10 20 30 40 50 60 70 80 90 100 150 200;
+@each $current-num in $num-list {
+
+	body.rtl .pd-t-#{$current-num}-rtl,
+	body.rtl .pd-tb-#{$current-num}-rtl,
+	%pd-t-#{$current-num},
+	%pd-tb-#{$current-num},
+	.pd-t-#{$current-num},
+	.pd-tb-#{$current-num} {
+		padding-top: #{$current-num/16}rem !important;
+	}
+
+	body.rtl .pd-b-#{$current-num}-rtl,
+	body.rtl .pd-tb-#{$current-num}-rtl,
+	%pd-b-#{$current-num},
+	%pd-tb-#{$current-num},
+	.pd-b-#{$current-num},
+	.pd-tb-#{$current-num} {
+		padding-bottom: #{$current-num/16}rem !important;
+	}
+
+	body.rtl .pd-#{$current-num}-rtl,
+	%pd-#{$current-num},
+	.pd-#{$current-num} {
+		padding: #{$current-num/16}rem !important;
+	}
+
+	body.rtl .mr-t-#{$current-num}-rtl,
+	body.rtl .mr-tb-#{$current-num}-rtl,
+	%mr-t-#{$current-num},
+	%mr-tb-#{$current-num},
+	.mr-t-#{$current-num},
+	.mr-tb-#{$current-num} {
+		margin-top: #{$current-num/16}rem !important;
+	}
+
+	body.rtl .mr-b-#{$current-num}-rtl,
+	body.rtl .mr-tb-#{$current-num}-rtl,
+	%mr-b-#{$current-num},
+	%mr-tb-#{$current-num},
+	.mr-b-#{$current-num},
+	.mr-tb-#{$current-num} {
+		margin-bottom: #{$current-num/16}rem !important;
+	}
+
+	body.rtl .mr-#{$current-num}-rtl,
+	%mr-#{$current-num},
+	.mr-#{$current-num} {
+		margin: #{$current-num/16}rem !important;
+	}
+}
+
+$num-list: 0 5 10 15 20 30 40 50 60 70 80 90;
+@each $current-num in $num-list {
+
+	body.rtl .pd-l-#{$current-num}-rtl,
+	body.rtl .pd-lr-#{$current-num}-rtl,
+	%pd-l-#{$current-num},
+	%pd-lr-#{$current-num},
+	.pd-l-#{$current-num},
+	.pd-lr-#{$current-num} {
+		padding-left: #{$current-num/16}rem !important;
+	}
+
+	body.rtl .pd-r-#{$current-num}-rtl,
+	body.rtl .pd-lr-#{$current-num}-rtl,
+	%pd-r-#{$current-num},
+	%pd-lr-#{$current-num},
+	.pd-r-#{$current-num},
+	.pd-lr-#{$current-num} {
+		padding-right: #{$current-num/16}rem !important;
+	}
+
+	body.rtl .mr-l-#{$current-num}-rtl,
+	body.rtl .mr-lr-#{$current-num}-rtl,
+	%mr-l-#{$current-num},
+	%mr-lr-#{$current-num},
+	.mr-l-#{$current-num},
+	.mr-lr-#{$current-num} {
+		margin-left: #{$current-num/16}rem !important;
+	}
+
+	body.rtl .mr-r-#{$current-num}-rtl,
+	body.rtl .mr-lr-#{$current-num}-rtl,
+	%mr-r-#{$current-num},
+	%mr-lr-#{$current-num},
+	.mr-r-#{$current-num},
+	.mr-lr-#{$current-num} {
+		margin-right: #{$current-num/16}rem !important;
+	}
+}
+
+/* RTL Margin Helpers
+=========================*/
+body.rtl {
+  @each $i,$val in $spacers {
+    .ml-#{$i}-rtl { margin-left: $val !important }
+    .mr-#{$i}-rtl { margin-right: $val !important }
+    .mt-#{$i}-rtl { margin-top: $val !important }
+    .mb-#{$i}-rtl { margin-bottom: $val !important }
+    .mx-#{$i}-rtl {
+      @extend .ml-#{$i}-rtl;
+      @extend .mr-#{$i}-rtl;
+    }
+    .my-#{$i}-rtl {
+      @extend .mt-#{$i}-rtl;
+      @extend .mb-#{$i}-rtl;
+    }
+    .m-#{$i}-rtl {
+      @extend .my-#{$i}-rtl;
+      @extend .mx-#{$i}-rtl;
+    }
+  }
+
+  .mr-auto-rtl { margin-right: auto !important }
+  .ml-auto-rtl { margin-left: auto !important }
+  .mt-auto-rtl { margin-top: auto !important }
+  .mb-auto-rtl { margin-bottom: auto !important }
+  .mx-auto-rtl {
+    @extend .ml-auto-rtl;
+    @extend .mr-auto-rtl;
+  }
+  .my-auto-rtl {
+    @extend .ml-auto-rtl;
+    @extend .mr-auto-rtl;
+  }
+  .m-auto-rtl {
+    @extend .my-auto-rtl;
+    @extend .mx-auto-rtl;
+  }
+}
+
+/* RTL Padding Helpers
+=========================*/
+body.rtl {
+  @each $i,$val in $spacers {
+    .pl-#{$i}-rtl { padding-left: $val !important }
+    .pr-#{$i}-rtl { padding-right: $val !important }
+    .pt-#{$i}-rtl { padding-top: $val !important }
+    .pb-#{$i}-rtl { padding-bottom: $val !important }
+    .px-#{$i}-rtl {
+      @extend .pl-#{$i}-rtl;
+      @extend .pr-#{$i}-rtl;
+    }
+    .py-#{$i}-rtl {
+      @extend .pt-#{$i}-rtl;
+      @extend .pb-#{$i}-rtl;
+    }
+    .p-#{$i}-rtl {
+      @extend .py-#{$i}-rtl;
+      @extend .px-#{$i}-rtl;
+    }
+  }
+}
+
+/* Float RTL Helpers
+=========================*/
+body.rtl {
+  .float-right-rtl { float: right !important }
+  .float-left-rtl { float: left !important }
+  .float-none-rtl { float: none !important }
+  @each $i, $val in $grid-breakpoints {
+    .float-#{$i}-right-rtl { float: right !important }
+    .float-#{$i}-left-rtl { float: left !important }
+  }
+}
+
+
+/* Width Helpers
+=========================*/
+@for $i from 1 through 10 {
+  .w-#{$i * 10} { width: #{ $i * 10 }% !important }
+}

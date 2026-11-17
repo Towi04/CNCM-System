@@ -1,0 +1,292 @@
+// main: ../style.scss
+/********************************
+*********************************
+Card
+*********************************
+*********************************/
+.card {
+  &[class*='bg']:not([class*='card-inverse']) {
+    .card-header {
+      background: inherit;
+    }
+  }
+}
+
+@each $col, $val in $colors {
+  .card-#{$col} {
+    background: #{$val};
+  }
+}
+
+.card-title {
+  margin-top: 0;
+}
+
+.card-header {
+  .list-icon {
+    position: absolute;
+    right: rem(10);
+    top: rem(10);
+    width: rem(50);
+    height: rem(50);
+    text-align: center;
+    line-height: rem(50);
+    border-radius: 100%;
+    transition: transform $transition-duration $transition-function;
+  }
+}
+
+.card-action {
+  border-top: $card-border-width solid $card-border-color;
+  padding: $card-spacer-x;
+}
+
+.card-link {
+  .text-inverse &:hover,
+  &:hover {
+    text-decoration: none;
+  }
+  & + .card-link { margin-left: 1em }
+}
+
+.card-expandable {
+  .card-body, .card-action {
+    display: none;
+  }
+
+  &.card-expanded .card-body,
+  &.card-expanded .card-action {
+    display: block;
+  }
+
+  &.card-expanded .list-icon {
+    transform: rotate(180deg);
+  }
+
+  .card-header {
+    cursor: pointer;
+  }
+}
+
+.card-outline {
+  @each $col, $val in $theme-colors {
+    &-#{$col} {
+      border-color: #{$val};
+      .card-footer,
+      .card-header {
+        background: #{$val};
+      }
+    }
+  }
+  @each $col, $val in $colors {
+    &-#{$col} {
+      border-color: #{$val};
+      .card-footer,
+      .card-header {
+        background: #{$val};
+      }
+    }
+  }
+}
+
+[class*='card-outline'] {
+  .card-block {
+    background: #fff;
+    border-bottom-left-radius: $card-border-radius;
+    border-bottom-right-radius: $card-border-radius;
+  }
+  .card-footer,
+  .card-header {
+    color: #fff;
+    h1, h2, h3, h4, h5, h6 {
+      color: inherit;
+    }
+  }
+}
+
+.card-body {
+  z-index: 1;
+}
+
+.blog-post-new {
+  .card-header {
+    position: relative;
+    z-index: 1;
+    &::before {
+      content: "";
+      @include position(absolute, null 0 0);
+      height: em(100);
+      transform: skewY(-4deg) translateY(70%);
+      background: $widget-bg;
+      z-index: 0;
+    }
+
+    .user-image {
+      position: absolute;
+      right: em(40);
+      bottom: em(-5);
+    }
+
+    .badge {
+      position: absolute;
+      padding: em(8) em(16);
+      top: em(20);
+      left: em(20);
+      border-top-right-radius: 0;
+      border-bottom-right-radius:0;
+      &::before {
+        content: "";
+        position: absolute;
+        right: em(-14);
+        top: 0;
+        border-style: solid;
+        border-width: 0px 0 15.5px 14px;
+        border-color: transparent transparent transparent $danger;
+      }
+      &::after {
+        content: "";
+        position: absolute;
+        right: em(-14);
+        bottom: 0;
+        border-style: solid;
+        border-width: 15.5px 0 0 14px;
+        border-color: transparent transparent transparent $danger;
+      }
+    }
+  }
+
+  .card-body {
+    padding-left: em(30);
+    padding-right: em(30);
+    p {
+      font-size: em(13);
+      line-height: em(25);
+    }
+  }
+
+  .card-action {
+    a {
+      font-weight: 400;
+      font-size: em(13);
+      i { font-size: em(16); }
+    }
+  }
+
+  body.rtl & {
+    .card-header .user-image {
+      right: auto;
+      left: em(40);
+    }
+  }
+}
+
+.listing-card {
+  background: #fff;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: $grid-gutter-width;
+  width: 100%;
+
+  header, .card-info, footer {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  h4 {
+    font-size: em(24,15);
+  }
+
+  figure {
+    position: relative;
+    a:not(.add-to-favourites) {
+      display: block;
+    }
+    img {
+      width: 100%;
+      height: auto;
+    }
+  }
+
+  .add-to-favourites {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 10px;
+    border-radius: 3px;
+    background: #000;
+    opacity: .6;
+    color: #fff;
+    line-height: 1;
+
+    &:hover {
+      opacity: .8;
+    }
+
+    i {
+      font-size: em(16,15);
+      line-height: 1;
+    }
+  }
+
+  .card-info {
+    font-family: $headings-font-family;
+    font-size: em(14,15);
+    color: #bbb;
+    font-weight: 500;
+    margin-top: em(25);
+    letter-spacing: -1px;
+
+    strong {
+      color: #666;
+    }
+  }
+
+  svg {
+    width: 36px;
+    height: 36px;
+    vertical-align: middle;
+    position: relative;
+    top: -2px;
+  }
+
+  .card-info-baths svg {
+    top: -6px;
+  }
+
+  .card-info path,
+  .card-info line,
+  .card-info g {
+    stroke: #bbb;
+  }
+
+  header {
+    color: #666;
+    margin-top: rem(30);
+  }
+
+  footer {
+    padding-top: 15px;
+    padding-bottom: 20px;
+    border-top: 1px solid $theme-border-color;
+  }
+
+  footer .float-left {
+    font-family: $headings-font-family;
+    font-size: em(13,15);
+    font-weight: 600;
+    padding-top: 5px;
+
+    i {
+      position: relative;
+      top: 2px;
+      margin-right: 5px;
+    }
+  }
+
+  .btn {
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0px;
+    font-size: em(11,15);
+  }
+}

@@ -1,0 +1,39 @@
+// main: ../style.scss
+
+/********************************
+*********************************
+BASIC
+*********************************
+*********************************/
+
+
+/* Vector Maps
+========================*/
+.gmap {
+  width: 100%;
+  height: em(300);
+
+  .overlay {
+    background: $primary;
+    border-radius: 5px;
+    color: #fff;
+    padding: em(15,15);
+    position: relative;
+    font-family: $headings-font-family;
+    font-size: em(15,11);
+    z-index: 1;
+    transform: translateY(em(-20));
+
+    &:before {
+      z-index: 2;
+      @include size(0);
+      border-style: solid;
+      border-width: 10px 10px 0 10px;
+      border-color: $primary transparent transparent transparent;
+      display: block;
+      content: "";
+      @include position(absolute, null 50% 0 null);
+      transform: translateX(50%) translateY(100%);
+    }
+  }
+}

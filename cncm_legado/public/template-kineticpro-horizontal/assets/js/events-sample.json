@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Project 1",
+    "start": "2017-12-10",
+    "end": "2017-12-13",
+    "className": "bg-mustard"
+  },
+  {
+    "title": "Project 2",
+    "start": "2017-12-07",
+    "end": "2017-12-10",
+    "className": "bg-cerize-red"
+  },
+  {
+    "title": "Project 3",
+    "start": "2017-12-15",
+    "end": "2017-12-17",
+    "className": "bg-primary"
+  },
+  {
+    "title": "Project 4",
+    "start": "2017-12-24",
+    "end": "2017-12-27",
+    "className": "bg-persian-blue"
+  }
+]

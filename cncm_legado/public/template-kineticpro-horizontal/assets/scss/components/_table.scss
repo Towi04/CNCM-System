@@ -1,0 +1,626 @@
+// main: ../style.scss
+/********************************
+ *********************************
+Tables
+ *********************************
+ *********************************/
+.table {
+  td {
+    border-top: $border-width solid $border-color;
+  }
+
+  thead tr.thead-inverse th {
+    background: inherit;
+  }
+
+  &.table-inverse thead th {
+    border-width: 0;
+  }
+
+  > tbody > tr:first-child > td {
+    border-top: none;
+  }
+
+  &.table-borderless {
+    td, th {
+      border: none;
+    }
+  }
+
+  > tbody > tr[class*="bg-"] > td {
+    color: #fff;
+  }
+
+  > thead > tr > th {
+    border-bottom-width: 1px;
+    border-top-width: 0px;
+    border-bottom-color: $border-color;
+  }
+
+  &.color-table > thead > tr > th {
+    border: 0;
+  }
+
+  .progress {
+    margin: 0;
+    margin-bottom: 0 !important;
+    position: relative;
+    top: em(8,12);
+  }
+
+}
+
+td.footable-sortable>span.fooicon,
+th.footable-sortable>span.fooicon {
+  top: em(13,12);
+  font-size: em(12,14);
+}
+
+/* DataTables
+========================*/
+.dataTables_wrapper {
+  label { font-weight: normal }
+
+  .dataTables_filter input {
+    padding: em(5) em(10);
+    border: rem(1) solid #eee;
+    border-radius: rem(2);
+    transition: all 0.3s ease;
+
+    &:focus {
+      border-color: $info;
+    }
+  }
+
+  .dataTables_length {
+    margin: em(15) auto;
+    select {
+      padding: em(3) em(7);
+    }
+  }
+
+  table.dataTable {
+    border: $table-border-width solid $table-border-color;
+    margin-top: em(20);
+
+    thead th {
+      border-color: $table-border-color;
+    }
+
+    th, td {
+      padding: em(15) em(20);
+    }
+
+    tfoot {
+      th {
+        border-top: rem(1) solid $table-border-color;
+      }
+    }
+
+    thead {
+      th {
+        border-top: 0
+      }
+      .sorting,
+      .sorting_asc,
+      .sorting_desc {
+        background: none;
+        position: relative;
+
+        &:before {
+          @include position(absolute, 50% em(10) null null );
+          transform: translateY(-50%);
+          font-family: "Material Icons";
+          font-feature-settings: 'liga';
+          font-size: em(18);
+        }
+      }
+
+      .sorting_asc::before { content: 'expand_less' }
+      .sorting_desc::before { content: 'expand_more' }
+      .sorting::before { content: 'sort'; opacity: 0.1; }
+    }
+
+  }
+
+  .dataTables_info {
+    margin-top: em(20);
+    color: $content-color;
+  }
+
+  .dataTables_paginate {
+    margin-top: em(30);
+    padding: 0;
+    border: rem(1) solid $pagination-border-color;
+
+    .paginate_button {
+      transition: all 0.3s ease;
+      border: 0;
+      color: $pagination-color !important;
+
+      &:hover {
+        background: none;
+        border: 0;
+        color: $body-color !important;
+      }
+
+      &:focus { box-shadow:none }
+
+      &.current {
+        background: $primary;
+        border: 0;
+        border-radius: 0;
+        color: #fff !important;
+
+        &:hover {
+          background: darken( $primary, 10%);
+          border: 0;
+          color: #fff !important;
+        }
+      }
+
+      &.next,
+      &.previous {
+        border: 0;
+      }
+    }
+  }
+
+  body.rtl & {
+    table.dataTable thead .sorting::before,
+    table.dataTable thead .sorting_desc::before,
+    table.dataTable thead .sorting_asc::before {
+      left: em(10);
+      right: auto;
+    }
+  }
+}
+
+/* Bootstrap Tables
+========================*/
+.bootstrap-table {
+  position: relative;
+
+  .btn {
+    cursor: pointer;
+    i {
+      &:before {
+        font-family: "Material Icons";
+        display: block;
+        line-height: 1;
+        font-style: normal;
+        font-size: em(20,15);
+      }
+    }
+
+    &[name="refresh"] {
+      i:before {
+        content: "refresh";
+      }
+    }
+
+    &[name="toggle"] {
+      i:before {
+        content: "dehaze";
+      }
+    }
+
+    i.glyphicon-th:before {
+      content: "apps";
+      display: inline;
+      vertical-align: middle;
+    }
+  }
+}
+
+.fixed-table-toolbar {
+  display: inline-flex;
+  @include position(absolute, 0 em(15) null null);
+  z-index: 1;
+  transform: translateY(-100%);
+  margin-top: em(-10);
+
+  .search {
+    order: -1;
+  }
+
+  .btn-group {
+    &, & > .btn-group {
+      display: flex;
+    }
+    .btn {
+      display: inline-flex;
+
+      &[name="toggle"]::after {
+        content: 'reorder';
+        font-family: 'Material Icons';
+        font-size: rem(14);
+      }
+    }
+  }
+
+  .search, .columns {
+    margin-top: 0;
+    margin-bottom: 0;
+    // line-height: em(20);
+
+    .btn {
+      padding: 0 em(10);
+    }
+
+    .dropdown-menu  {
+      label {
+        display: flex;
+        align-items: center;
+        cursor:pointer;
+      }
+      input {
+        margin-right: 1em;
+      }
+    }
+  }
+
+  @include mobile {
+    display: none;
+  }
+
+  body.rtl & {
+    left: 0;
+    right: auto;
+  }
+}
+.fixed-table-container {
+  border: 0;
+  border-bottom: rem(1) solid $table-border-color;
+
+  thead th {
+    .both {
+      background: none;
+      position: relative;
+      &:before {
+        content: '';
+        @include position(absolute, 50% em(10) null null );
+        transform: translateY(-50%);
+        font-family: "Material Icons";
+        font-feature-settings: 'liga';
+        font-size: em(18);
+      }
+    }
+
+    .both.asc::before { content: 'expand_less'; opacity: 1 }
+    .both.desc::before { content: 'expand_more'; opacity: 1 }
+    .both::before { content: 'sort'; opacity: 0.1 }
+  }
+}
+
+body.rtl .fixed-table-body .card-view .title {
+  text-align: right !important;
+}
+
+.bootstrap-table .table {
+  border: rem(1) solid $table-border-color;
+
+  > tbody > tr > td,
+  > thead > tr > th {
+    border-color: $table-border-color;
+  }
+}
+
+.table-striped tbody tr:nth-of-type(odd),
+.table-hover tbody tr:hover {
+  background-color: rgba($primary, 0.05);
+}
+
+/* Responsive Tables
+========================*/
+.responsive-utilities .is-hidden {
+  color: #ccc;
+  background-color: #f9f9f9 !important;
+}
+
+.responsive-utilities .is-visible {
+  color: #468847;
+  background-color: #dff0d8 !important;
+}
+
+.tablesaw {
+  .tablesaw-sortable-head {
+    &:before {
+      content:'';
+      @include position(absolute, 50% em(10) null null );
+      transform: translateY(-50%);
+      font-family: "Material Icons";
+      font-feature-settings: 'liga';
+      font-size: em(18);
+    }
+  }
+
+  .tablesaw-swipe-cellpersist {
+    border-right: 2px solid $input-border-color;
+  }
+
+
+  .tablesaw-sortable-ascending:before { content: 'expand_less'; }
+  .tablesaw-sortable-descending:before { content: 'expand_more'; }
+}
+
+.tablesaw-bar {
+  .tablesaw-columntoggle-popup {
+    .btn-group {
+      display: inline-block;
+      margin: em(10) 0 em(5) 0;
+      label {
+        height: auto;
+        line-height: 2rem;
+        input {
+          height: auto;
+          position: relative;
+          top: em(2);
+        }
+      }
+    }
+  }
+}
+
+.tablesaw-bar .tablesaw-bar-section .btn-select {
+  padding: em(5, 12.25) em(10, 12.25);
+  padding-right: em(50, 12.25);
+  font-weight: normal;
+  position: relative;
+  font-family: $font-family-base;
+  background: #eee;
+  text-transform: none;
+
+  span {
+    line-height: em(20, 12.25);
+    height: em(20, 12.25);
+    display: block;
+  }
+
+  select {
+    cursor: pointer;
+  }
+
+  &:after { display: none; }
+
+  &:before {
+    content: 'expand_more';
+    font-family: "Material Icons";
+    font-feature-settings: 'liga';
+    font-size: em(18, 12.25);
+    text-transform: lowercase;
+    @include position(absolute, 50% em(10, 12.25) null null);
+    transform: translateY(-50%);
+    line-height: 1;
+  }
+}
+
+.tablesaw-sortable-arrow {
+  display: none;
+}
+
+.tablesaw-swipe .tablesaw-cell-persist {
+  border-right: rem(1) solid #eee;
+}
+
+
+/* Editable
+========================*/
+.table-editable,
+.table-editable-inline {
+  .tabledit-toolbar {
+    display: inline !important;
+    .tabledit-save-button, .tabledit-confirm-button, .tabledit-restore-button { margin-left: em(8,12); }
+
+    .btn-group {
+      .btn {
+        cursor: pointer;
+        span.glyphicon {
+          &::before {
+            font-family: "feather";
+            display: inline-block;
+            line-height: 1;
+            font-style: normal;
+            font-size: em(16,12);
+            font-weight: 300;
+            position: relative;
+            top: 3px;
+          }
+        }
+
+        .glyphicon-pencil::before {
+          content: "\e950";
+        }
+
+        .glyphicon-trash::before {
+          content: "\e9cd";
+        }
+
+      }
+    }
+  }
+  tr.tabledit-deleted-row {
+    display: none;
+  }
+}
+
+
+/* Footable
+========================*/
+.footable {
+  .footable-sortable {
+    .fooicon {
+      display: none;
+    }
+
+    &:before {
+      content: 'sort';
+      opacity: 0;
+      font-family: 'Material Icons';
+      font-feature-settings: 'liga';
+      @include position(absolute, 50% em(10) null null);
+      transform: translateY(-50%);
+      font-size: em(18);
+      transition: all 0.3s ease;
+    }
+
+    &:hover::before {
+      opacity: 1;
+    }
+
+    &.footable-asc::before { content: 'expand_more'; opacity: 1; }
+    &.footable-desc::before { content: 'expand_less'; opacity: 1;  }
+  }
+
+  .footable-filtering {
+    th { border-top: none; }
+    form.form-inline {
+      margin-top: 0;
+      margin-bottom: em(15);
+      float: right;
+    }
+  }
+
+  .checkbox {
+    input[type="checkbox"] {
+      opacity: 1;
+    }
+  }
+
+  .footable-first-visible {
+    span{
+      &::before{
+        display: none;
+      }
+
+      &::after {
+        font-family: "FontAwesome";
+        display: block;
+        font-style: normal;
+        font-size: em(18);
+        font-weight: 300;
+      }
+    }
+
+    .fooicon-plus::after {
+      content: "\f067";
+    }
+
+    .fooicon-minus::after {
+      content: "\f068";
+    }
+  }
+
+  .input-group-btn {
+    display: inline-block;
+    .btn {
+      span.fooicon {
+        &::before { display: none; }
+        &::after {
+          font-family: "FontAwesome";
+          display: block;
+          font-style: normal;
+          font-size: em(16, 15);
+          font-weight: 300;
+        }
+      }
+
+      .fooicon-search::after {
+        content: "\f002";
+      }
+
+    }
+  }
+
+  .footable-paging {
+    span.label {
+      font-size: em(11);
+      background: rgba(0,0,0,.7);
+      color: #fff;
+    }
+    .pagination {
+      margin: auto;
+      display: inline-block;
+
+      > li.active > a {
+        background: #51d2b7;
+        border-color: #51d2b7;
+        color: #fff;
+      }
+
+      li {
+        a {
+          position: relative;
+          display: block;
+          padding: 0.5rem 0.75rem;
+          margin-left: em(-1);
+          line-height: 1.25;
+          color: #51d2b7;
+          background-color: #fff;
+          border: rem(1) solid #ddd;
+
+          &:hover {
+            background: #51d2b7;
+            border-color: #51d2b7;
+            color: #fff;
+          }
+        }
+
+        &.footable-page-nav[data-page="first"] {
+          a {
+            border-top-left-radius: 0.25rem;
+            border-bottom-left-radius: 0.25rem;
+          }
+        }
+
+        &.footable-page-nav[data-page="last"] {
+          a {
+            border-top-right-radius: 0.25rem;
+            border-bottom-right-radius: 0.25rem;
+          }
+        }
+
+      }
+    }
+  }
+}
+
+table.footable > thead > tr.footable-filtering > th ul.dropdown-menu > li > a.checkbox input[type="checkbox"] {
+  line-height: 1em;
+  height: 1em;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.footable-filtering {
+  .footable-filtering-search {
+    .dropdown-menu {
+      li {
+        a {
+          display: block;
+          width: 100%;
+          padding: em(3) 1.42857em;
+          padding-top: 0.35714em;
+          padding-bottom: 0.35714em;
+          clear: both;
+          font-weight: normal;
+          color: #888;
+          text-align: inherit;
+          white-space: nowrap;
+          background: none;
+          border: 0;
+
+          &:hover {
+            color: #555;
+            text-decoration: none;
+            background-color: #f7fafc;
+          }
+
+          label {
+            cursor: pointer;
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,142 @@
+// main: ../style.scss
+/********************************
+ *********************************
+ LISTS
+ *********************************
+ *********************************/
+
+.list-group {
+  .list-icon {
+    font-size: em(18);
+    position: relative;
+
+    // &.float-left, &.float-right {
+    //   top: 1px;
+    // }
+  }
+
+  .badge {
+    margin-top: em(2);
+  }
+}
+
+body.rtl {
+  .list-group {
+    padding: 0;
+  }
+}
+
+
+/* Sortable Lists
+========================*/
+.list-group.sortable {
+  .list-group-item {
+    @include clearfix();
+    border-radius: em(2);
+    margin-bottom: em(5);
+    @include padding( em(15) null );
+  }
+
+  .list-icon {
+    font-size: em(18);
+    position: relative;
+    top: em(-2,18);
+  }
+
+  a {
+    .list-icon {
+      color: $nav-icon-color;
+    }
+
+    &:hover .list-icon {
+      color: $nav-link-color;
+    }
+  }
+
+  .ui-sortable-placeholder {
+    height: em(53);
+    border: rem(2) dashed $nav-icon-color !important;
+    background: none !important;
+    margin-bottom: em(5);
+    list-style: none;
+    visibility: visible !important;
+  }
+}
+
+
+/* Nestable Sortable List
+========================*/
+.dd-dragel,
+.dd {
+  display: block;
+  width: 100%;
+  max-width: none;
+  .dd-item {
+    position: relative;
+
+    .dd-list {
+      padding-left: em(40);
+    }
+
+    .dd-handle {
+      cursor: move;
+    }
+
+    > div,
+    .dd-handle {
+      font-weight: normal;
+      font-size: $font-size-base;
+      color: $body-color;
+      border: rem(1) solid #ddd;
+      padding: em(10) em(20);
+      height: em(40);
+      background: #fff;
+      @include margin( em(10) 0);
+    }
+
+    > button.dd-expand,
+    > button.dd-collapse {
+      line-height: 1;
+      font-size: em(16,13);
+      text-align: center;
+      opacity: 0.2;
+      @include size( em(40,16), em(40,16) );
+      @include margin( 0 0 0 0);
+
+      &:before { font-family: 'Material Icons' }
+    }
+
+    > button.dd-collapse::before { content: 'remove' }
+    > button.dd-expand::before { content: 'add' }
+
+    &.dd3-item {
+      padding-left: em(38,13);
+      .dd-list {
+        padding-left: 0;
+      }
+    }
+
+    .dd3-handle {
+      background: #eee;
+      @include size(  em(40) );
+      line-height: em(40);
+      text-align: center;
+      display: inline-block;
+      padding: 0;
+      margin: 0;
+      @include position(absolute, 0 null null 0);
+
+      &:before {
+        content: "open_with";
+        font-family: 'Material Icons';
+        text-indent: 0;
+      }
+    }
+  }
+}
+
+body.rtl {
+  .dd-list {
+    padding: 0;
+  }
+}

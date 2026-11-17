@@ -1,0 +1,245 @@
+// main: ../style.scss
+/********************************
+*********************************
+Blog Post
+*********************************
+*********************************/
+.blog-post-single,
+.blog-post {
+  display: inline-block;
+  figure { margin-bottom: 0 }
+  p:last-child { margin-bottom: 0 }
+}
+
+.blog-post-card {
+  background: $widget-bg;
+  overflow: hidden;
+  border-radius: .5rem;
+  border: rem(1) solid $theme-border-color;
+  display: block;
+  margin-bottom: rem(30);
+
+  .blog-post-content,
+  footer,
+  header {
+    position: relative;
+    padding-left: em(30);
+    padding-right: em(30);
+  }
+
+  > figure {
+    display: flex;
+    a { flex: 1; }
+    img { width: 100%; }
+  }
+
+  header {
+    padding-top: em(25);
+  }
+
+  .blog-post-share-links {
+    @include position(absolute, 0 null null em(40) );
+    padding-left: em(40);
+    transform: translateY(-50%);
+    overflow: hidden;
+    transition: transform 0.3s ease;
+    max-width: 0;
+    height: em(40);
+
+    > li {
+      padding: 0;
+      padding-left: em(10);
+      margin-right: 0;
+      height: em(40);
+      transition: all 0.3s ease;
+      transition-delay: 0s;
+
+      &:first-child {
+        padding-left: 0;
+        @include position(absolute, 0 null null 0);
+        z-index: 2;
+      }
+
+      &:not(:first-child) {
+        opacity: 0;
+        transform: translateX(rem(-20)) rotate(0deg);
+      }
+    }
+
+    &.active,
+    &:hover {
+      max-width: rem(900);
+      > li:not(:first-child) {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      li:first-child {
+        transform: rotate(360deg);
+      }
+      li {
+        @for $i from 1 through 10 {
+          &:nth-child(#{$i}) {
+            transition-delay: #{0.05*$i}s;
+          }
+        }
+      }
+    }
+    a {
+      display: inline-block;
+      color: #fff;
+      @include size(em(40));
+      text-align: center;
+      border-radius: rem(100);
+      i {
+        line-height: em(40,30);
+        font-size: em(30);
+      }
+    }
+  }
+
+  .blog-post-title {
+    margin: em(10) 0 em(20);
+    font-size: $h5-font-size;
+    a {
+      color: $body-color;
+      &:focus,
+      &:hover {
+        color: $primary;
+      }
+    }
+  }
+
+  .blog-post-tags {
+    font-size: 0.9em;
+    ul {
+      margin-left: 0;
+    }
+    ul > li {
+      padding: 0;
+      &:after { content: ',' }
+      &:last-child:after { content: '' }
+    }
+  }
+
+  .blog-post-content {
+    margin-top: 2em;
+  }
+
+  footer { padding-bottom: em(40) }
+
+  &.blog-post-single {
+    header {
+      padding-top: em(50);
+    }
+    .blog-post-content {
+      margin-bottom: em(40);
+    }
+  }
+}
+
+/********************************
+*********************************
+Comments
+*********************************
+*********************************/
+.blog-post-comments {
+  .comment {
+    flex-wrap: wrap;
+    > figure {
+      margin-right: rem(30);
+    }
+  }
+
+  .comment-user-name {
+    font-size: $h6-font-size;
+  }
+
+  .comment-body {
+    background: $widget-bg;
+    padding: $widget-padding-y $widget-padding-x;
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .replies {
+    margin-top: rem(30);
+    padding-left: rem(90);
+    width: 100%;
+  }
+
+  .rtl & {
+    .comment {
+      > figure {
+        margin-left: rem(30);
+        margin-right: 0;
+      }
+    }
+
+    .replies {
+      padding-left: 0;
+      padding-right: rem(90);
+    }
+  }
+}
+
+/********************************
+*********************************
+Sidebar
+*********************************
+*********************************/
+.blog-page-sidebar {
+  .widget {
+    margin-bottom: em(50);
+  }
+  .widget-title {
+    margin-top: 0;
+    font-size: $h5-font-size;
+    padding-bottom: rem(20);
+    position: relative;
+    margin-bottom: rem(20);
+    &:after {
+      content: '';
+      width: rem(40);
+      height: 1px;
+      background: $primary;
+      display: block;
+      @include position(absolute, null null 0 0);
+    }
+  }
+
+  .rtl & {
+    .widget-title::after {
+      @include position(absolute, null 0 0 auto);
+    }
+  }
+
+
+  .widget_tag_cloud {
+    .tagcloud {
+      a {
+        font-family: $headings-font-family;
+        line-height: 1.3;
+      }
+    }
+  }
+
+  .widget_archives {
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      display: flex;
+      border-bottom: 1px dashed rgba($body-color, 0.3);
+      margin-bottom: .5em;
+      padding-bottom: .5em;
+      padding-bottom: .5em;
+      font-family: $headings-font-family;
+      color: $text-muted;
+    }
+    a {
+      flex: 1;
+    }
+  }
+}

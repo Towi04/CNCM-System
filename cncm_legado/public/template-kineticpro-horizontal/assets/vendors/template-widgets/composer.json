@@ -1,0 +1,13 @@
+{
+    "name": "varun/twitterapi",
+    "authors": [
+        {
+            "name": "Varun Chauhan",
+            "email": "varun9509@gmail.com"
+        }
+    ],
+    "require": {
+        "abraham/twitteroauth": "^0.7.3",
+        "mute/facebook": "^1.0"
+    }
+}

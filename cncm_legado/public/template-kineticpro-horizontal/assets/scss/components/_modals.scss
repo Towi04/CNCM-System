@@ -1,0 +1,88 @@
+// main: ../style.scss
+
+/* Modals
+========================*/
+.modal-content {
+  padding: 0 $modal-inner-padding;
+  border-radius: em(3);
+
+  .close {
+    font-size: em(18);
+    top: em(-5,18);
+    position: absolute;
+    right: em(-18,21);
+    height: em(36,18);
+    width: em(36,18);
+    background-color: #313a46;
+    opacity: 1;
+    border: 2px solid #ffffff;
+    text-shadow: none;
+    color: #ffffff;
+    border-radius: 50%;
+    text-align: center;
+    line-height: em(33,18);
+    padding: 0;
+
+    &:hover { background-color: $primary; }
+  }
+
+  body.rtl & {
+    .close {
+      right: auto;
+      left: em(-18,21);
+    }
+  }
+}
+
+.modal-footer,
+.modal-body {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.modal-header {
+  border-top-left-radius: em(3);
+  border-top-right-radius: em(3);
+  margin: -1px calc(#{$modal-inner-padding * -1} - 1px) 0;
+}
+
+.modal-footer,
+.modal-header {
+  border-color: $theme-border-color;
+}
+
+.modal-title {
+  margin-top: 0;
+}
+
+.modal-body {
+  h1,h2,h3,h4,h5,h6 {
+    color: #777;
+  }
+}
+
+.modal-img {
+  cursor: pointer;
+}
+
+@each $col, $val in $theme-colors {
+  .modal-#{$col} {
+    .modal-content .modal-header {
+      background: #{$val};
+      border: 0;
+    }
+  }
+}
+
+@each $col, $val in $colors {
+  .modal-#{$col} {
+    .modal-content .modal-header {
+      background: #{$val};
+      border: 0;
+    }
+  }
+}
+
+.modal-content .modal-header {
+  background: none;
+}

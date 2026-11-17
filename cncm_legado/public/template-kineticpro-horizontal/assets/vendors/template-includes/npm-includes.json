@@ -1,0 +1,203 @@
+{
+	"type": "npm",
+
+	"register": {
+
+		"css": {
+
+			"sweet-alert": "sweetalert2/dist/sweetalert2.css",
+
+			"magnific-popup": "magnific-popup/dist/magnific-popup.min.css",
+
+			"datatables": "datatables/media/css/jquery.dataTables.min.css",
+
+			"fullcalendar": "fullcalendar/dist/fullcalendar.min.css",
+
+			"toastr": "jquery-toast-plugin/dist/jquery.toast.min.css",
+
+			"bootstrap-table": "bootstrap-table/dist/bootstrap-table.min.css",		
+
+			"rangeslider": "ion-rangeslider/css/ion.rangeSlider.css",
+
+			"slick": "slick-carousel/slick/slick.css",
+
+			"slick-theme": "slick-carousel/slick/slick-theme.css",
+
+			"clockpicker": "clockpicker/dist/bootstrap-clockpicker.min.css",
+
+			"colorpicker": "spectrum-colorpicker/spectrum.css",
+
+			"daterangepicker": "bootstrap-daterangepicker/daterangepicker.css",
+
+			"datepicker": "bootstrap-datepicker/dist/css/bootstrap-datepicker.min.css",
+
+			"select2": "select2/dist/css/select2.min.css",
+
+			"selectpicker": "bootstrap-select/dist/css/bootstrap-select.min.css",
+
+			"multiselect": "multiselect/css/multi-select.css",
+
+			"bootstrap-wysiwyg": "bootstrap3-wysihtml5-bower/dist/bootstrap3-wysihtml5.min.css",
+
+			"morris-css": "morris.js/morris.css",
+
+			"mediaelement": "mediaelement/build/mediaelementplayer.min.css",
+
+			"jqvmaps-css": "jqvmap/dist/jqvmap.min.css"
+
+		},
+
+		"js": {
+
+			"jqueryui": {
+				"url": "jqueryui/jquery-ui.min.js",
+				"priority": 0
+			},
+
+			"magnific-popup": "magnific-popup/dist/jquery.magnific-popup.min.js",
+
+			"validator": "jquery-form-validator/form-validator/jquery.form-validator.min.js",
+
+			"moment": "moment/min/moment.min.js",
+
+			"fullcalendar": "fullcalendar/dist/fullcalendar.min.js",
+
+			"underscore": "underscore.js/underscore-min.js",
+
+			"clndr": "clndr/clndr.min.js",
+
+			"toastr": "jquery-toast-plugin/dist/jquery.toast.min.js",
+
+			"datatables": "datatables/media/js/jquery.dataTables.min.js",
+
+			"bootstrap-table": "bootstrap-table/dist/bootstrap-table.min.js",
+
+			"rangeslider": "ion-rangeslider/js/ion.rangeSlider.min.js",
+
+			"slick": "slick-carousel/slick/slick.min.js",
+
+			"charts-js": "chart.js/dist/Chart.min.js",
+
+			"chart-js-bundle": "chart.js/dist/Chart.bundle.min.js",
+
+			"knob": "jquery-knob/dist/jquery.knob.min.js",
+
+			"morris-charts": "morris.js/morris.min.js",
+
+			"morris-raphael": "raphael/raphael.min.js",
+
+			"sparkline": "jquery-sparkline/jquery.sparkline.min.js",
+
+			"countup": "countup.js/countUp.js",
+
+			"waypoints": "waypoints/lib/jquery.waypoints.min.js",
+
+			"maskedinput": "jquery.maskedinput/src/jquery.maskedinput.js",
+
+			"jquery-circle-progress": "jquery-circle-progress/dist/circle-progress.min.js",
+
+			"clockpicker": "clockpicker/dist/bootstrap-clockpicker.min.js",
+
+			"colorpicker": "spectrum-colorpicker/spectrum.js",
+
+			"daterangepicker": "bootstrap-daterangepicker/daterangepicker.js",
+
+			"datepicker": "bootstrap-datepicker/dist/js/bootstrap-datepicker.min.js",
+
+			"select2": "select2/dist/js/select2.min.js",
+
+			"selectpicker": "bootstrap-select/dist/js/bootstrap-select.min.js",
+
+			"multiselect": "multiselect/js/jquery.multi-select.js",
+
+			"tinymce": "tinymce/tinymce.min.js",
+
+			"tinymce.jquery": "tinymce/jquery.tinymce.min.js",
+
+			"tinymce.skin": "tinymce/themes/inlite/theme.min.js",
+
+			"bootstrap-wysiwyg": "bootstrap3-wysihtml5-bower/dist/bootstrap3-wysihtml5.all.min.js",
+
+			"mithril": "mithril/mithril.min.js",
+
+			"mediaelement": "mediaelement/build/mediaelement-and-player.min.js",
+
+			"sweet-alert": "sweetalert2/dist/sweetalert2.min.js",
+
+			"gmaps": "gmaps/gmaps.min.js",
+
+
+
+
+			"jqvmaps-js": "jqvmap/dist/jquery.vmap.min.js",
+
+			"jqvmaps-algeria": "jqvmap/dist/maps/jquery.vmap.algeria.js",
+
+			"jqvmaps-argentina": "jqvmap/dist/maps/jquery.vmap.argentina.js",
+
+			"jqvmaps-brazil": "jqvmap/dist/maps/jquery.vmap.brazil.js",
+
+			"jqvmaps-canada": "jqvmap/dist/maps/jquery.vmap.canada.js",
+
+			"jqvmaps-europe": "jqvmap/dist/maps/jquery.vmap.europe.js",
+
+			"jqvmaps-france": "jqvmap/dist/maps/jquery.vmap.france.js",
+
+			"jqvmaps-germany": "jqvmap/dist/maps/jquery.vmap.germany.js",
+
+			"jqvmaps-greece": "jqvmap/dist/maps/jquery.vmap.greece.js",
+
+			"jqvmaps-iran": "jqvmap/dist/maps/jquery.vmap.iran.js",
+
+			"jqvmaps-iraq": "jqvmap/dist/maps/jquery.vmap.iraq.js",
+
+			"jqvmaps-russia": "jqvmap/dist/maps/jquery.vmap.russia.js",
+
+			"jqvmaps-tunisia": "jqvmap/dist/maps/jquery.vmap.tunisia.js",
+
+			"jqvmaps-turke": "jqvmap/dist/maps/jquery.vmap.turkey.js",
+
+			"jqvmaps-usa": "jqvmap/dist/maps/jquery.vmap.usa.js",
+
+			"jqvmaps-world": "jqvmap/dist/maps/jquery.vmap.world.js",
+
+			"jqvmaps-africa": "jqvmap/dist/maps/continents/jquery.vmap.africa.js",
+
+			"jqvmaps-asia": "jqvmap/dist/maps/continents/jquery.vmap.asia.js",
+
+			"jqvmaps-australia": "jqvmap/dist/maps/continents/jquery.vmap.australia.js",
+
+			"jqvmaps-north-america": "jqvmap/dist/maps/continents/jquery.vmap.north-america.js",
+
+			"jqvmaps-south-america": "jqvmap/dist/maps/continents/jquery.vmap.south-america.js"
+
+		}
+
+	},
+
+	"enqueue": {
+
+		"css": {
+
+			"scrollbar-css": "perfect-scrollbar/css/perfect-scrollbar.css"
+
+		},
+
+		"js": {
+
+			"jquery": {
+				"url": "jquery/dist/jquery.min.js",
+				"priority": 0
+			},
+
+			"popper": "popper.js/dist/umd/popper.min.js",
+
+			"metismenu": "metismenu/dist/metisMenu.min.js",
+
+			"scrollbar-js": "perfect-scrollbar/dist/perfect-scrollbar.min.js"
+
+		}
+
+	}
+	
+}

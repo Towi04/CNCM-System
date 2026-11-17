@@ -1,0 +1,253 @@
+// main: ../style.scss
+/********************************
+*********************************
+Contacts
+*********************************
+*********************************/
+.contact-list {
+  position: relative;
+  width: 100%;
+  max-height: 100%;
+  margin: 15px 0;
+
+  tr {
+    border-bottom: 1px solid $theme-border-color;
+  }
+
+  td {
+    vertical-align: middle;
+    font-family: $headings-font-family;
+    letter-spacing: $headings-letter-spacing;
+    color: $headings-color;
+    font-weight: 500;
+    line-height: 1.5;
+    padding: 10px 0;
+
+    a {
+      color: $headings-color;
+    }
+
+    small {
+      font-size: em(13);
+      font-weight: 300;
+      color: $text-muted;
+      a {
+        color: $text-muted;
+        text-decoration: underline;
+      }
+    }
+
+    figure {
+      margin-bottom: 0;
+    }
+  }
+
+  a {
+    color: $body-color;
+    &:hover { color: $primary; }
+  }
+
+  .list-icon {
+    font-size: em(18);
+    color: #666;
+  }
+
+  .unread td {
+    font-weight: 600;
+  }
+
+  label {
+    margin-bottom: 0;
+  }
+}
+
+.contact-list-user {
+  position: relative;
+  z-index: 12;
+
+  input[type="checkbox"],
+  figure {
+    cursor: pointer;
+    margin-bottom: 0;
+    padding: 2px;
+  }
+
+  input[type="checkbox"] {
+    position: absolute;
+    margin: 0;
+    opacity: 0;
+  }
+
+  figure {
+    border: 2px solid transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 100%;
+  }
+
+  input:checked + figure {
+    border-color: $danger;
+  }
+}
+
+.contact-list-message {
+  .badge {
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-size: em(11);
+    letter-spacing: em(.5);
+  }
+}
+
+.contact-list-badge {
+  text-align: right;
+}
+
+// Contact Info
+.contact-info {
+  position: relative;
+  border: 1px solid rgba($theme-border-color, .5);
+  padding: em(30) em(20);
+  text-align: center;
+
+  header.padded-reverse {
+    position: relative;
+    min-height: 155px;
+    background-color: $primary;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+
+    figure {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%) translateY(50%);
+    }
+  }
+
+  .social-ratings {
+    margin-top: 40px;
+    border-top: 1px solid $theme-border-color;
+    .col-md-4 {
+      padding: 15px 0;
+      border-left: 1px solid $theme-border-color;
+      &:first-child { border: 0 }
+    }
+  }
+}
+
+.contact-info-list-border {
+  margin-top: 20px;
+
+  .widget-body {
+    border: 1px solid $theme-border-color;
+  }
+}
+
+.contact-details-tab {
+  border-color: $theme-border-color;
+  left: -1px;
+
+  .nav-item a {
+    padding: 0 50px;
+    line-height: 60px;
+    display: inline-block;
+    text-transform: uppercase;
+    font-family: $headings-font-family;
+    font-weight: 600;
+    color: $content-color;
+
+    &:hover {
+      background: transparent;
+      border-color: $theme-border-color;
+    }
+
+    &.active {
+      color: $headings-color;
+      background: $widget-bg;
+      border-top-left-radius: .125em;
+      border-top-right-radius: .125em;
+      border-color: $theme-border-color $theme-border-color $widget-bg;
+      &:hover {
+        border-color: $theme-border-color $theme-border-color $widget-bg;
+      }
+    }
+  }
+}
+
+.contact-details-cell {
+  border: 1px solid $theme-border-color;
+  margin-bottom: 6px;
+  padding: 20px 22px 18px;
+  overflow: hidden;
+  color: #666;
+  display: flex;
+  align-items: center;
+  small {
+    padding-right: 20px;
+  }
+  span {
+    flex: 1;
+    align-self: flex-end;
+    font-size: em(14);
+    margin: 0;
+    text-align: right;
+  }
+  body.rtl & {
+    span {
+      text-align: left;
+    }
+  }
+}
+
+.contact-details-textarea p {
+  width: 80%;
+  margin-left: 20%;
+  text-align: left;
+}
+
+.contact-list-right {
+  .mail-list-user {
+    width: 100px;
+  }
+
+  @include mobile {
+    .mail-list-user,
+    .mail-list-time {
+      display: none;
+    }
+
+    .mail-list-name {
+      padding-left: 2em;
+    }
+  }
+
+  td {
+    padding: em(10) 0;
+    position: relative;
+  }
+
+  td label {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  tr:first-child td label {
+    top: calc(50% + 5px);
+  }
+
+  .mail-list-name {
+    & > a {
+      font-weight: 700;
+      display: block;
+    }
+
+    .text-muted a {
+      color: #8d9ea7;
+      text-decoration: underline;
+    }
+  }
+}

@@ -1,0 +1,91 @@
+// main: ../style.scss
+/********************************
+*********************************
+Site Map
+*********************************
+*********************************/
+
+.sitemap {
+  position: relative;
+
+  i {
+    font-size: em(18);
+    vertical-align: top;
+    top: 2px;
+  }
+
+  a {
+    color: #7c8d96;
+    &:hover {
+      color: $primary;
+    }
+  }
+
+  ul {
+    margin-left: em(15);
+  }
+
+
+  li {
+    position: relative;
+    padding-left: em(40);
+    padding-top: em(3);
+
+    &.menu-item-has-children {
+      > ul {
+        margin-top: em(10);
+        margin-left: em(25);
+      }
+    }
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: em(7);
+      top: em(-12);
+      height: em(25);
+      width: em(35);
+      border-bottom: rem(1) solid #ddd;
+      border-left: rem(1) solid #ddd;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: em(7);
+      border-left: rem(1) solid #ddd;
+      height: 1px;
+      width: em(35);
+    }
+
+  }
+
+  body.rtl & {
+    li {
+      padding-left: 0;
+      padding-right: em(40);
+      &:before {
+        left: auto;
+        right: 0;
+        border-left: 0;
+        border-right: 1px solid $theme-border-color;
+      }
+    }
+  }
+}
+
+.sitemap-default,
+.sitemap-right     {
+  a {
+    margin-left: em(10);
+  }
+}
+
+.sitemap-right {
+  strong {
+    color: $primary;
+    text-transform: uppercase;
+    font-size: em(15);
+    font-weight: 500;
+  }
+}

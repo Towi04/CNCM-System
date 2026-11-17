@@ -1,0 +1,134 @@
+// main: ../style.scss
+/********************************
+ *********************************
+Range Slider
+ *********************************
+ *********************************/
+.irs {
+  display: block;
+  clear: both;
+  margin: 3em 0;
+
+  .irs-single,
+  .irs-from,
+  .irs-to {
+    display: block;
+    height: 2em;
+    line-height: 2em;
+    text-align: center;
+    display: block;
+    background: $primary;
+    color: #fff;
+    font-size: em(10);
+    top: -3em;
+    padding: 0 .5em;
+
+    &:after {
+      border-color: $primary transparent transparent transparent;
+    }
+  }
+
+  .irs-single,
+  .irs-max,
+  .irs-min,
+  .irs-from,
+  .irs-to {
+    &:after {
+      content: '';
+      @include size(0);
+      border-style: solid;
+      border-width: 5px 3px 0 3px;
+      @include position(absolute, null 50% em(-5,10) null);
+      transform: translateX(50%);
+    }
+  }
+
+  .irs-slider {
+    display: block;
+    @include size(2em);
+    background: yellow;
+    top: 0;
+    border-radius: 100px;
+    background: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 2px 0 rgba(0,0,0,0.1);
+    cursor: pointer;
+    z-index: 3;
+  }
+
+  .irs-shadow.shadow-from,
+  .irs-shadow.shadow-to,
+  .irs-line,
+  .irs-bar {
+    height: 1em;
+    top: 0.5em;
+    border-radius: 100px;
+    background: $input-bg;
+    box-shadow: inset 1px 1px 5px 0 $input-bg;
+    border: 1px solid $input-border-color;
+    cursor: pointer;
+  }
+
+  .irs-bar {
+    background: $primary;
+    box-shadow:inset 1px 1px 5px 0 $primary;
+    border: 1px solid darken( $primary , 10%);
+    border-left: 0;
+    z-index: 2;
+  }
+
+  .irs-shadow.shadow-from,
+  .irs-shadow.shadow-to {
+    background: #bbb;
+    box-shadow:inset 1px 1px 5px 0 #bbb;
+    border: 1px solid #aaa;
+    z-index: 1;
+  }
+
+  .irs-grid {
+    top: 2em;
+    opacity: 0.2;
+  }
+
+  .irs-max,
+  .irs-min {
+    text-align: center;
+    height: 2em;
+    padding: 0 .5em;
+    line-height: 2em;
+    @include position(absolute, -3em null null 0);
+    background: #eee;
+    border: 1px solid #ddd;
+    font-size: em(10);
+    &:after {
+      border-color: #ddd transparent transparent transparent;
+    }
+  }
+
+  .irs-min{
+    left: 0
+  }
+  .irs-max{
+    left: auto;
+    right: 0;
+  }
+
+  .irs-bar-edge {
+    height: 1em;
+    top: 0.5em;
+    width: em(20);
+    border: 1px solid darken( $primary , 10%);
+    border-right: 0;
+    background: $primary;
+    box-shadow:inset 1px 1px 5px 0 $primary;
+    border-radius: 16px 0 0 16px;
+  }
+}
+
+.irs-grid-pol {
+  background: $content-color;
+}
+
+.irs-grid-text {
+  color: $content-color;
+}

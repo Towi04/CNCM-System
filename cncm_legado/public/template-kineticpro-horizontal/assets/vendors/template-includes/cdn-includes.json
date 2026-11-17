@@ -1,0 +1,203 @@
+{
+	"type": "cdn",
+
+	"register": {
+
+		"css": {
+
+			"sweet-alert": "https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.11.5/sweetalert2.css",
+
+			"magnific-popup": "https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/1.1.0/magnific-popup.min.css",
+
+			"datatables": "https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.18/css/jquery.dataTables.min.css",
+
+			"fullcalendar": "https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.9.0/fullcalendar.min.css",
+
+			"toastr": "https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.css",
+
+			"bootstrap-table": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css",		
+
+			"rangeslider": "https://cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.2.0/css/ion.rangeSlider.min.css",
+
+			"slick": "https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.6.0/slick.min.css",
+
+			"slick-theme": "https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.6.0/slick-theme.min.css",
+
+			"clockpicker": "https://cdnjs.cloudflare.com/ajax/libs/clockpicker/0.0.7/bootstrap-clockpicker.min.css",
+
+			"colorpicker": "https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.0/spectrum.min.css",
+
+			"daterangepicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-daterangepicker/2.1.27/daterangepicker.min.css",
+
+			"datepicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.8.0/css/bootstrap-datepicker.min.css",
+
+			"select2": "https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/css/select2.min.css",
+
+			"selectpicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.min.css",
+
+			"multiselect": "https://cdnjs.cloudflare.com/ajax/libs/multi-select/0.9.12/css/multi-select.min.css",
+
+			"bootstrap-wysiwyg": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap3-wysiwyg/0.3.3/bootstrap3-wysihtml5.min.css",
+
+			"morris-css": "https://cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.0/morris.css",
+
+			"mediaelement": "https://cdnjs.cloudflare.com/ajax/libs/mediaelement/4.2.9/mediaelementplayer.min.css",
+
+			"jqvmaps-css": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/jqvmap.min.css"
+
+		},
+
+		"js": {
+
+			"jqueryui": {
+				"url": "https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.1/jquery-ui.min.js",
+				"priority": 0
+			},
+
+			"magnific-popup": "https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/1.1.0/jquery.magnific-popup.min.js",
+
+			"validator": "https://cdnjs.cloudflare.com/ajax/libs/jquery-form-validator/2.3.77/jquery.form-validator.min.js",
+
+			"moment": "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js",
+
+			"fullcalendar": "https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.9.0/fullcalendar.min.js",
+
+			"underscore": "https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js",
+
+			"clndr": "https://cdnjs.cloudflare.com/ajax/libs/clndr/1.4.7/clndr.min.js",
+
+			"toastr": "https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.js",
+
+			"datatables": "https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.18/js/jquery.dataTables.min.js",
+
+			"bootstrap-table": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.js",
+
+			"rangeslider": "https://cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.2.0/js/ion.rangeSlider.min.js",
+
+			"slick": "https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick.min.js",
+
+			"charts-js": "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.min.js",
+
+			"chart-js-bundle": "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.bundle.min.js",
+
+			"knob": "https://cdnjs.cloudflare.com/ajax/libs/jQuery-Knob/1.2.11/jquery.knob.min.js",
+
+			"morris-charts": "https://cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.0/morris.min.js",
+
+			"morris-raphael": "https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.min.js",
+
+			"sparkline": "https://cdnjs.cloudflare.com/ajax/libs/jquery-sparklines/2.1.2/jquery.sparkline.min.js",
+
+			"countup": "https://cdnjs.cloudflare.com/ajax/libs/countup.js/1.9.2/countUp.min.js",
+
+			"waypoints": "https://cdnjs.cloudflare.com/ajax/libs/waypoints/4.0.1/jquery.waypoints.min.js",
+
+			"maskedinput": "https://cdnjs.cloudflare.com/ajax/libs/jquery.maskedinput/1.4.1/jquery.maskedinput.min.js",
+
+			"jquery-circle-progress": "https://cdnjs.cloudflare.com/ajax/libs/jquery-circle-progress/1.2.2/circle-progress.min.js",
+
+			"clockpicker": "https://cdnjs.cloudflare.com/ajax/libs/clockpicker/0.0.7/bootstrap-clockpicker.min.js",
+
+			"colorpicker": "https://cdnjs.cloudflare.com/ajax/libs/spectrum/1.8.0/spectrum.min.js",
+
+			"daterangepicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-daterangepicker/2.1.27/daterangepicker.min.js",
+
+			"datepicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.8.0/js/bootstrap-datepicker.min.js",
+
+			"select2": "https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.5/js/select2.min.js",
+
+			"selectpicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js",
+
+			"multiselect": "https://cdnjs.cloudflare.com/ajax/libs/multi-select/0.9.12/js/jquery.multi-select.min.js",
+
+			"tinymce": "https://cdnjs.cloudflare.com/ajax/libs/tinymce/4.7.13/tinymce.min.js",
+
+			"tinymce.jquery": "https://cdnjs.cloudflare.com/ajax/libs/tinymce/4.7.13/jquery.tinymce.min.js",
+
+			"tinymce.skin": "https://cdnjs.cloudflare.com/ajax/libs/tinymce/4.7.13/themes/inlite/theme.min.js",
+
+			"bootstrap-wysiwyg": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap3-wysiwyg/0.3.3/bootstrap3-wysihtml5.all.min.js",
+
+			"mithril": "https://cdnjs.cloudflare.com/ajax/libs/mithril/1.1.6/mithril.js",
+
+			"mediaelement": "https://cdnjs.cloudflare.com/ajax/libs/mediaelement/4.2.9/mediaelement-and-player.min.js",
+
+			"sweet-alert": "https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.11./5sweetalert2.min.js",
+
+			"gmaps": "https://cdnjs.cloudflare.com/ajax/libs/gmaps.js/0.4.24/gmaps.min.js",
+
+
+
+
+			"jqvmaps-js": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/jquery.vmap.js",
+
+			"jqvmaps-algeria": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.algeria.js",
+
+			"jqvmaps-argentina": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.argentina.js",
+
+			"jqvmaps-brazil": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.brazil.js",
+
+			"jqvmaps-canada": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.canada.js",
+
+			"jqvmaps-europe": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.europe.js",
+
+			"jqvmaps-france": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.france.js",
+
+			"jqvmaps-germany": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.germany.js",
+
+			"jqvmaps-greece": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.greece.js",
+
+			"jqvmaps-iran": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.iran.js",
+
+			"jqvmaps-iraq": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.iraq.js",
+
+			"jqvmaps-russia": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.russia.js",
+
+			"jqvmaps-tunisia": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.tunisia.js",
+
+			"jqvmaps-turke": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.turkey.js",
+
+			"jqvmaps-usa": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.usa.js",
+
+			"jqvmaps-world": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/jquery.vmap.world.js",
+
+			"jqvmaps-africa": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/continents/jquery.vmap.africa.js",
+
+			"jqvmaps-asia": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/continents/jquery.vmap.asia.js",
+
+			"jqvmaps-australia": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/continents/jquery.vmap.australia.js",
+
+			"jqvmaps-north-america": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/continents/jquery.vmap.north-america.js",
+
+			"jqvmaps-south-america": "https://cdnjs.cloudflare.com/ajax/libs/jqvmap/1.5.1/maps/continents/jquery.vmap.south-america.js"
+
+		}
+
+	},
+
+	"enqueue": {
+
+		"css": {
+
+			"scrollbar-css": "https://cdnjs.cloudflare.com/ajax/libs/jquery.perfect-scrollbar/1.4.0/css/perfect-scrollbar.min.css"
+
+		},
+
+		"js": {
+
+			"jquery": {
+				"url": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js",
+				"priority": 0
+			},
+
+			"popper": "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js",
+
+			"metismenu": "https://cdnjs.cloudflare.com/ajax/libs/metisMenu/2.7.9/metisMenu.min.js",
+
+			"scrollbar-js": "https://cdnjs.cloudflare.com/ajax/libs/jquery.perfect-scrollbar/1.4.0/perfect-scrollbar.min.js"
+
+		}
+
+	}
+	
+}

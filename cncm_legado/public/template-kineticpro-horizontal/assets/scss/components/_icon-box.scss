@@ -1,0 +1,141 @@
+// main: ../style.scss
+/********************************
+*********************************
+Icon Box
+*********************************
+*********************************/
+.icon-box {
+  header {
+    a {
+      font-size: em(20);
+      color: $body-color;
+    }
+    img {
+      @include size(em(50,30));
+      max-width: none;
+    }
+  }
+
+  section {
+    h5 {
+      margin-bottom: rem(20);
+    }
+    p {
+      line-height: em(25, 14);
+      font-size: em(14);
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+.icon-box-xs header a { font-size: rem(12) }
+.icon-box-sm header a { font-size: rem(16) }
+.icon-box-lg header a { font-size: rem(24) }
+.icon-box-xl header a { font-size: rem(28) }
+
+.icon-box-centered {
+  padding: em(40) em(20) em(30);
+  text-align: center;
+  header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  section {
+    margin-top: em(30);
+  }
+  h5 {
+    margin-bottom: em(25,15);
+  }
+
+}
+
+.icon-box-side {
+  display: flex;
+  margin: em(30) 0;
+  header {
+    margin: 0 em(20);
+  }
+  a {
+    display: flex;
+  }
+  .icon-box-title {
+    margin-top: 0;
+  }
+  section {
+    flex: 1;
+  }
+}
+
+.icon-box-circle-bg {
+  header {
+    a {
+      color: #fff;
+      background: $body-color;
+    }
+  }
+}
+
+.icon-box-circle {
+  header a {
+    border-radius: 100px;
+    @include size(2em);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  &.icon-box-xs header a { font-size: rem(10) }
+  &.icon-box-sm header a { font-size: rem(14) }
+  &.icon-box-lg header a { font-size: rem(24) }
+  &.icon-box-xl header a { font-size: rem(30) }
+}
+
+.icon-box-outline {
+  header a {
+    padding: 1em;
+    border: 1px solid $body-color;
+  }
+  &-thick {
+    header a {
+      border: 2px solid $body-color;
+    }
+  }
+  &-thicker {
+    header a {
+      border: 3px solid $body-color;
+    }
+  }
+  &-thickest {
+    header a {
+      border: 4px solid $body-color;
+    }
+  }
+  &.icon-box-xs header a { font-size: rem(10) }
+  &.icon-box-sm header a { font-size: rem(14) }
+  &.icon-box-lg header a { font-size: rem(24) }
+  &.icon-box-xl header a { font-size: rem(30) }
+}
+
+.icon-box-circle-bg,
+[class^='icon-box-outline'] {
+  header {
+    a, i {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    a {
+      font-size: em(20);
+      @include size( 2em );
+      text-align: center;
+      border-radius: 100%;
+    }
+    i { font-size: 1em; line-height: 1; }
+  }
+  &.icon-box-xs header a { font-size: rem(10) }
+  &.icon-box-sm header a { font-size: rem(14) }
+  &.icon-box-lg header a { font-size: rem(24) }
+  &.icon-box-xl header a { font-size: rem(30) }
+}

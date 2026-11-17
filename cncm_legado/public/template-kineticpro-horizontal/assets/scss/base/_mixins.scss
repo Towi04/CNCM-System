@@ -1,0 +1,203 @@
+// main: ../style.scss
+
+// Media Queries
+$tablet-width: 768px;
+$desktop-width: 1024px;
+
+@mixin mobile {
+  @media (max-width: #{$tablet-width - 1px}) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: #{$tablet-width}) and (max-width: #{$desktop-width - 1px}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: #{$desktop-width}) {
+    @content;
+  }
+}
+
+@mixin retina {
+  @media
+    only screen and (-webkit-min-device-pixel-ratio: 2),
+    only screen and (min--moz-device-pixel-ratio: 2),
+    only screen and (-o-min-device-pixel-ratio: 2/1),
+    only screen and (min-device-pixel-ratio: 2),
+    only screen and (min-resolution: 192dpi),
+    only screen and (min-resolution: 2dppx) {
+    @content;
+  }
+}
+
+@mixin print {
+  @media print {
+    @content;
+  }
+}
+
+
+// Button variants
+// ----------------------------
+//
+// The below is an alternative to the native button-variant mixin of bootstrap, to accomodate color parameter.
+//
+// ----------------------------
+//
+// Easily pump out default styles, as well as :hover, :focus, :active,
+// and disabled options for all buttons
+
+@mixin theme-button-variant($background, $border, $color: $content-color, $active-background: darken($background, 7.5%), $active-border: darken($border, 10%)) {
+  color: $color;
+  background-color: $background;
+  border-color: $border;
+  box-shadow: none;
+  // @include box-shadow($btn-box-shadow);
+
+  &:hover {
+    color: $color;
+    background-color: $active-background;
+    border-color: $active-border;
+  }
+
+  &:focus,
+  &.focus {
+    // Avoid using mixin so we can pass custom focus shadow properly
+    @if $enable-shadows {
+      box-shadow: $btn-box-shadow, 0 0 0 3px rgba($border, .5);
+    } @else {
+      box-shadow: 0 0 0 3px rgba($border, .5);
+    }
+  }
+
+  // Disabled comes first so active can properly restyle
+  &.disabled,
+  &:disabled {
+    background-color: $background;
+    border-color: $border;
+  }
+
+  &:active,
+  &.active,
+  .show > &.dropdown-toggle {
+    background-color: $active-background;
+    background-image: none; // Remove the gradient for the pressed/active state
+    border-color: $active-border;
+    @include box-shadow($btn-active-box-shadow);
+  }
+}
+
+// Button Variants
+@mixin buttons-variant($col, $color, $background, $border, $hover-color: #fff) {
+  .btn-#{$col} {
+    color: $color;
+    background-color: $background;
+    border-color: $border;
+
+    &:focus,
+    &:hover,
+    &:active,
+    &:active:focus,
+    &:active:hover,
+    .show>&.dropdown-toggle,
+    .show>&.dropdown-toggle:hover,
+    .show>&.dropdown-toggle:focus {
+      color: $hover-color;
+      background-color: darken($background, 5%);
+      border-color: darken($border, 5%);
+    }
+    &:focus,
+    &:active,
+    &:active:focus,
+    .show>&.dropdown-toggle:focus {
+      outline: 0 0 0 2px rgba($background,.3);
+    }
+  }
+
+  .btn-outline-#{$col} {
+    color: $background;
+    background: transparent;
+    border-color: $background;
+
+    &:focus,
+    &:hover,
+    &:active,
+    &:active:focus,
+    &:active:hover,
+    .show>&.dropdown-toggle,
+    .show>&.dropdown-toggle:hover,
+    .show>&.dropdown-toggle:focus {
+      color: $color;
+      background-color: $background;
+    }
+  }
+}
+
+
+
+// Placeholder
+@mixin placeholder {
+  &::-webkit-input-placeholder {
+    @content;
+  }
+  &:-moz-placeholder {
+    @content;
+  }
+  &::-moz-placeholder {
+    @content;
+  }
+  &:-ms-input-placeholder {
+    @content;
+  }
+}
+
+
+// Set Margin & Padding
+@mixin allspace($top-bottom: 0, $left-right: 0) {
+	padding: $top-bottom $left-right;
+	margin: $top-bottom $left-right;
+}
+
+// Making tiny, small, large, huge classes
+$spacing-unit-tiny:  round(0.25 * $spacer);
+$spacing-unit-small: round(0.5  * $spacer);
+$spacing-unit-large: round(2    * $spacer);
+$spacing-unit-huge:  round(4    * $spacer);
+
+@mixin sizes($properties...) {
+  &--tiny {
+    @each $property in $properties {
+      #{$property}: $spacing-unit-tiny;
+    }
+  }
+
+  &--small {
+    @each $property in $properties {
+      #{$property}: $spacing-unit-small;
+    }
+  }
+
+  &--large {
+    @each $property in $properties {
+      #{$property}: $spacing-unit-large;
+    }
+  }
+
+  &--huge {
+    @each $property in $properties {
+      #{$property}: $spacing-unit-huge;
+    }
+  }
+}
+
+@function em($target, $base: $font-size-base-px) {
+  @return strip-unit($target) / strip-unit($base) * 1em;
+}
+
+@function rem($target) {
+  @return strip-unit($target)/16 * 1rem;
+}

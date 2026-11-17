@@ -1,0 +1,110 @@
+// main: ../style.scss
+/********************************
+*********************************
+To Do App
+*********************************
+*********************************/
+.todo-widget {
+  padding-bottom: em(20);
+  display: flex;
+  flex-direction: column;
+  .list-group {
+    flex: 1;
+    margin-bottom: em(20);
+  }
+  input { height: em(45) }
+  .list-group-item {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    &.checked {
+      .label-text{
+        font-style: italic;
+        text-decoration: line-through;
+      }
+    }
+    &:hover {
+      background: #f9f9f9;
+    }
+    &:hover .edit-item,
+    &:hover .delete-item {
+      opacity: 1;
+    }
+  }
+  @include mobile {
+    .list-group-item {
+      .label-text {
+        padding-right: em(70);
+      }
+      .edit-item,
+      .delete-item {
+        opacity: 1;
+      }
+    }
+  }
+  @include tablet {
+    .list-group-item {
+      .label-text {
+        padding-right: em(45);
+      }
+      .delete-item,
+      .edit-item {
+        opacity: 1;
+      }
+    }
+    opacity: 1;
+  }
+  label {
+    display: block;
+    position: relative;
+    padding: em(15);
+    font-weight: normal;
+    cursor: pointer;
+    flex: 1;
+    margin-bottom: 0;
+
+    input[type="checkbox"] {
+      display: none;
+    }
+
+    .label-text {
+      display: block;
+    }
+  }
+  .edit-item,
+  .delete-item {
+    @include position(absolute, 50% em(10,16) null null);
+    color: $body-color;
+    opacity: 0;
+    transition: all 0.3s ease;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: em(16);
+    background: $info;
+    color: #fff;
+    @include size( em(30,16) );
+    line-height: em(30,16);
+    text-align: center;
+    border-radius: 100px;
+  }
+  .edit-item {
+    right: em(50,16);
+  }
+
+  .edit-field {
+    position: relative;
+    input { padding-right: em(50) }
+    .submit-btn {
+      @include position(absolute, 50% em(10,15) null null );
+      transform: translateY(-50%);
+      @include size( em(30,15) );
+      line-height: em(27,15);
+      font-size: em(15);
+      padding: 0;
+      border-radius: 100px;
+      text-align: center;
+      i { font-size: em(16,15); }
+    }
+
+  }
+}

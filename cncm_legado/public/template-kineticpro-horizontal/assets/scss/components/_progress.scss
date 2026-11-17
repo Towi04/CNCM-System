@@ -1,0 +1,30 @@
+// main: ../style.scss
+/********************************
+ *********************************
+Progress
+ *********************************
+ *********************************/
+.progress {
+
+  .progress-bar {
+    height: 100%;
+  }
+  &.progress-xsm {
+    height: rem(20);
+    margin: em(7) 0;
+  }
+  &.progress-sm {
+    height: rem(10);
+    margin: em(5) 0;
+  }
+
+  &.inverse {
+    background: rgba(255,255,255,.3);
+  }
+}
+
+.progress-lg {
+  .progress-bar {
+    height: 100%;
+  }
+}

@@ -1,0 +1,56 @@
+// main: ../style.scss
+/********************************
+*********************************
+Counters
+*********************************
+*********************************/
+.counter-gradient {
+  padding: em(30) em(20);
+
+  .counter {
+    color: $primary;
+  }
+}
+
+.counter-w-info {
+  margin: rem(5) 0 0;
+  font-family: $headings-font-family;
+  font-size: rem(13);
+
+  .counter-title {
+    font-weight: 600;
+    font-size: $h4-font-size;
+    line-height: 1.2;
+    color: $headings-color;
+    margin-bottom: rem(10);
+  }
+
+  .counter-difference {
+    font-weight: 700;
+    position: relative;
+    top: -2px;
+  }
+
+  .list-icon {
+    @include size( rem(40) );
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    background: $primary;
+    @include position(absolute, null 0 0 null);
+  }
+
+  .text-inverse & {
+    .counter-title {
+      color: #fff;
+    }
+  }
+
+  body.rtl & {
+    .list-icon {
+      left: 0;
+      right: auto;
+    }
+  }
+}

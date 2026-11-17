@@ -1,0 +1,209 @@
+// main: ../style.scss
+/********************************
+ *********************************
+Inbox
+ *********************************
+ *********************************/
+
+/* Mail Inbox
+========================*/
+.mail-inbox {
+  position: relative;
+
+  @include mobile {
+    height: auto !important;
+  }
+
+  @include tablet {
+    height: auto !important;
+  }
+}
+
+.mail-inbox-header {
+  display: flex;
+  align-items: center;
+  min-height: em(70);
+  @include padding(null #{$spacer * 1.25});
+  border-bottom: 1px solid $theme-border-color;
+}
+
+.mail-inbox-select-all {
+  font-size: em(12);
+  display: inline-block;
+
+  span.label-text {
+    padding-left: em(25,12);
+  }
+}
+
+.mail-list-item {
+  position: relative;
+  padding: em(20) #{$spacer * 1.25};
+  border-bottom: 1px solid $theme-border-color;
+
+  .checkbox {
+    padding: 0;
+  }
+
+  &.unread .mail-title {
+    font-weight: $font-weight-semibold;
+  }
+
+  .checkbox .label-text {
+    padding-left: 1em;
+  }
+
+  .mail-select-checkbox .label-text {
+    margin-right: .5em;
+    top: -5px;
+    padding: 0 !important;
+    margin-right: em(20);
+
+    body.rtl & {
+      margin-right: 0;
+      margin-left: em(20);
+    }
+  }
+
+  &:nth-child(odd) {
+    background: $dropdown-link-hover-bg;
+  }
+
+  &::last-child {
+    border-bottom: 0;
+  }
+}
+
+.mail-inbox-categories {
+  .list-inline-item {
+    margin-right: 1.5em;
+    &:not(.active) a {
+      color: $headings-color;
+    }
+  }
+}
+
+/* Mail Single
+========================*/
+.mail-single {
+  //@include padding(em(30) #{$spacer * 1.25});
+  > header {
+    margin-left: em(15);
+  }
+}
+
+.mail-single-content {
+  border: 1px solid $theme-border-color;
+  border-left: 0;
+  border-right: 0;
+  position: relative;
+  top: em(-1);
+  padding: em(35) em(50) em(10) em(50);
+
+  > header {
+    color: $headings-color;
+
+    a {
+      color: $headings-color;
+      font-weight: 700;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.mail-single-reply {
+  border: 1px solid $theme-border-color;
+  border-radius: 5px;
+  padding: em(20);
+  position: relative;
+
+  .triangle-top {
+    @include size(0);
+    @include position(absolute, em(-15) null null em(50) );
+    border-style: solid;
+    border-width: 0 15px 15px 15px;
+    border-color: transparent transparent $theme-border-color transparent;
+  }
+  .triangle-top:after{
+    content: '';
+    @include position(absolute, em(1) null null em(-16) );
+    @include size(0);
+    border-style: solid;
+    border-width: 0 16px 16px 16px;
+    border-color: transparent transparent $widget-bg transparent;
+  }
+}
+
+/* Mail Compose
+========================*/
+.mail-sidebar {
+  border-right: 1px solid $theme-border-color;
+  body.rtl & {
+    border-right: 0;
+    border-left: 1px solid $theme-border-color;
+  }
+}
+
+.mail-compose {
+  .wysihtml5-sandbox {
+    flex: 1;
+    border-left: 0 !important;
+    border-right: 0 !important;
+  }
+  .wysihtml5-toolbar {
+    border-left: 0;
+    border-right: 0;
+  }
+  .wysihtml5-toolbar {
+    border-left: 0;
+    border-right: 0;
+  }
+  @include mobile {
+  }
+  @include tablet {
+  }
+}
+
+/* Mail Attachment
+========================*/
+.mail-attachment {
+  .mail-attachment-heading .list-icon {
+    @include size( rem(20), 1em);
+    text-align: center;
+    font-size: rem(18);
+    margin-right: rem(5);
+  }
+  .file-list {
+    margin: 0 rem(-15);
+  }
+  .file-list-item {
+    display: flex;
+    align-items: center;
+    border-uadius: 3px;
+    padding: em(10) em(15);
+    transition: background 0.3s ease;
+    font-size: em(12);
+    font-weight: $font-weight-semibold;
+    i,
+    img {
+      @include size( em(25) );
+      line-height: em(25);
+      text-align: center;
+      border-radius: 100px;
+      margin-right: em(10);
+    }
+    a {
+      color: $headings-color;
+    }
+    a.list-inline-item {
+      font-size: em(13,12);
+      color: $text-muted;
+      font-weight: normal;
+    }
+    &:hover {
+      background: rgba($theme-border-color, .3);
+    }
+  }
+}
