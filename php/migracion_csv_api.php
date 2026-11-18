@@ -18,16 +18,188 @@ migracion_csv_ensure_schema($pdo);
 $action = trim((string) ($_POST['action'] ?? $_GET['action'] ?? ''));
 $idPlantel = (int) ($_POST['id_plantel'] ?? plantel_id_activo());
 
-if ($action === 'staff_template') {
-    $planteles = function_exists('plantel_list') ? plantel_list($pdo, true) : [];
-    $slugEj = $planteles[0]['slug'] ?? 'guerrero';
+if ($action === 'export_legado') {
+    // Descarga CSV desde la BD legado en el servidor (LEGACY_DB_*), sin XAMPP.
+    if (function_exists('set_time_limit')) {
+        @set_time_limit(120);
+    }
+    $lib = dirname(__DIR__) . '/tools/migracion_csv/lib.php';
+    if (!is_readable($lib)) {
+        header('Content-Type: text/plain; charset=utf-8');
+        http_response_code(500);
+        echo 'Falta tools/migracion_csv/lib.php en el servidor.';
+        exit;
+    }
+    require_once $lib;
+    $conn = function_exists('legacy_import_legacy_connection')
+        ? legacy_import_legacy_connection()
+        : ['ok' => false, 'pdo' => null, 'error' => 'legacy_import no disponible'];
+    if (empty($conn['ok']) || !($conn['pdo'] instanceof PDO)) {
+        header('Content-Type: text/plain; charset=utf-8');
+        http_response_code(400);
+        echo 'Sin conexión al legado. Configure LEGACY_DB_HOST/NAME/USER/PASS en config.local.php. '
+            . (string) ($conn['error'] ?? '');
+        exit;
+    }
+    /** @var PDO $pdoLeg */
+    $pdoLeg = $conn['pdo'];
+    $tipoExp = strtolower(trim((string) ($_GET['tipo'] ?? $_POST['tipo'] ?? '')));
+    // staff_emails no sale del legado; usar personal o plantilla de ejemplo
+    if ($tipoExp === 'staff_emails') {
+        $tipoExp = 'personal';
+    }
+    $idSucursal = (int) ($_GET['id_sucursal'] ?? $_POST['id_sucursal'] ?? 0);
+    $filtroRaw = (string) ($_GET['filtro'] ?? $_POST['filtro'] ?? '');
+    $filtro = [];
+    foreach (preg_split('/\R/', $filtroRaw) ?: [] as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        $filtro[] = $line;
+    }
+    $filtroAlRaw = (string) ($_GET['filtro_alumnos'] ?? $_POST['filtro_alumnos'] ?? '');
+    $filtroAlumnos = [];
+    foreach (preg_split('/\R/', $filtroAlRaw) ?: [] as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        // Si pegan CSV con encabezado, ignorar la fila de títulos
+        if (strcasecmp($line, 'id_alumno_legado') === 0 || str_contains(strtolower($line), 'id_alumno_legado,')) {
+            if (str_contains($line, ',')) {
+                // Extraer columna id_alumno_legado de una fila CSV completa más abajo
+                continue;
+            }
+            continue;
+        }
+        // Valor suelto o primera columna de una fila CSV
+        if (str_contains($line, ',')) {
+            $parts = str_getcsv($line);
+            $first = trim((string) ($parts[0] ?? ''));
+            if ($first !== '' && strcasecmp($first, 'id_alumno_legado') !== 0) {
+                $filtroAlumnos[] = $first;
+            }
+            continue;
+        }
+        $filtroAlumnos[] = $line;
+    }
+    $idsGrupos = migcsv_resolver_ids_grupos($pdoLeg, $filtro);
+    $idsAlumnosFiltro = migcsv_resolver_ids_alumnos($pdoLeg, $filtroAlumnos);
+    if (in_array($tipoExp, ['grupos', 'alumnos'], true) && $idsGrupos === []) {
+        header('Content-Type: text/plain; charset=utf-8');
+        http_response_code(400);
+        echo 'Indique ids o claves de grupos activos (uno por línea) para exportar ' . $tipoExp . '.';
+        exit;
+    }
+    if ($tipoExp === 'pagos' && $idsAlumnosFiltro === [] && $idsGrupos === []) {
+        header('Content-Type: text/plain; charset=utf-8');
+        http_response_code(400);
+        echo 'Para pagos indique id_alumno_legado (uno por línea, o pegue la columna del CSV de alumnos) '
+            . 'o, en su defecto, ids/claves de grupos.';
+        exit;
+    }
+    if ($idSucursal > 0 && $idsGrupos !== []) {
+        $ph = implode(',', array_fill(0, count($idsGrupos), '?'));
+        $st = $pdoLeg->prepare("SELECT id FROM grupos WHERE id IN ($ph) AND id_sucursal = ?");
+        $st->execute(array_merge($idsGrupos, [$idSucursal]));
+        $idsGrupos = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    }
+    try {
+        switch ($tipoExp) {
+            case 'diagnostico':
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(migcsv_diagnostico($pdoLeg), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                exit;
+            case 'personal':
+                $rows = migcsv_export_personal($pdoLeg, $idSucursal > 0 ? $idSucursal : null);
+                migcsv_csv_enviar('01_personal.csv', [
+                    'id_usuario_legado', 'nombres', 'apellido_paterno', 'apellido_materno',
+                    'email_legado', 'rol_legado', 'rol', 'plantel_slug', 'username', 'notas',
+                ], $rows);
+                // unreachable
+            case 'aulas':
+                $slug = '';
+                if ($idSucursal > 0) {
+                    $st = $pdoLeg->prepare('SELECT nombre FROM sucursales WHERE id = ?');
+                    $st->execute([$idSucursal]);
+                    $slug = migcsv_slug_sucursal((string) $st->fetchColumn());
+                }
+                migcsv_csv_enviar('02_aulas.csv', [
+                    'plantel_slug', 'codigo', 'nombre', 'piso', 'capacidad', 'notas',
+                ], migcsv_plantilla_aulas($slug !== '' ? $slug : null));
+            case 'grupos':
+                $rows = migcsv_export_grupos($pdoLeg, $idsGrupos);
+                migcsv_csv_enviar('03_grupos_activos.csv', [
+                    'id_grupo_legado', 'clave_legado', 'id_sucursal_legado', 'sucursal', 'plantel_slug',
+                    'especialidad_legado', 'clave_especialidad', 'infantil',
+                    'fecha_inicio_legado', 'fecha_inicio_estimada', 'clave_fase_estimada',
+                    'horario_legado', 'dias_clase', 'hora_inicio', 'hora_fin',
+                    'id_profesor_legado', 'profesor_sugerido', 'profesores_grupo', 'profesor_username',
+                    'aula_codigo', 'status_legado', 'max_alumnos', 'alumnos_activos_count',
+                ], $rows);
+            case 'alumnos':
+                $rows = migcsv_export_alumnos($pdoLeg, $idsGrupos);
+                migcsv_csv_enviar('04_alumnos.csv', [
+                    'id_alumno_legado', 'numero_control', 'nombres', 'apellido_paterno', 'apellido_materno',
+                    'email', 'telefono', 'id_sucursal_legado', 'plantel_slug', 'id_grupo_legado', 'clave_legado',
+                    'fecha_inicio', 'forma_pago', 'id_asesor_legado', 'asesor_nombre', 'status_legado',
+                ], $rows);
+            case 'pagos':
+                $rows = $idsAlumnosFiltro !== []
+                    ? migcsv_export_pagos_por_alumnos($pdoLeg, $idsAlumnosFiltro)
+                    : migcsv_export_pagos($pdoLeg, $idsGrupos);
+                migcsv_csv_enviar('05_pagos.csv', [
+                    'id_pago_legado', 'numero_control', 'id_alumno_legado', 'fecha', 'monto',
+                    'forma_pago', 'tipo', 'concepto', 'folio',
+                ], $rows);
+            default:
+                header('Content-Type: text/plain; charset=utf-8');
+                http_response_code(400);
+                echo 'Tipo no válido para exportar del legado. Use: personal|aulas|grupos|alumnos|pagos';
+                exit;
+        }
+    } catch (Throwable $e) {
+        header('Content-Type: text/plain; charset=utf-8');
+        http_response_code(500);
+        echo 'Error al exportar del legado: ' . $e->getMessage();
+        exit;
+    }
+}
+
+if ($action === 'staff_template' || $action === 'csv_ejemplo') {
+    $tipoEj = strtolower(trim((string) ($_GET['tipo'] ?? $_POST['tipo'] ?? '')));
+    if ($action === 'staff_template' && $tipoEj === '') {
+        $tipoEj = 'staff_emails';
+    }
+    $slugEj = null;
+    if (function_exists('plantel_list')) {
+        $planteles = plantel_list($pdo, true);
+        $slugEj = (string) ($planteles[0]['slug'] ?? 'guerrero');
+        if ($idPlantel > 0) {
+            foreach ($planteles as $p) {
+                if ((int) ($p['id_plantel'] ?? 0) === $idPlantel) {
+                    $slugEj = (string) ($p['slug'] ?? $slugEj);
+                    break;
+                }
+            }
+        }
+    }
+    $ej = migracion_csv_ejemplo($pdo, $tipoEj !== '' ? $tipoEj : 'staff_emails', $slugEj);
+    if ($ej === null) {
+        header('Content-Type: text/plain; charset=utf-8');
+        http_response_code(400);
+        echo 'Tipo no válido. Use: staff_emails|personal|aulas|grupos|alumnos|pagos';
+        exit;
+    }
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="plantilla_personal_correos.csv"');
+    header('Content-Disposition: attachment; filename="' . $ej['filename'] . '"');
     $out = fopen('php://output', 'w');
     fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
-    fputcsv($out, migracion_csv_staff_emails_headers());
-    fputcsv($out, ['nombre.apellido@cncm.edu.mx', $slugEj, 'profesor', '', '', '']);
-    fputcsv($out, ['otro.usuario@cncm.edu.mx', $slugEj, 'asesor', '', '', '']);
+    fputcsv($out, $ej['headers']);
+    foreach ($ej['rows'] as $row) {
+        fputcsv($out, $row);
+    }
     fclose($out);
     exit;
 }
@@ -46,11 +218,30 @@ try {
             'SELECT tipo, nivel, mensaje, creado_en FROM hay_migracion_csv_log
              ORDER BY id DESC LIMIT 15'
         )->fetchAll(PDO::FETCH_ASSOC);
+        $legado = ['ok' => false, 'db' => '', 'error' => '', 'sucursales' => []];
+        if (function_exists('legacy_import_legacy_connection')) {
+            $conn = legacy_import_legacy_connection();
+            $legado['ok'] = !empty($conn['ok']);
+            $legado['error'] = (string) ($conn['error'] ?? '');
+            $legado['db'] = defined('LEGACY_DB_NAME') ? (string) LEGACY_DB_NAME : '';
+            if (!empty($conn['ok']) && $conn['pdo'] instanceof PDO) {
+                try {
+                    $legado['sucursales'] = $conn['pdo']->query(
+                        'SELECT id, nombre FROM sucursales ORDER BY id'
+                    )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                } catch (Throwable $e) {
+                    $legado['sucursales'] = [];
+                }
+            }
+        } else {
+            $legado['error'] = 'legacy_import no disponible';
+        }
         echo json_encode([
             'status' => 'ok',
             'mapas' => $maps,
             'logs' => $logs,
             'id_plantel' => $idPlantel,
+            'legado' => $legado,
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -106,6 +297,29 @@ try {
                 'errores' => $res['errores'] ?? [],
                 'especialidades' => $res['especialidades'] ?? [],
                 'profesores' => $res['profesores'] ?? [],
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if ($tipoPreview === 'alumnos') {
+            $offset = (int) ($_POST['offset'] ?? 0);
+            $limit = (int) ($_POST['limit'] ?? 50);
+            $res = migracion_csv_preview_alumnos(
+                $pdo,
+                $_FILES['csv']['tmp_name'],
+                $idPlantel > 0 ? $idPlantel : null,
+                $offset,
+                $limit
+            );
+            echo json_encode([
+                'status' => !empty($res['ok']) ? 'ok' : 'error',
+                'message' => $res['message'] ?? '',
+                'headers' => $res['headers'] ?? [],
+                'total_filas' => $res['total_filas'] ?? 0,
+                'offset' => $res['offset'] ?? $offset,
+                'limit' => $res['limit'] ?? $limit,
+                'muestra' => $res['muestra'] ?? [],
+                'errores' => $res['errores'] ?? [],
+                'grupos_faltantes' => $res['grupos_faltantes'] ?? [],
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }

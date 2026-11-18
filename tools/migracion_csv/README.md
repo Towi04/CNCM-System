@@ -1,8 +1,15 @@
 # Extractor CSV legado → HAY
 
-Herramienta **local (XAMPP)** para exportar solo grupos activos (y sus alumnos/pagos) desde la BD del sistema anterior, sin subir el dump completo al servidor.
+Exporta grupos activos (y sus alumnos/pagos) desde la BD legado.
 
-En el Portal HAY: menú **Migración CSV** (`views/migracion_csv.php`).
+**En el servidor (recomendado):** si el dump legado ya está en MariaDB y
+`LEGACY_DB_*` está en `config.local.php`, use el Portal → **Migración CSV** →
+bloque *Descargar desde BD legado*: pegue ids/claves de grupos y descargue
+`03_grupos` / `04_alumnos` / `05_pagos` (también personal/aulas).
+
+**Opcional local (XAMPP):** esta carpeta `tools/migracion_csv/` sigue sirviendo
+si prefiere extraer en su PC. En el Portal también hay **CSV de ejemplo**
+(columnas + 2–3 filas) por tipo.
 
 ## Requisitos
 
@@ -78,11 +85,23 @@ Pareja kids con horarios distintos: duplicar la fila del mismo `id_grupo_legado`
 
 ### 04_alumnos
 
-`numero_control`, nombres, `id_grupo_legado`, `fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
+`numero_control`, nombres, `id_grupo_legado` (o `clave_legado` del grupo ya importado),
+`fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
+
+**No se crean al importar grupos.** Use el **mismo** filtro de ids/claves con el que importó
+`03_grupos`, descargue `04_alumnos.csv` (Portal → Descargar del legado), revise Vista previa
+(`grupo_estado`) e Importe. Si un `id_grupo_legado` (p. ej. 959) “no está en el mapa”, ese id
+no formó parte de los grupos importados aunque haya otros mapeados: vuelva a exportar/importar
+`03_grupos` incluyendo ese id. Kids: un alumno del grupo legado → IK y CK (dual).
+Al importar se provisiona cuenta HAY + Google Workspace + Moodle (si faltan), con las mismas
+reglas del sistema (número de control / correo institucional).
 
 ### 05_pagos
 
 `numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`, `folio`. Colegiatura congelada se define después en HAY.
+
+Para descargar pagos del legado basta pegar (o subir el CSV de alumnos) la columna
+`id_alumno_legado`; no es obligatorio el filtro de grupos.
 
 ## Checklist operativo por plantel
 

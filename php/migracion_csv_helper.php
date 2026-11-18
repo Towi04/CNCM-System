@@ -49,6 +49,10 @@ function migracion_csv_log(PDO $pdo, string $tipo, string $nivel, string $mensaj
 
 function migracion_csv_map_get(PDO $pdo, string $entidad, string $idLegacy): ?int
 {
+    $idLegacy = migracion_csv_norm_id_legado($idLegacy);
+    if ($idLegacy === '') {
+        return null;
+    }
     $st = $pdo->prepare(
         'SELECT id_hay FROM hay_migracion_csv_map WHERE entidad = ? AND id_legacy = ? LIMIT 1'
     );
@@ -60,11 +64,82 @@ function migracion_csv_map_get(PDO $pdo, string $entidad, string $idLegacy): ?in
 
 function migracion_csv_map_set(PDO $pdo, string $entidad, string $idLegacy, int $idHay, ?string $detalle = null): void
 {
+    $idLegacy = migracion_csv_norm_id_legado($idLegacy);
+    if ($idLegacy === '') {
+        return;
+    }
     $pdo->prepare(
         'INSERT INTO hay_migracion_csv_map (entidad, id_legacy, id_hay, detalle)
          VALUES (?,?,?,?)
          ON DUPLICATE KEY UPDATE id_hay = VALUES(id_hay), detalle = VALUES(detalle)'
     )->execute([$entidad, $idLegacy, $idHay, $detalle]);
+}
+
+/**
+ * Normaliza ids legado (trim, BOM, Excel 959.0 → 959).
+ */
+function migracion_csv_norm_id_legado(string $id): string
+{
+    $id = trim($id);
+    $id = preg_replace('/^\xEF\xBB\xBF/', '', $id) ?? $id;
+    $id = trim($id, " \t\n\r\0\x0B\"'");
+    if ($id === '') {
+        return '';
+    }
+    if (preg_match('/^(\d+)\.0+$/', $id, $m)) {
+        return $m[1];
+    }
+    if (preg_match('/^\d+$/', $id)) {
+        // Quitar ceros a la izquierda sin perder el id "0"
+        return (string) ((int) $id);
+    }
+
+    return $id;
+}
+
+/**
+ * @return list<string>
+ */
+function migracion_csv_map_keys_muestra(PDO $pdo, string $entidad, int $limit = 25): array
+{
+    $limit = max(1, min(100, $limit));
+    $st = $pdo->prepare(
+        'SELECT id_legacy FROM hay_migracion_csv_map WHERE entidad = ? ORDER BY id_legacy ASC LIMIT ' . (int) $limit
+    );
+    $st->execute([$entidad]);
+    $out = [];
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $k) {
+        $out[] = (string) $k;
+    }
+
+    return $out;
+}
+
+/**
+ * Asegura alias id↔clave en el mapa de grupos (y kids CK si aplica).
+ */
+function migracion_csv_map_alias_grupo(
+    PDO $pdo,
+    string $idLeg,
+    string $claveLegado,
+    int $idHay,
+    ?int $idHayComp = null,
+    ?string $detalle = null
+): void {
+    $idLeg = migracion_csv_norm_id_legado($idLeg);
+    $claveLegado = trim($claveLegado);
+    if ($idLeg !== '') {
+        migracion_csv_map_set($pdo, 'grupo', $idLeg, $idHay, $detalle);
+        if ($idHayComp !== null && $idHayComp > 0) {
+            migracion_csv_map_set($pdo, 'grupo_comp', $idLeg, $idHayComp, $detalle);
+        }
+    }
+    if ($claveLegado !== '' && $claveLegado !== $idLeg) {
+        migracion_csv_map_set($pdo, 'grupo', $claveLegado, $idHay, $detalle ?: ('alias_clave; id_legado=' . $idLeg));
+        if ($idHayComp !== null && $idHayComp > 0) {
+            migracion_csv_map_set($pdo, 'grupo_comp', $claveLegado, $idHayComp, $detalle ?: ('alias_clave; id_legado=' . $idLeg));
+        }
+    }
 }
 
 /**
@@ -1027,7 +1102,7 @@ function migracion_csv_importar_aulas(PDO $pdo, array $rows, ?int $forzarPlantel
  */
 function migracion_csv_grupo_row_key(array $r): string
 {
-    $idLeg = trim((string) ($r['id_grupo_legado'] ?? ''));
+    $idLeg = migracion_csv_norm_id_legado((string) ($r['id_grupo_legado'] ?? ''));
     if ($idLeg !== '') {
         return 'id:' . $idLeg;
     }
@@ -1044,7 +1119,8 @@ function migracion_csv_grupo_row_key(array $r): string
  */
 function migracion_csv_grupo_normalizar_fila(array $r, int $line, array $overrides): ?array
 {
-    $idLeg = trim((string) ($r['id_grupo_legado'] ?? ''));
+    $idLeg = migracion_csv_norm_id_legado((string) ($r['id_grupo_legado'] ?? ''));
+    $r['id_grupo_legado'] = $idLeg;
     if ($idLeg !== '' && isset($overrides[$idLeg]) && is_array($overrides[$idLeg])) {
         $ovEsp = strtoupper(trim((string) ($overrides[$idLeg]['clave_especialidad'] ?? '')));
         if ($ovEsp !== '') {
@@ -1228,7 +1304,31 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
             $esKids = true;
         }
 
-        if ($idLeg !== '' && migracion_csv_map_get($pdo, 'grupo', $idLeg) !== null) {
+        $claveAntYa = (string) ($primera['_clave_anterior'] ?? '');
+        $idLegNorm = migracion_csv_norm_id_legado($idLeg);
+        $idHayYa = null;
+        $idCompYa = null;
+        foreach ([$idLegNorm, $claveAntYa] as $kTry) {
+            if ($kTry === '') {
+                continue;
+            }
+            $found = migracion_csv_map_get($pdo, 'grupo', $kTry);
+            if ($found !== null && $found > 0) {
+                $idHayYa = $found;
+                $idCompYa = migracion_csv_map_get($pdo, 'grupo_comp', $kTry);
+                break;
+            }
+        }
+        if ($idHayYa !== null) {
+            // Reimport con id tras un mapa solo-por-clave (o viceversa): completar alias sin duplicar
+            migracion_csv_map_alias_grupo(
+                $pdo,
+                $idLegNorm,
+                $claveAntYa,
+                $idHayYa,
+                $idCompYa,
+                'alias_reimport'
+            );
             $omitidos += $esKids ? 2 : 1;
             continue;
         }
@@ -1338,9 +1438,15 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                         ->execute([$idProfComp, $idComp]);
                 }
 
-                if ($idLeg !== '') {
-                    migracion_csv_map_set($pdo, 'grupo', $idLeg, $idIng, 'kids_ingles; legado=' . $claveAnterior . '; hay=' . $claveIng);
-                    migracion_csv_map_set($pdo, 'grupo_comp', $idLeg, $idComp, 'kids_computacion; legado=' . $claveAnterior . '; hay=' . $claveComp);
+                $mapKey = migracion_csv_map_key_grupo($idLeg, $claveAnterior);
+                if ($mapKey !== '') {
+                    migracion_csv_map_set($pdo, 'grupo', $mapKey, $idIng, 'kids_ingles; legado=' . $claveAnterior . '; hay=' . $claveIng);
+                    migracion_csv_map_set($pdo, 'grupo_comp', $mapKey, $idComp, 'kids_computacion; legado=' . $claveAnterior . '; hay=' . $claveComp);
+                    // Si hubo id y clave distintos, mapear ambos para que alumnos.csv enlace con cualquiera
+                    if ($idLeg !== '' && $claveAnterior !== '' && $idLeg !== $claveAnterior) {
+                        migracion_csv_map_set($pdo, 'grupo', $claveAnterior, $idIng, 'kids_ingles; alias_clave; hay=' . $claveIng);
+                        migracion_csv_map_set($pdo, 'grupo_comp', $claveAnterior, $idComp, 'kids_computacion; alias_clave; hay=' . $claveComp);
+                    }
                 }
                 $creados += 2;
             } else {
@@ -1397,14 +1503,25 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                 if (function_exists('tutor_asignar_grupo')) {
                     tutor_asignar_grupo($pdo, $idGrupo);
                 }
-                if ($idLeg !== '') {
+                $claveAntAdulto = (string) ($r['_clave_anterior'] ?? '');
+                $mapKey = migracion_csv_map_key_grupo($idLeg, $claveAntAdulto);
+                if ($mapKey !== '') {
                     migracion_csv_map_set(
                         $pdo,
                         'grupo',
-                        $idLeg,
+                        $mapKey,
                         $idGrupo,
-                        'legado=' . (string) $r['_clave_anterior'] . '; hay=' . $clave . '; esp=' . $claveEsp
+                        'legado=' . $claveAntAdulto . '; hay=' . $clave . '; esp=' . $claveEsp
                     );
+                    if ($idLeg !== '' && $claveAntAdulto !== '' && $idLeg !== $claveAntAdulto) {
+                        migracion_csv_map_set(
+                            $pdo,
+                            'grupo',
+                            $claveAntAdulto,
+                            $idGrupo,
+                            'alias_clave; hay=' . $clave . '; esp=' . $claveEsp
+                        );
+                    }
                 }
                 $creados++;
             }
@@ -1425,6 +1542,153 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
 }
 
 /**
+ * Clave del mapa legado→HAY: preferir id numérico; si no, clave_legado.
+ */
+function migracion_csv_map_key_grupo(string $idLeg, string $claveAnterior): string
+{
+    $idLeg = migracion_csv_norm_id_legado($idLeg);
+    if ($idLeg !== '') {
+        return $idLeg;
+    }
+
+    return trim($claveAnterior);
+}
+
+/**
+ * Busca grupos HAY por clave_anterior (varios candidatos).
+ *
+ * @param list<string> $candidatos
+ * @return list<array<string,mixed>>
+ */
+function migracion_csv_grupos_por_clave_anterior(PDO $pdo, ?int $idPlantel, array $candidatos): array
+{
+    $cands = [];
+    foreach ($candidatos as $c) {
+        $c = trim((string) $c);
+        if ($c !== '' && !in_array($c, $cands, true)) {
+            $cands[] = $c;
+        }
+    }
+    if ($cands === []) {
+        return [];
+    }
+    $ph = implode(',', array_fill(0, count($cands), '?'));
+    $sql = 'SELECT g.id_grupo, g.clave, g.id_plantel, e.clave AS esp_clave
+            FROM grupos g
+            LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad
+            WHERE g.clave_anterior IN (' . $ph . ')';
+    $params = $cands;
+    if ($idPlantel !== null && $idPlantel > 0) {
+        $sql .= ' AND g.id_plantel = ?';
+        $params[] = $idPlantel;
+    }
+    $sql .= ' ORDER BY g.id_grupo ASC';
+    try {
+        $st = $pdo->prepare($sql);
+        $st->execute($params);
+
+        return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+/**
+ * @param list<array<string,mixed>> $rows
+ * @return array{0:?int,1:?int}
+ */
+function migracion_csv_pares_desde_filas_grupo(array $rows): array
+{
+    if ($rows === []) {
+        return [null, null];
+    }
+    if (count($rows) === 1) {
+        return [(int) $rows[0]['id_grupo'], null];
+    }
+    $idIng = null;
+    $idComp = null;
+    foreach ($rows as $row) {
+        $esp = strtoupper(trim((string) ($row['esp_clave'] ?? '')));
+        $cl = strtoupper(trim((string) ($row['clave'] ?? '')));
+        if (str_starts_with($esp, 'COMP') || str_starts_with($cl, 'CK')) {
+            $idComp = (int) $row['id_grupo'];
+        } elseif (str_starts_with($esp, 'ING') || str_starts_with($cl, 'IK')) {
+            $idIng = (int) $row['id_grupo'];
+        }
+    }
+    if ($idIng && $idComp) {
+        return [$idIng, $idComp];
+    }
+
+    return [(int) $rows[0]['id_grupo'], isset($rows[1]) ? (int) $rows[1]['id_grupo'] : null];
+}
+
+/**
+ * Resuelve grupo(s) HAY para un alumno: mapa por id/clave, o clave_anterior en grupos.
+ * Si encuentra por clave/clave_anterior, rellena alias del id_grupo_legado en el mapa.
+ *
+ * @return array{0:?int,1:?int} [id_grupo (inglés/adulto), id_grupo_comp (kids) o null]
+ */
+function migracion_csv_resolver_grupos_para_alumno(
+    PDO $pdo,
+    int $idPlantel,
+    string $idGrupoLeg,
+    string $claveLegado
+): array {
+    $idGrupoLeg = migracion_csv_norm_id_legado($idGrupoLeg);
+    $claveLegado = trim($claveLegado);
+    $keys = [];
+    if ($idGrupoLeg !== '') {
+        $keys[] = $idGrupoLeg;
+        $keys[] = 'legado#' . $idGrupoLeg;
+    }
+    if ($claveLegado !== '') {
+        foreach ([$claveLegado, strtoupper($claveLegado)] as $ck) {
+            if (!in_array($ck, $keys, true)) {
+                $keys[] = $ck;
+            }
+        }
+    }
+    foreach ($keys as $k) {
+        $id = migracion_csv_map_get($pdo, 'grupo', $k);
+        if ($id !== null && $id > 0) {
+            $idComp = migracion_csv_map_get($pdo, 'grupo_comp', $k);
+            // Completar alias id↔clave para próximos imports
+            migracion_csv_map_alias_grupo($pdo, $idGrupoLeg, $claveLegado, $id, $idComp, 'alias_resolver');
+
+            return [$id, $idComp];
+        }
+    }
+
+    $candidatos = [];
+    if ($claveLegado !== '') {
+        $candidatos[] = $claveLegado;
+    }
+    if ($idGrupoLeg !== '') {
+        $candidatos[] = $idGrupoLeg;
+        $candidatos[] = 'legado#' . $idGrupoLeg;
+    }
+    $rows = migracion_csv_grupos_por_clave_anterior($pdo, $idPlantel, $candidatos);
+    if ($rows === [] && $idPlantel > 0) {
+        // Último recurso: mismo clave_anterior en otro plantel (mapa/plantel desfasado)
+        $rows = migracion_csv_grupos_por_clave_anterior($pdo, null, $candidatos);
+    }
+    [$idG, $idC] = migracion_csv_pares_desde_filas_grupo($rows);
+    if ($idG !== null && $idG > 0) {
+        migracion_csv_map_alias_grupo(
+            $pdo,
+            $idGrupoLeg,
+            $claveLegado !== '' ? $claveLegado : ('legado#' . $idGrupoLeg),
+            $idG,
+            $idC,
+            'alias_clave_anterior'
+        );
+    }
+
+    return [$idG, $idC];
+}
+
+/**
  * @return array{ok:bool, message:string, creados?:int, vinculados?:int, errores?:list<string>}
  */
 function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlantel = null): array
@@ -1434,9 +1698,16 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
     }
     migracion_csv_ensure_schema($pdo);
     alumno_ensure_schema($pdo);
+    if (function_exists('usuario_ensure_schema')) {
+        usuario_ensure_schema($pdo);
+    }
     $creados = 0;
     $vinculados = 0;
+    $cuentasOk = 0;
+    $cuentasFail = 0;
     $errores = [];
+    /** @var array<string, true> $gruposFaltantes */
+    $gruposFaltantes = [];
 
     foreach ($rows as $i => $r) {
         $line = $i + 2;
@@ -1444,7 +1715,8 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
         $nombres = trim((string) ($r['nombres'] ?? ''));
         $apPat = trim((string) ($r['apellido_paterno'] ?? ''));
         $apMat = trim((string) ($r['apellido_materno'] ?? ''));
-        $idGrupoLeg = trim((string) ($r['id_grupo_legado'] ?? ''));
+        $idGrupoLeg = migracion_csv_norm_id_legado((string) ($r['id_grupo_legado'] ?? ''));
+        $claveGrupoLeg = trim((string) ($r['clave_grupo_legado'] ?? $r['clave_legado'] ?? ''));
         if ($nombres === '' && $nc === '') {
             continue;
         }
@@ -1453,11 +1725,21 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
             $errores[] = "Línea {$line}: plantel no resuelto";
             continue;
         }
-        $idGrupo = $idGrupoLeg !== '' ? migracion_csv_map_get($pdo, 'grupo', $idGrupoLeg) : null;
-        $idGrupoComp = $idGrupoLeg !== '' ? migracion_csv_map_get($pdo, 'grupo_comp', $idGrupoLeg) : null;
+        [$idGrupo, $idGrupoComp] = migracion_csv_resolver_grupos_para_alumno(
+            $pdo,
+            $idPlantel,
+            $idGrupoLeg,
+            $claveGrupoLeg
+        );
         $gc = [];
         if ($idGrupo === null || $idGrupo <= 0) {
-            $errores[] = "Línea {$line}: grupo legado {$idGrupoLeg} no importado aún";
+            $ref = $idGrupoLeg !== '' ? $idGrupoLeg : $claveGrupoLeg;
+            $gruposFaltantes[$ref !== '' ? $ref : '(vacío)'] = true;
+            $extra = $idGrupoLeg !== '' && $claveGrupoLeg !== ''
+                ? " (id={$idGrupoLeg}, clave={$claveGrupoLeg})"
+                : '';
+            $errores[] = "Línea {$line}: grupo legado {$ref}{$extra} no está en el mapa HAY"
+                . ' — no basta con tener otros grupos: ese id/clave concreto debe existir en 03_grupos importado';
             continue;
         }
         $gSt = $pdo->prepare('SELECT * FROM grupos WHERE id_grupo = ? LIMIT 1');
@@ -1547,6 +1829,8 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
             }
             if ($idAlLeg !== '') {
                 migracion_csv_map_set($pdo, 'alumno', $idAlLeg, $idAlumno, $nc);
+            } elseif ($nc !== '') {
+                migracion_csv_map_set($pdo, 'alumno', 'nc:' . $nc, $idAlumno, $nc);
             }
             if ($idAsesor) {
                 try {
@@ -1627,18 +1911,59 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
                     }
                 }
             }
+
+            // Misma ruta que inscripción/ubicación: Google + usuario HAY + Moodle
+            if (function_exists('usuario_crear_cuenta_alumno')) {
+                try {
+                    $cuenta = usuario_crear_cuenta_alumno($pdo, $idAlumno, $idPlantel);
+                    if (!empty($cuenta['ok']) || !empty($cuenta['vinculado'])) {
+                        $cuentasOk++;
+                        if (isset($cuenta['moodle_ok']) && empty($cuenta['moodle_ok']) && !empty($cuenta['moodle'])) {
+                            $errores[] = "Línea {$line} (NC {$nc}): HAY/Google OK; Moodle pendiente — "
+                                . (string) $cuenta['moodle'];
+                        }
+                    } else {
+                        $cuentasFail++;
+                        $errores[] = "Línea {$line} (NC {$nc}): cuenta — "
+                            . (string) ($cuenta['message'] ?? 'no se pudo crear Google/HAY/Moodle');
+                    }
+                } catch (Throwable $e) {
+                    $cuentasFail++;
+                    $errores[] = "Línea {$line} (NC {$nc}): cuenta — " . $e->getMessage();
+                }
+            }
         } catch (Throwable $e) {
             $errores[] = "Línea {$line}: " . $e->getMessage();
         }
     }
 
-    migracion_csv_log($pdo, 'alumnos', 'info', "Alumnos: {$creados} creados, {$vinculados} vinculados");
+    $msg = "{$creados} creado(s), {$vinculados} vinculado(s)";
+    if ($cuentasOk + $cuentasFail > 0) {
+        $msg .= "; cuentas OK {$cuentasOk}" . ($cuentasFail > 0 ? " / fallos {$cuentasFail}" : '');
+    }
+    if ($gruposFaltantes !== []) {
+        $faltan = array_keys($gruposFaltantes);
+        sort($faltan, SORT_NATURAL);
+        $msg .= '. Grupos legado sin mapa: ' . implode(', ', array_slice($faltan, 0, 20))
+            . (count($faltan) > 20 ? '…' : '');
+        $muestraMapa = migracion_csv_map_keys_muestra($pdo, 'grupo', 15);
+        if ($muestraMapa !== []) {
+            $errores[] = 'Ids/claves de grupo YA mapeados (muestra): ' . implode(', ', $muestraMapa)
+                . '. Si 959 (u otro) no aparece, descargue e importe de nuevo 03_grupos con un filtro que INCLUYA esos ids.';
+        } else {
+            $errores[] = 'No hay ningún grupo en el mapa. Importe 03_grupos antes que alumnos.';
+        }
+    }
+    migracion_csv_log($pdo, 'alumnos', 'info', 'Alumnos: ' . $msg);
 
     return [
         'ok' => ($creados + $vinculados) > 0 || $errores === [],
-        'message' => "{$creados} creado(s), {$vinculados} vinculado(s)",
+        'message' => $msg,
         'creados' => $creados,
         'vinculados' => $vinculados,
+        'cuentas_ok' => $cuentasOk,
+        'cuentas_fail' => $cuentasFail,
+        'grupos_faltantes' => array_keys($gruposFaltantes),
         'errores' => array_slice($errores, 0, 40),
     ];
 }
@@ -1871,6 +2196,111 @@ function migracion_csv_staff_emails_headers(): array
         'apellido_paterno',
         'apellido_materno',
     ];
+}
+
+/**
+ * CSV de ejemplo (encabezados + 2–3 filas) para el tipo de migración elegido.
+ *
+ * @return array{filename:string, headers:list<string>, rows:list<list<string>>}|null
+ */
+function migracion_csv_ejemplo(PDO $pdo, string $tipo, ?string $slugPreferido = null): ?array
+{
+    $tipo = strtolower(trim($tipo));
+    $slug = trim((string) $slugPreferido);
+    if ($slug === '' && function_exists('plantel_list')) {
+        $planteles = plantel_list($pdo, true);
+        $slug = (string) ($planteles[0]['slug'] ?? 'guerrero');
+    }
+    if ($slug === '') {
+        $slug = 'guerrero';
+    }
+
+    switch ($tipo) {
+        case 'staff_emails':
+            return [
+                'filename' => 'ejemplo_personal_correos.csv',
+                'headers' => migracion_csv_staff_emails_headers(),
+                'rows' => [
+                    ['juan.perez@cncm.edu.mx', $slug, 'profesor', '', '', ''],
+                    ['maria.lopez@cncm.edu.mx', $slug, 'asesor', 'María', 'López', 'García'],
+                    ['recepcion.' . $slug . '@cncm.edu.mx', $slug, 'recepcion', '', '', ''],
+                ],
+            ];
+
+        case 'personal':
+            return [
+                'filename' => 'ejemplo_01_personal.csv',
+                'headers' => [
+                    'id_usuario_legado', 'nombres', 'apellido_paterno', 'apellido_materno',
+                    'email_legado', 'rol_legado', 'rol', 'plantel_slug', 'username', 'notas',
+                ],
+                'rows' => [
+                    ['101', 'Juan', 'Pérez', 'López', 'juan@ejemplo.com', 'Docente', 'profesor', $slug, 'juan.perez', ''],
+                    ['102', 'Ana', 'Ruiz', '', '', 'Asesor', 'asesor', $slug, '', ''],
+                    ['103', 'Luis', 'Hernández', 'Mora', '', 'Gerente', 'gerente', $slug, 'luis.hernandez', ''],
+                ],
+            ];
+
+        case 'aulas':
+            return [
+                'filename' => 'ejemplo_02_aulas.csv',
+                'headers' => ['plantel_slug', 'codigo', 'nombre', 'piso', 'capacidad', 'notas'],
+                'rows' => [
+                    [$slug, 'A1', 'Aula 1', '1', '12', ''],
+                    [$slug, 'A2', 'Aula 2', '1', '12', ''],
+                    [$slug, 'LAB', 'Laboratorio', 'PB', '16', 'cómputo kids'],
+                ],
+            ];
+
+        case 'grupos':
+            return [
+                'filename' => 'ejemplo_03_grupos.csv',
+                'headers' => [
+                    'id_grupo_legado', 'clave_legado', 'plantel_slug', 'clave_especialidad', 'infantil',
+                    'fecha_inicio_estimada', 'clave_fase_estimada', 'dias_clase', 'hora_inicio', 'hora_fin',
+                    'profesor_sugerido', 'profesor_username', 'aula_codigo',
+                ],
+                'rows' => [
+                    // Adulto inglés sábado mañana
+                    ['501', 'IS100', $slug, 'ING', '0', '2025-01-11', 'F1', '6', '08:00', '12:00', 'Jose Perez', '', 'A1'],
+                    // Kids: misma clave en 2 filas (inglés 08:00 + cómputo 10:00)
+                    ['502', 'IKCF100', $slug, 'ING-K', '1', '2025-01-11', 'F1', '6', '08:00', '10:00', 'Maria Lopez', '', 'A1'],
+                    ['502', 'IKCF100', $slug, 'COMP-K', '1', '2025-01-11', 'F1', '6', '10:00', '12:00', 'Maria Lopez', '', 'LAB'],
+                ],
+            ];
+
+        case 'alumnos':
+            return [
+                'filename' => 'ejemplo_04_alumnos.csv',
+                'headers' => [
+                    'id_alumno_legado', 'numero_control', 'nombres', 'apellido_paterno', 'apellido_materno',
+                    'email', 'telefono', 'plantel_slug', 'id_grupo_legado', 'clave_legado', 'fecha_inicio',
+                    'forma_pago', 'id_asesor_legado', 'asesor_nombre',
+                ],
+                'rows' => [
+                    ['9001', '2501001', 'Pedro', 'Ramírez', 'Solís', '', '5551112233', $slug, '501', 'IS100', '2025-01-11', 'mensual', '', ''],
+                    ['9002', '2501002', 'Lucía', 'Gómez', 'Nava', 'lucia@ejemplo.com', '', $slug, '501', 'IS100', '2025-01-11', 'mensual', '', ''],
+                    ['9003', '2501003', 'Diego', 'Torres', '', '', '', $slug, '502', 'IKCF100', '2025-01-11', 'mensual', '', ''],
+                ],
+            ];
+
+        case 'pagos':
+            return [
+                'filename' => 'ejemplo_05_pagos.csv',
+                'headers' => [
+                    'id_pago_legado', 'numero_control', 'id_alumno_legado', 'fecha', 'monto',
+                    'forma_pago', 'tipo', 'concepto', 'folio',
+                ],
+                'rows' => [
+                    ['7001', '2501001', '9001', '2025-01-15', '1200', 'efectivo', 'colegiatura', 'Enero', 'F-1001'],
+                    ['7002', '2501002', '9002', '2025-01-16', '1200', 'transferencia', 'colegiatura', 'Enero', 'F-1002'],
+                    ['7003', '2501003', '9003', '2025-01-18', '800', 'efectivo', 'inscripcion', 'Inscripción', 'F-1003'],
+                ],
+            ];
+
+        default:
+            return null;
+    }
 }
 
 /** @return array{nombre:string, apellido:string} */
@@ -2315,6 +2745,131 @@ function migracion_csv_importar_staff_emails(
         'google_creados' => $googleCreados,
         'moodle_ok' => $moodleOk,
         'errores' => array_slice($errores, 0, 40),
+    ];
+}
+
+/**
+ * Vista previa de alumnos: indica si el grupo legado ya está mapeado.
+ *
+ * @return array{
+ *   ok:bool, message?:string, headers?:list<string>, muestra?:list<array<string,mixed>>,
+ *   total_filas?:int, offset?:int, limit?:int, errores?:list<string>,
+ *   grupos_faltantes?:list<string>
+ * }
+ */
+function migracion_csv_preview_alumnos(
+    PDO $pdo,
+    string $tmpPath,
+    ?int $idPlantel = null,
+    int $offset = 0,
+    int $limit = 50
+): array {
+    if (!migracion_csv_puede()) {
+        return ['ok' => false, 'message' => 'No autorizado'];
+    }
+    migracion_csv_ensure_schema($pdo);
+    $parsed = migracion_csv_leer_archivo($tmpPath);
+    if (!empty($parsed['error'])) {
+        return ['ok' => false, 'message' => $parsed['error']];
+    }
+    $rows = $parsed['rows'];
+    if ($rows === []) {
+        return ['ok' => false, 'message' => 'Sin filas de datos'];
+    }
+
+    $total = count($rows);
+    $limit = max(10, min(100, $limit));
+    $offset = max(0, min($offset, max(0, $total - 1)));
+    $headers = [
+        'id_alumno_legado',
+        'numero_control',
+        'nombres',
+        'apellido_paterno',
+        'plantel_slug',
+        'id_grupo_legado',
+        'clave_legado',
+        'grupo_hay',
+        'grupo_estado',
+        'accion',
+    ];
+    $muestra = [];
+    $errores = [];
+    /** @var array<string, true> $faltantes */
+    $faltantes = [];
+    $end = min($total, $offset + $limit);
+
+    // Barrido completo para listar faltantes (barato: solo mapa)
+    foreach ($rows as $idx => $r) {
+        $idG = migracion_csv_norm_id_legado((string) ($r['id_grupo_legado'] ?? ''));
+        $claveG = trim((string) ($r['clave_grupo_legado'] ?? $r['clave_legado'] ?? ''));
+        $idP = migracion_csv_resolver_plantel($pdo, (string) ($r['plantel_slug'] ?? ''), $idPlantel);
+        if ($idP === null || $idP <= 0) {
+            continue;
+        }
+        [$gid] = migracion_csv_resolver_grupos_para_alumno($pdo, $idP, $idG, $claveG);
+        if ($gid === null || $gid <= 0) {
+            $ref = $idG !== '' ? $idG : ($claveG !== '' ? $claveG : '(vacío)');
+            $faltantes[$ref] = true;
+        }
+    }
+
+    for ($i = $offset; $i < $end; $i++) {
+        $r = $rows[$i];
+        $idG = migracion_csv_norm_id_legado((string) ($r['id_grupo_legado'] ?? ''));
+        $claveG = trim((string) ($r['clave_grupo_legado'] ?? $r['clave_legado'] ?? ''));
+        $plantelRaw = trim((string) ($r['plantel_slug'] ?? ''));
+        $idP = migracion_csv_resolver_plantel($pdo, $plantelRaw, $idPlantel);
+        $grupoHay = '';
+        $estado = 'ok';
+        $accion = 'crear/vincular';
+        if ($idP === null || $idP <= 0) {
+            $estado = 'plantel';
+            $accion = 'ERROR: plantel';
+            $errores[] = 'Fila ' . ($i + 2) . ': plantel no resuelto';
+        } else {
+            [$gid, $gidComp] = migracion_csv_resolver_grupos_para_alumno($pdo, $idP, $idG, $claveG);
+            if ($gid === null || $gid <= 0) {
+                $estado = 'faltante';
+                $accion = 'ERROR: importe grupo';
+                $ref = $idG !== '' ? $idG : $claveG;
+                $errores[] = 'Fila ' . ($i + 2) . ': grupo legado ' . $ref . ' no mapeado';
+            } else {
+                $grupoHay = '#' . $gid . ($gidComp ? ('+#' . $gidComp) : '');
+            }
+        }
+        $muestra[] = [
+            'id_alumno_legado' => migracion_csv_norm_id_legado((string) ($r['id_alumno_legado'] ?? '')),
+            'numero_control' => trim((string) ($r['numero_control'] ?? '')),
+            'nombres' => trim((string) ($r['nombres'] ?? '')),
+            'apellido_paterno' => trim((string) ($r['apellido_paterno'] ?? '')),
+            'plantel_slug' => $plantelRaw,
+            'id_grupo_legado' => $idG,
+            'clave_legado' => $claveG,
+            'grupo_hay' => $grupoHay,
+            'grupo_estado' => $estado,
+            'accion' => $accion,
+            'fila' => $i + 2,
+        ];
+    }
+
+    $faltanList = array_keys($faltantes);
+    sort($faltanList, SORT_NATURAL);
+    $msg = $total . ' alumno(s)';
+    if ($faltanList !== []) {
+        $msg .= '; grupos legado sin mapa: ' . implode(', ', array_slice($faltanList, 0, 15))
+            . (count($faltanList) > 15 ? '…' : '');
+    }
+
+    return [
+        'ok' => true,
+        'headers' => $headers,
+        'muestra' => $muestra,
+        'total_filas' => $total,
+        'offset' => $offset,
+        'limit' => $limit,
+        'errores' => array_slice(array_values(array_unique($errores)), 0, 30),
+        'grupos_faltantes' => $faltanList,
+        'message' => $msg,
     ];
 }
 
