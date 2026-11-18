@@ -7,6 +7,14 @@ if (!migracion_csv_puede()) {
 migracion_csv_ensure_schema($pdo);
 $apiUrl = hay_asset_url('php/migracion_csv_api.php');
 $idPlantel = (int) plantel_id_activo();
+$slugsTxt = '';
+if (function_exists('plantel_list')) {
+    $parts = [];
+    foreach (plantel_list($pdo, true) as $p) {
+        $parts[] = '<code>' . htmlspecialchars((string) $p['slug'], ENT_QUOTES, 'UTF-8') . '</code>';
+    }
+    $slugsTxt = $parts !== [] ? implode(', ', $parts) : 'configure planteles en HAY';
+}
 ?>
 <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/admin_catalogo.css'), ENT_QUOTES, 'UTF-8'); ?>">
 
@@ -14,9 +22,8 @@ $idPlantel = (int) plantel_id_activo();
   <div class="catalog-header">
     <h2><i class="fas fa-file-csv"></i> Migración CSV (legado → HAY)</h2>
     <p style="color:#666; margin:0; max-width:900px;">
-      Para personal activo use <strong>Personal por correos</strong> (email + plantel): completa nombre desde Google o legado,
-      crea el usuario en HAY, crea la cuenta en Google Workspace si no existe, y provisiona Moodle.
-      Después podrá importar alumnos activos por grupos.
+      Importe en orden: personal → aulas → grupos → alumnos → pagos.
+      Use <strong>Vista previa</strong> para corregir especialidad y profesor antes de Importar.
     </p>
   </div>
 
@@ -41,8 +48,8 @@ $idPlantel = (int) plantel_id_activo();
     </div>
     <button type="button" class="secondary" id="migcsv-preview"><i class="fas fa-search"></i> Vista previa</button>
     <button type="button" class="primary" id="migcsv-import"><i class="fas fa-upload"></i> Importar</button>
-    <button type="button" class="secondary" id="migcsv-template" title="Descargar plantilla CSV">
-      <i class="fas fa-download"></i> Plantilla correos
+    <button type="button" class="secondary" id="migcsv-template" title="Descargar CSV de ejemplo del tipo seleccionado">
+      <i class="fas fa-download"></i> <span id="migcsv-template-label">CSV de ejemplo</span>
     </button>
     <button type="button" class="secondary" id="migcsv-provision" title="Google Workspace + Moodle para registros mapeados">
       <i class="fas fa-user-plus"></i> Re-provisionar mapeados
@@ -73,51 +80,13 @@ $idPlantel = (int) plantel_id_activo();
   </div>
 
   <div style="margin-top:16px; font-size:0.9rem; color:#555; max-width:900px;">
-    <p><strong>Personal por correos:</strong> columnas mínimas <code>email</code>, <code>plantel_slug</code>.
-      Opcionales: <code>rol</code> (default <code>profesor</code>), <code>nombres</code>, <code>apellido_paterno</code>, <code>apellido_materno</code>.
-      Orden del nombre: CSV → Google → legado → inferido del correo (<code>fuente_nombre=email</code>).
-      En la tabla puede editar <strong>rol</strong>, <strong>nombres</strong> y <strong>apellido</strong> antes de Importar (útil si Google va a crear la cuenta).
+    <p style="margin:0 0 8px;">
+      <strong>CSV de ejemplo:</strong> el botón de arriba descarga columnas + 2–3 filas de muestra
+      según el tipo seleccionado. Planteles válidos: <?php echo $slugsTxt; ?>.
     </p>
-    <p><strong>Al Importar:</strong> crea/actualiza usuario en HAY, crea Google si no existe (con esos nombres) y provisiona Moodle.
-    </p>
-    <p><strong>Columna Google:</strong>
-      <code>existe</code> = ya hay cuenta Workspace;
-      <code>crear</code> = se creará al importar;
-      <code>error: …</code> = fallo de API (no confundir con “ya existe”).
-    </p>
-    <p><strong>Planteles (slug):</strong>
-      <?php
-        $slugs = [];
-        if (function_exists('plantel_list')) {
-            foreach (plantel_list($pdo, true) as $p) {
-                $slugs[] = '<code>' . htmlspecialchars($p['slug'], ENT_QUOTES, 'UTF-8') . '</code>';
-            }
-        }
-        echo $slugs !== [] ? implode(', ', $slugs) : 'configure planteles en HAY';
-      ?>
-      — el CSV usa <code>plantel_slug</code> por fila (no el plantel de la sesión).
-      Si el slug no existe en HAY, esa fila falla en lugar de caer en la sede activa.
-    </p>
-    <p><strong>Claves especialidad (alumnos/grupos):</strong>
-      <code>ING</code>, <code>ING-EXT</code>, <code>ING-K</code>, <code>COMP</code>/<code>COMP24</code>/<code>COMP25</code>,
-      <code>COMP-EXT</code>, <code>COMP-K</code>, <code>PREP-AB</code>, <code>PREP-ESC</code>.
-    </p>
-    <p><strong>Grupos activos:</strong> en Vista previa verá <code>clave_legado</code>, <code>esp_estado</code> y
-      <code>clave_nueva_sugerida</code>. Si la especialidad falta o no existe en HAY, elija una en la columna
-      <code>clave_especialidad</code> antes de Importar. El grupo se crea con <strong>clave HAY nueva</strong>
-      (directrices del plantel) y el legado queda en <code>clave_anterior</code> + mapa <code>hay_migracion_csv_map</code>.
-    </p>
-    <p><strong>Kids (IK+CK):</strong> una sola clave legado en el sistema anterior. En el CSV puede:
-      (1) poner <code>ING-K</code>/<code>infantil=1</code> en una fila → HAY crea la pareja y parte el bloque en
-      <em>2 h inglés + 2 h cómputo</em> el mismo día; o
-      (2) <strong>repetir</strong> el mismo <code>id_grupo_legado</code>/<code>clave_legado</code> en 2 filas
-      (1ª = inglés, 2ª = computación) con su <code>hora_inicio</code>, <code>dias_clase</code> y
-      <code>aula_codigo</code> distintos — mismo número HAY, horarios/aulas independientes.
-      Ej. sábado 08:00 aula1 + 10:00 lab; o lunes 15:00 + miércoles 15:00.
-    </p>
-    <p><strong>Profesor:</strong> en Vista previa elija el docente en el desplegable. Por defecto se
-      preselecciona el nombre HAY más parecido al del CSV (ignora acentos, mayúsculas y orden de
-      apellidos). Revise los marcados como <code>aproximado</code> o <code>sin_match</code>.
+    <p style="margin:0; color:#777;">
+      En grupos, la vista previa permite elegir especialidad y profesor; kids = repetir la misma
+      clave legado en 2 filas (inglés + cómputo) o una fila <code>ING-K</code>.
     </p>
   </div>
 </div>
@@ -140,4 +109,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118e'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118f'), ENT_QUOTES, 'UTF-8'); ?>"></script>

@@ -483,8 +483,32 @@
     }
   });
 
+  function updateTemplateLabel() {
+    const tipo = $('migcsv-tipo')?.value || 'staff_emails';
+    const label = $('migcsv-template-label');
+    if (!label) return;
+    const names = {
+      staff_emails: 'Ejemplo personal correos',
+      personal: 'Ejemplo 01 personal',
+      aulas: 'Ejemplo 02 aulas',
+      grupos: 'Ejemplo 03 grupos',
+      alumnos: 'Ejemplo 04 alumnos',
+      pagos: 'Ejemplo 05 pagos',
+    };
+    label.textContent = names[tipo] || 'CSV de ejemplo';
+  }
+
+  $('migcsv-tipo')?.addEventListener('change', updateTemplateLabel);
+  updateTemplateLabel();
+
   $('migcsv-template')?.addEventListener('click', () => {
-    window.location.href = api + '?action=staff_template';
+    const tipo = $('migcsv-tipo')?.value || 'staff_emails';
+    const qs = new URLSearchParams({
+      action: 'csv_ejemplo',
+      tipo: tipo,
+      id_plantel: String(idPlantel || 0),
+    });
+    window.location.href = api + '?' + qs.toString();
   });
 
   $('migcsv-provision')?.addEventListener('click', async () => {

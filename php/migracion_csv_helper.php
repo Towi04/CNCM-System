@@ -1873,6 +1873,111 @@ function migracion_csv_staff_emails_headers(): array
     ];
 }
 
+/**
+ * CSV de ejemplo (encabezados + 2–3 filas) para el tipo de migración elegido.
+ *
+ * @return array{filename:string, headers:list<string>, rows:list<list<string>>}|null
+ */
+function migracion_csv_ejemplo(PDO $pdo, string $tipo, ?string $slugPreferido = null): ?array
+{
+    $tipo = strtolower(trim($tipo));
+    $slug = trim((string) $slugPreferido);
+    if ($slug === '' && function_exists('plantel_list')) {
+        $planteles = plantel_list($pdo, true);
+        $slug = (string) ($planteles[0]['slug'] ?? 'guerrero');
+    }
+    if ($slug === '') {
+        $slug = 'guerrero';
+    }
+
+    switch ($tipo) {
+        case 'staff_emails':
+            return [
+                'filename' => 'ejemplo_personal_correos.csv',
+                'headers' => migracion_csv_staff_emails_headers(),
+                'rows' => [
+                    ['juan.perez@cncm.edu.mx', $slug, 'profesor', '', '', ''],
+                    ['maria.lopez@cncm.edu.mx', $slug, 'asesor', 'María', 'López', 'García'],
+                    ['recepcion.' . $slug . '@cncm.edu.mx', $slug, 'recepcion', '', '', ''],
+                ],
+            ];
+
+        case 'personal':
+            return [
+                'filename' => 'ejemplo_01_personal.csv',
+                'headers' => [
+                    'id_usuario_legado', 'nombres', 'apellido_paterno', 'apellido_materno',
+                    'email_legado', 'rol_legado', 'rol', 'plantel_slug', 'username', 'notas',
+                ],
+                'rows' => [
+                    ['101', 'Juan', 'Pérez', 'López', 'juan@ejemplo.com', 'Docente', 'profesor', $slug, 'juan.perez', ''],
+                    ['102', 'Ana', 'Ruiz', '', '', 'Asesor', 'asesor', $slug, '', ''],
+                    ['103', 'Luis', 'Hernández', 'Mora', '', 'Gerente', 'gerente', $slug, 'luis.hernandez', ''],
+                ],
+            ];
+
+        case 'aulas':
+            return [
+                'filename' => 'ejemplo_02_aulas.csv',
+                'headers' => ['plantel_slug', 'codigo', 'nombre', 'piso', 'capacidad', 'notas'],
+                'rows' => [
+                    [$slug, 'A1', 'Aula 1', '1', '12', ''],
+                    [$slug, 'A2', 'Aula 2', '1', '12', ''],
+                    [$slug, 'LAB', 'Laboratorio', 'PB', '16', 'cómputo kids'],
+                ],
+            ];
+
+        case 'grupos':
+            return [
+                'filename' => 'ejemplo_03_grupos.csv',
+                'headers' => [
+                    'id_grupo_legado', 'clave_legado', 'plantel_slug', 'clave_especialidad', 'infantil',
+                    'fecha_inicio_estimada', 'clave_fase_estimada', 'dias_clase', 'hora_inicio', 'hora_fin',
+                    'profesor_sugerido', 'profesor_username', 'aula_codigo',
+                ],
+                'rows' => [
+                    // Adulto inglés sábado mañana
+                    ['501', 'IS100', $slug, 'ING', '0', '2025-01-11', 'F1', '6', '08:00', '12:00', 'Jose Perez', '', 'A1'],
+                    // Kids: misma clave en 2 filas (inglés 08:00 + cómputo 10:00)
+                    ['502', 'IKCF100', $slug, 'ING-K', '1', '2025-01-11', 'F1', '6', '08:00', '10:00', 'Maria Lopez', '', 'A1'],
+                    ['502', 'IKCF100', $slug, 'COMP-K', '1', '2025-01-11', 'F1', '6', '10:00', '12:00', 'Maria Lopez', '', 'LAB'],
+                ],
+            ];
+
+        case 'alumnos':
+            return [
+                'filename' => 'ejemplo_04_alumnos.csv',
+                'headers' => [
+                    'id_alumno_legado', 'numero_control', 'nombres', 'apellido_paterno', 'apellido_materno',
+                    'email', 'telefono', 'plantel_slug', 'id_grupo_legado', 'fecha_inicio',
+                    'forma_pago', 'id_asesor_legado', 'asesor_nombre',
+                ],
+                'rows' => [
+                    ['9001', '2501001', 'Pedro', 'Ramírez', 'Solís', '', '5551112233', $slug, '501', '2025-01-11', 'mensual', '', ''],
+                    ['9002', '2501002', 'Lucía', 'Gómez', 'Nava', 'lucia@ejemplo.com', '', $slug, '501', '2025-01-11', 'mensual', '', ''],
+                    ['9003', '2501003', 'Diego', 'Torres', '', '', '', $slug, '502', '2025-01-11', 'mensual', '', ''],
+                ],
+            ];
+
+        case 'pagos':
+            return [
+                'filename' => 'ejemplo_05_pagos.csv',
+                'headers' => [
+                    'id_pago_legado', 'numero_control', 'id_alumno_legado', 'fecha', 'monto',
+                    'forma_pago', 'tipo', 'concepto', 'folio',
+                ],
+                'rows' => [
+                    ['7001', '2501001', '9001', '2025-01-15', '1200', 'efectivo', 'colegiatura', 'Enero', 'F-1001'],
+                    ['7002', '2501002', '9002', '2025-01-16', '1200', 'transferencia', 'colegiatura', 'Enero', 'F-1002'],
+                    ['7003', '2501003', '9003', '2025-01-18', '800', 'efectivo', 'inscripcion', 'Inscripción', 'F-1003'],
+                ],
+            ];
+
+        default:
+            return null;
+    }
+}
+
 /** @return array{nombre:string, apellido:string} */
 function migracion_csv_nombre_desde_email(string $email): array
 {

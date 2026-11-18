@@ -18,16 +18,39 @@ migracion_csv_ensure_schema($pdo);
 $action = trim((string) ($_POST['action'] ?? $_GET['action'] ?? ''));
 $idPlantel = (int) ($_POST['id_plantel'] ?? plantel_id_activo());
 
-if ($action === 'staff_template') {
-    $planteles = function_exists('plantel_list') ? plantel_list($pdo, true) : [];
-    $slugEj = $planteles[0]['slug'] ?? 'guerrero';
+if ($action === 'staff_template' || $action === 'csv_ejemplo') {
+    $tipoEj = strtolower(trim((string) ($_GET['tipo'] ?? $_POST['tipo'] ?? '')));
+    if ($action === 'staff_template' && $tipoEj === '') {
+        $tipoEj = 'staff_emails';
+    }
+    $slugEj = null;
+    if (function_exists('plantel_list')) {
+        $planteles = plantel_list($pdo, true);
+        $slugEj = (string) ($planteles[0]['slug'] ?? 'guerrero');
+        if ($idPlantel > 0) {
+            foreach ($planteles as $p) {
+                if ((int) ($p['id_plantel'] ?? 0) === $idPlantel) {
+                    $slugEj = (string) ($p['slug'] ?? $slugEj);
+                    break;
+                }
+            }
+        }
+    }
+    $ej = migracion_csv_ejemplo($pdo, $tipoEj !== '' ? $tipoEj : 'staff_emails', $slugEj);
+    if ($ej === null) {
+        header('Content-Type: text/plain; charset=utf-8');
+        http_response_code(400);
+        echo 'Tipo no válido. Use: staff_emails|personal|aulas|grupos|alumnos|pagos';
+        exit;
+    }
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="plantilla_personal_correos.csv"');
+    header('Content-Disposition: attachment; filename="' . $ej['filename'] . '"');
     $out = fopen('php://output', 'w');
     fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
-    fputcsv($out, migracion_csv_staff_emails_headers());
-    fputcsv($out, ['nombre.apellido@cncm.edu.mx', $slugEj, 'profesor', '', '', '']);
-    fputcsv($out, ['otro.usuario@cncm.edu.mx', $slugEj, 'asesor', '', '', '']);
+    fputcsv($out, $ej['headers']);
+    foreach ($ej['rows'] as $row) {
+        fputcsv($out, $row);
+    }
     fclose($out);
     exit;
 }
