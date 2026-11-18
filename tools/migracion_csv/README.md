@@ -97,6 +97,9 @@ reglas del sistema (número de control / correo institucional).
 
 `numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`, `folio`. Colegiatura congelada se define después en HAY.
 
+Para descargar pagos del legado basta pegar (o subir el CSV de alumnos) la columna
+`id_alumno_legado`; no es obligatorio el filtro de grupos.
+
 ## Checklist operativo por plantel
 
 1. [ ] Alta/import de personal → provisión staff
