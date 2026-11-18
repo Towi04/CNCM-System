@@ -35,9 +35,17 @@
         const loading = document.getElementById('loading-area');
         if (form && loading) {
             form.addEventListener('submit', () => {
+                // Solo feedback visual; no bloquear el POST/redirect del navegador.
                 loading.style.display = 'block';
                 const btn = form.querySelector('.btn-login');
-                if (btn) btn.disabled = true;
+                if (btn) {
+                    btn.disabled = true;
+                    // Si el usuario vuelve con el botón Atrás (bfcache), rehabilitar.
+                    window.addEventListener('pageshow', () => {
+                        btn.disabled = false;
+                        loading.style.display = 'none';
+                    }, { once: true });
+                }
             });
         }
     });

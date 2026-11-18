@@ -9,8 +9,7 @@ if (!isset($_SESSION['user_id'])) {
             . ' cookie_path=' . hay_app_cookie_path())
         : ('No llegó cookie ' . hay_session_name() . '. cookie_path=' . hay_app_cookie_path()
             . ' https=' . (hay_request_is_https() ? '1' : '0'));
-    header('Location: index.php?error=sesion&msg=' . urlencode($hint));
-    exit();
+    hay_redirect('index.php?error=sesion&msg=' . urlencode($hint));
 }
 /** Migraciones solo al entrar al panel (no en login). */
 define('HAY_RUN_SCHEMA_BOOTSTRAP', true);
@@ -28,7 +27,7 @@ if (function_exists('rbac_sincronizar_sesion_usuario')) {
 plantel_inicializar_sesion($pdo);
 user_avatar_refresh_session($pdo, (int) $_SESSION['user_id']);
 
-// Liberar lock antes del HTML para que las vistas AJAX no queden en cola.
+// Liberar lock antes del HTML para que CSS/JS/AJAX no queden en cola tras el login.
 if (function_exists('hay_session_release_lock')) {
     hay_session_release_lock();
 }
