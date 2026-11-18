@@ -101,6 +101,11 @@ try {
     }
 
     if ($action === 'import') {
+        // Staff+Google/Moodle por fila puede superar el límite por defecto (30–60s).
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+        @ignore_user_abort(true);
         $tipo = strtolower(trim((string) ($_POST['tipo'] ?? '')));
         if (empty($_FILES['csv']['tmp_name'])) {
             echo json_encode(['status' => 'error', 'message' => 'Adjunte un CSV'], JSON_UNESCAPED_UNICODE);

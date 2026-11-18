@@ -121,4 +121,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261117d'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118a'), ENT_QUOTES, 'UTF-8'); ?>"></script>

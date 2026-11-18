@@ -1,6 +1,10 @@
 (function () {
-  if (window.__hayMigCsvInit) return;
-  window.__hayMigCsvInit = true;
+  // Al navegar con cargarSeccion se reinyecta el HTML; no usar un flag global
+  // permanente o los botones quedan sin listeners (Importar no dispara la API).
+  const wrap = document.getElementById('migcsv-msg')?.closest('.catalog-wrap');
+  if (!wrap) return;
+  if (wrap.dataset.migcsvBound === '1') return;
+  wrap.dataset.migcsvBound = '1';
 
   const cfg = window.HAY_MIGCSV || {};
   const api = cfg.api || 'php/migracion_csv_api.php';
@@ -14,8 +18,11 @@
 
   /** @type {{headers:string[], rows:object[], total:number, offset:number, limit:number, roles:string[], roleLabels:object}|null} */
   let previewState = null;
-  /** Overrides por email (persisten al cambiar de página) */
-  const overrides = Object.create(null);
+  /** Overrides por email (persisten al cambiar de página de preview / reentrar sección) */
+  if (!window.__hayMigCsvOverrides) {
+    window.__hayMigCsvOverrides = Object.create(null);
+  }
+  const overrides = window.__hayMigCsvOverrides;
 
   function $(id) {
     return document.getElementById(id);
@@ -27,6 +34,16 @@
     el.style.display = 'block';
     el.textContent = text || '';
     el.className = 'catalog-alert ' + (ok ? 'ok' : 'err');
+  }
+
+  function setBusy(busy, label) {
+    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-template'].forEach((id) => {
+      const el = $(id);
+      if (el) el.disabled = !!busy;
+    });
+    if (busy) {
+      showMsg(label || 'Trabajando… no cierre ni cambie de sección.', true);
+    }
   }
 
   function applyOverrideToRow(row) {
@@ -249,7 +266,7 @@
       return;
     }
     const aviso = tipo === 'staff_emails'
-      ? '¿Importar personal y provisionar Google/Moodle?\nSe creará el correo en Google Workspace si no existe.\nSe usarán los roles/nombres que editó en la vista previa.'
+      ? '¿Importar personal y provisionar Google/Moodle?\nSe creará el correo en Google Workspace si no existe.\nSe usarán los roles/nombres que editó en la vista previa.\nCon ~100 filas puede tardar varios minutos.'
       : '¿Importar «' + file.name + '» como ' + tipo + '?';
     if (!confirm(aviso)) return;
     const fd = new FormData();
@@ -260,17 +277,20 @@
     if (tipo === 'staff_emails') {
       fd.append('overrides', JSON.stringify(overrides));
     }
+    setBusy(true, 'Importando… (Google/Moodle por fila). Espere; en Network debe aparecer migracion_csv_api.php');
     try {
-      const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
+      const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
       const data = await r.json();
       let text = data.message || '';
       if (data.errores && data.errores.length) {
         text += ' — ' + data.errores.slice(0, 3).join('; ');
       }
-      showMsg(text, data.status === 'ok');
+      showMsg(text || (data.status === 'ok' ? 'Importación terminada' : 'Error al importar'), data.status === 'ok');
       refreshEstado();
     } catch (e) {
-      showMsg('Error de red al importar', false);
+      showMsg('Error de red al importar (timeout o conexión). Revise Network → migracion_csv_api.php', false);
+    } finally {
+      setBusy(false);
     }
   });
 
@@ -284,8 +304,9 @@
     fd.append('action', 'provision');
     fd.append('id_plantel', String(idPlantel));
     fd.append('limite', '200');
+    setBusy(true, 'Provisionando cuentas… no cierre la sección.');
     try {
-      const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
+      const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
       const data = await r.json();
       let text = data.message || '';
       if (data.errores && data.errores.length) {
@@ -295,6 +316,8 @@
       refreshEstado();
     } catch (e) {
       showMsg('Error de red en provisión', false);
+    } finally {
+      setBusy(false);
     }
   });
 
