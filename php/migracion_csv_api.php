@@ -300,6 +300,29 @@ try {
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
+        if ($tipoPreview === 'alumnos') {
+            $offset = (int) ($_POST['offset'] ?? 0);
+            $limit = (int) ($_POST['limit'] ?? 50);
+            $res = migracion_csv_preview_alumnos(
+                $pdo,
+                $_FILES['csv']['tmp_name'],
+                $idPlantel > 0 ? $idPlantel : null,
+                $offset,
+                $limit
+            );
+            echo json_encode([
+                'status' => !empty($res['ok']) ? 'ok' : 'error',
+                'message' => $res['message'] ?? '',
+                'headers' => $res['headers'] ?? [],
+                'total_filas' => $res['total_filas'] ?? 0,
+                'offset' => $res['offset'] ?? $offset,
+                'limit' => $res['limit'] ?? $limit,
+                'muestra' => $res['muestra'] ?? [],
+                'errores' => $res['errores'] ?? [],
+                'grupos_faltantes' => $res['grupos_faltantes'] ?? [],
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         $parsed = migracion_csv_leer_archivo($_FILES['csv']['tmp_name']);
         if (!empty($parsed['error'])) {
             echo json_encode(['status' => 'error', 'message' => $parsed['error']], JSON_UNESCAPED_UNICODE);

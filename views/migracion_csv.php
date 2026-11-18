@@ -120,11 +120,17 @@ if (function_exists('plantel_list')) {
       En grupos, la vista previa permite elegir especialidad y profesor; kids = repetir la misma
       clave legado en 2 filas (inglés + cómputo) o una fila <code>ING-K</code>.
     </p>
+    <p style="margin:0 0 8px; color:#777;">
+      <strong>Alumnos:</strong> no se migran solos con los grupos. Use el <em>mismo</em> filtro
+      de ids/claves con el que importó <code>03_grupos</code>, descargue <code>04_alumnos</code>
+      → Vista previa (columna <code>grupo_estado</code>) → Importar. Enlazan por
+      <code>id_grupo_legado</code> o <code>clave_legado</code>. Si marca “grupo legado N no está
+      en el mapa”, ese N no está entre los grupos ya importados (aunque haya otros 21): vuelva a
+      descargar/importar <code>03_grupos</code> incluyendo ese id.
+    </p>
     <p style="margin:0; color:#777;">
-      <strong>Alumnos:</strong> no se migran solos con los grupos. Con el mismo filtro de claves,
-      descargue <code>04_alumnos</code> del legado → Importar. Enlazan por
-      <code>id_grupo_legado</code> o <code>clave_legado</code>. Al importar se crea (si falta)
-      usuario HAY + Google + Moodle (mismas reglas: NC / correo institucional).
+      Al importar alumnos se crea (si falta) usuario HAY + Google + Moodle
+      (mismas reglas: NC / correo institucional).
     </p>
   </div>
 </div>
@@ -147,4 +153,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118j'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118k'), ENT_QUOTES, 'UTF-8'); ?>"></script>

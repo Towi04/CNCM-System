@@ -381,6 +381,17 @@
               td.style.color = '#0a7a32';
             }
           }
+          if (h === 'grupo_estado') {
+            if (v === 'faltante' || v === 'plantel') {
+              td.style.color = '#b00020';
+              td.style.fontWeight = '600';
+              td.title = v === 'faltante'
+                ? 'Ese id/clave de grupo no está en el mapa: reimporte 03_grupos incluyendo ese id.'
+                : 'Plantel del alumno no resuelto.';
+            } else if (v === 'ok') {
+              td.style.color = '#0a7a32';
+            }
+          }
           if (h === 'profesor_csv' && v) {
             td.title = 'Texto original del CSV';
           }
@@ -445,10 +456,13 @@
         });
       }
       let text = data.message || ('Vista previa: ' + previewState.total + ' fila(s)');
-      if (data.errores && data.errores.length) {
+      if (data.grupos_faltantes && data.grupos_faltantes.length) {
+        text += ' — faltan grupos: ' + data.grupos_faltantes.slice(0, 10).join(', ')
+          + (data.grupos_faltantes.length > 10 ? '…' : '');
+      } else if (data.errores && data.errores.length) {
         text += ' — ' + data.errores.slice(0, 2).join('; ');
       }
-      showMsg(text, true);
+      showMsg(text, !(data.grupos_faltantes && data.grupos_faltantes.length));
       renderPreview();
     } catch (e) {
       showMsg('Error de red', false);
