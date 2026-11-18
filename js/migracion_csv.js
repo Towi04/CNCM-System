@@ -538,9 +538,12 @@
   });
 
   const FILTRO_KEY = 'hay_migcsv_filtro_grupos';
+  const FILTRO_AL_KEY = 'hay_migcsv_filtro_alumnos';
   try {
     const saved = localStorage.getItem(FILTRO_KEY);
     if (saved && $('migcsv-filtro')) $('migcsv-filtro').value = saved;
+    const savedAl = localStorage.getItem(FILTRO_AL_KEY);
+    if (savedAl && $('migcsv-filtro-alumnos')) $('migcsv-filtro-alumnos').value = savedAl;
   } catch (e) { /* ignore */ }
 
   $('migcsv-filtro')?.addEventListener('change', () => {
@@ -548,17 +551,99 @@
       localStorage.setItem(FILTRO_KEY, $('migcsv-filtro').value || '');
     } catch (e) { /* ignore */ }
   });
+  $('migcsv-filtro-alumnos')?.addEventListener('change', () => {
+    try {
+      localStorage.setItem(FILTRO_AL_KEY, $('migcsv-filtro-alumnos').value || '');
+    } catch (e) { /* ignore */ }
+  });
+
+  /** Extrae id_alumno_legado de un CSV (columna o única columna). */
+  function extractIdsAlumnoFromCsvText(text) {
+    const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim() !== '');
+    if (!lines.length) return [];
+    const parseRow = (line) => {
+      const out = [];
+      let cur = '';
+      let q = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          q = !q;
+          continue;
+        }
+        if (ch === ',' && !q) {
+          out.push(cur.trim());
+          cur = '';
+          continue;
+        }
+        cur += ch;
+      }
+      out.push(cur.trim());
+      return out;
+    };
+    const header = parseRow(lines[0]).map((h) => h.toLowerCase());
+    let col = header.indexOf('id_alumno_legado');
+    let start = 1;
+    if (col < 0) {
+      // Sin encabezado: una columna de ids
+      if (header.length === 1 && /^\d+$/.test(header[0])) {
+        col = 0;
+        start = 0;
+      } else {
+        return [];
+      }
+    }
+    const ids = [];
+    const seen = Object.create(null);
+    for (let i = start; i < lines.length; i++) {
+      const cols = parseRow(lines[i]);
+      const v = String(cols[col] || '').trim();
+      if (!v || !/^\d+$/.test(v) || seen[v]) continue;
+      seen[v] = true;
+      ids.push(v);
+    }
+    return ids;
+  }
+
+  $('migcsv-filtro-alumnos-file')?.addEventListener('change', async (ev) => {
+    const file = ev.target?.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const ids = extractIdsAlumnoFromCsvText(text);
+      if (!ids.length) {
+        showMsg('No se encontró columna id_alumno_legado en el CSV.', false);
+        return;
+      }
+      const ta = $('migcsv-filtro-alumnos');
+      if (ta) {
+        ta.value = ids.join('\n');
+        try {
+          localStorage.setItem(FILTRO_AL_KEY, ta.value);
+        } catch (e) { /* ignore */ }
+      }
+      showMsg('Cargados ' + ids.length + ' id_alumno_legado desde ' + file.name, true);
+    } catch (e) {
+      showMsg('No se pudo leer el CSV de alumnos.', false);
+    }
+  });
 
   $('migcsv-export-legado')?.addEventListener('click', () => {
     const tipo = $('migcsv-tipo')?.value || 'grupos';
     const filtro = ($('migcsv-filtro')?.value || '').trim();
+    const filtroAl = ($('migcsv-filtro-alumnos')?.value || '').trim();
     const idSuc = $('migcsv-sucursal')?.value || '0';
-    if (['grupos', 'alumnos', 'pagos'].indexOf(tipo) >= 0 && !filtro) {
+    if (['grupos', 'alumnos'].indexOf(tipo) >= 0 && !filtro) {
       showMsg('Pegue ids o claves de grupos (uno por línea) para exportar ' + tipo + ' desde el legado.', false);
+      return;
+    }
+    if (tipo === 'pagos' && !filtroAl && !filtro) {
+      showMsg('Para pagos pegue id_alumno_legado (o suba el CSV de alumnos), o use el filtro de grupos.', false);
       return;
     }
     try {
       localStorage.setItem(FILTRO_KEY, filtro);
+      localStorage.setItem(FILTRO_AL_KEY, filtroAl);
     } catch (e) { /* ignore */ }
     const qs = new URLSearchParams({
       action: 'export_legado',
@@ -566,6 +651,7 @@
       id_sucursal: String(idSuc),
       id_plantel: String(idPlantel || 0),
       filtro: filtro,
+      filtro_alumnos: filtroAl,
     });
     showMsg('Descargando CSV desde la BD legado del servidor…', true);
     window.location.href = api + '?' + qs.toString();

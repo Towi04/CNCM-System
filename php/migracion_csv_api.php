@@ -58,11 +58,45 @@ if ($action === 'export_legado') {
         }
         $filtro[] = $line;
     }
+    $filtroAlRaw = (string) ($_GET['filtro_alumnos'] ?? $_POST['filtro_alumnos'] ?? '');
+    $filtroAlumnos = [];
+    foreach (preg_split('/\R/', $filtroAlRaw) ?: [] as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        // Si pegan CSV con encabezado, ignorar la fila de títulos
+        if (strcasecmp($line, 'id_alumno_legado') === 0 || str_contains(strtolower($line), 'id_alumno_legado,')) {
+            if (str_contains($line, ',')) {
+                // Extraer columna id_alumno_legado de una fila CSV completa más abajo
+                continue;
+            }
+            continue;
+        }
+        // Valor suelto o primera columna de una fila CSV
+        if (str_contains($line, ',')) {
+            $parts = str_getcsv($line);
+            $first = trim((string) ($parts[0] ?? ''));
+            if ($first !== '' && strcasecmp($first, 'id_alumno_legado') !== 0) {
+                $filtroAlumnos[] = $first;
+            }
+            continue;
+        }
+        $filtroAlumnos[] = $line;
+    }
     $idsGrupos = migcsv_resolver_ids_grupos($pdoLeg, $filtro);
-    if (in_array($tipoExp, ['grupos', 'alumnos', 'pagos'], true) && $idsGrupos === []) {
+    $idsAlumnosFiltro = migcsv_resolver_ids_alumnos($pdoLeg, $filtroAlumnos);
+    if (in_array($tipoExp, ['grupos', 'alumnos'], true) && $idsGrupos === []) {
         header('Content-Type: text/plain; charset=utf-8');
         http_response_code(400);
         echo 'Indique ids o claves de grupos activos (uno por línea) para exportar ' . $tipoExp . '.';
+        exit;
+    }
+    if ($tipoExp === 'pagos' && $idsAlumnosFiltro === [] && $idsGrupos === []) {
+        header('Content-Type: text/plain; charset=utf-8');
+        http_response_code(400);
+        echo 'Para pagos indique id_alumno_legado (uno por línea, o pegue la columna del CSV de alumnos) '
+            . 'o, en su defecto, ids/claves de grupos.';
         exit;
     }
     if ($idSucursal > 0 && $idsGrupos !== []) {
@@ -112,7 +146,9 @@ if ($action === 'export_legado') {
                     'fecha_inicio', 'forma_pago', 'id_asesor_legado', 'asesor_nombre', 'status_legado',
                 ], $rows);
             case 'pagos':
-                $rows = migcsv_export_pagos($pdoLeg, $idsGrupos);
+                $rows = $idsAlumnosFiltro !== []
+                    ? migcsv_export_pagos_por_alumnos($pdoLeg, $idsAlumnosFiltro)
+                    : migcsv_export_pagos($pdoLeg, $idsGrupos);
                 migcsv_csv_enviar('05_pagos.csv', [
                     'id_pago_legado', 'numero_control', 'id_alumno_legado', 'fecha', 'monto',
                     'forma_pago', 'tipo', 'concepto', 'folio',

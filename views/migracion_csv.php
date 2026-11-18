@@ -60,9 +60,17 @@ if (function_exists('plantel_list')) {
     <h3 style="margin:0 0 8px; font-size:1rem;"><i class="fas fa-database"></i> Descargar desde BD legado (servidor)</h3>
     <p id="migcsv-legado-status" style="margin:0 0 10px; color:#666; font-size:0.9rem;">Comprobando LEGACY_DB_*…</p>
     <div class="catalog-toolbar" style="flex-wrap:wrap; gap:12px; align-items:flex-end; margin:0;">
-      <div class="field" style="flex:1; min-width:260px;">
-        <label for="migcsv-filtro">Grupos activos (id o clave legado, uno por línea)</label>
-        <textarea id="migcsv-filtro" rows="4" placeholder="IKCF0085&#10;IKCF0098&#10;502" style="width:100%; min-width:260px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
+      <div class="field" style="flex:1; min-width:220px;">
+        <label for="migcsv-filtro">Grupos (id o clave, uno por línea)</label>
+        <textarea id="migcsv-filtro" rows="4" placeholder="IKCF0085&#10;IKCF0098&#10;502" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
+      </div>
+      <div class="field" style="flex:1; min-width:220px;">
+        <label for="migcsv-filtro-alumnos">Alumnos para pagos (<code>id_alumno_legado</code>)</label>
+        <textarea id="migcsv-filtro-alumnos" rows="4" placeholder="9001&#10;9002&#10;9003" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
+        <label style="margin-top:6px; font-size:0.8rem; color:#666;">
+          O cargar CSV de alumnos:
+          <input type="file" id="migcsv-filtro-alumnos-file" accept=".csv,text/csv" style="display:block; margin-top:4px; font-size:0.8rem;">
+        </label>
       </div>
       <div class="field">
         <label for="migcsv-sucursal">Sucursal legado (opcional)</label>
@@ -75,8 +83,8 @@ if (function_exists('plantel_list')) {
       </button>
     </div>
     <p style="margin:10px 0 0; color:#777; font-size:0.85rem;">
-      Requiere <code>LEGACY_DB_*</code> en <code>config.local.php</code>. Para grupos/alumnos/pagos el filtro es obligatorio.
-      Luego use el archivo descargado en Vista previa → Importar.
+      Requiere <code>LEGACY_DB_*</code>. Grupos/alumnos: filtro de grupos. Pagos: basta pegar
+      <code>id_alumno_legado</code> (o subir el CSV de alumnos ya descargado).
     </p>
   </div>
 
@@ -139,4 +147,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118i'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118j'), ENT_QUOTES, 'UTF-8'); ?>"></script>
