@@ -1533,8 +1533,13 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
     }
     migracion_csv_ensure_schema($pdo);
     alumno_ensure_schema($pdo);
+    if (function_exists('usuario_ensure_schema')) {
+        usuario_ensure_schema($pdo);
+    }
     $creados = 0;
     $vinculados = 0;
+    $cuentasOk = 0;
+    $cuentasFail = 0;
     $errores = [];
 
     foreach ($rows as $i => $r) {
@@ -1652,6 +1657,8 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
             }
             if ($idAlLeg !== '') {
                 migracion_csv_map_set($pdo, 'alumno', $idAlLeg, $idAlumno, $nc);
+            } elseif ($nc !== '') {
+                migracion_csv_map_set($pdo, 'alumno', 'nc:' . $nc, $idAlumno, $nc);
             }
             if ($idAsesor) {
                 try {
@@ -1732,18 +1739,45 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
                     }
                 }
             }
+
+            // Misma ruta que inscripción/ubicación: Google + usuario HAY + Moodle
+            if (function_exists('usuario_crear_cuenta_alumno')) {
+                try {
+                    $cuenta = usuario_crear_cuenta_alumno($pdo, $idAlumno, $idPlantel);
+                    if (!empty($cuenta['ok']) || !empty($cuenta['vinculado'])) {
+                        $cuentasOk++;
+                        if (isset($cuenta['moodle_ok']) && empty($cuenta['moodle_ok']) && !empty($cuenta['moodle'])) {
+                            $errores[] = "Línea {$line} (NC {$nc}): HAY/Google OK; Moodle pendiente — "
+                                . (string) $cuenta['moodle'];
+                        }
+                    } else {
+                        $cuentasFail++;
+                        $errores[] = "Línea {$line} (NC {$nc}): cuenta — "
+                            . (string) ($cuenta['message'] ?? 'no se pudo crear Google/HAY/Moodle');
+                    }
+                } catch (Throwable $e) {
+                    $cuentasFail++;
+                    $errores[] = "Línea {$line} (NC {$nc}): cuenta — " . $e->getMessage();
+                }
+            }
         } catch (Throwable $e) {
             $errores[] = "Línea {$line}: " . $e->getMessage();
         }
     }
 
-    migracion_csv_log($pdo, 'alumnos', 'info', "Alumnos: {$creados} creados, {$vinculados} vinculados");
+    $msg = "{$creados} creado(s), {$vinculados} vinculado(s)";
+    if ($cuentasOk + $cuentasFail > 0) {
+        $msg .= "; cuentas OK {$cuentasOk}" . ($cuentasFail > 0 ? " / fallos {$cuentasFail}" : '');
+    }
+    migracion_csv_log($pdo, 'alumnos', 'info', 'Alumnos: ' . $msg);
 
     return [
         'ok' => ($creados + $vinculados) > 0 || $errores === [],
-        'message' => "{$creados} creado(s), {$vinculados} vinculado(s)",
+        'message' => $msg,
         'creados' => $creados,
         'vinculados' => $vinculados,
+        'cuentas_ok' => $cuentasOk,
+        'cuentas_fail' => $cuentasFail,
         'errores' => array_slice($errores, 0, 40),
     ];
 }

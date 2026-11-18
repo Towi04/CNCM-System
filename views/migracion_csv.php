@@ -115,7 +115,8 @@ if (function_exists('plantel_list')) {
     <p style="margin:0; color:#777;">
       <strong>Alumnos:</strong> no se migran solos con los grupos. Con el mismo filtro de claves,
       descargue <code>04_alumnos</code> del legado → Importar. Enlazan por
-      <code>id_grupo_legado</code> o <code>clave_legado</code>.
+      <code>id_grupo_legado</code> o <code>clave_legado</code>. Al importar se crea (si falta)
+      usuario HAY + Google + Moodle (mismas reglas: NC / correo institucional).
     </p>
   </div>
 </div>
@@ -138,4 +139,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118h'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118i'), ENT_QUOTES, 'UTF-8'); ?>"></script>
