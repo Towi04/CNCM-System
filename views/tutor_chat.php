@@ -16,7 +16,7 @@ $hintAcceso = match ($rolEfectivo) {
     'alumno' => 'Solo puede consultar al tutor asignado a su(s) grupo(s) activo(s).',
     'profesor' => 'Acceso a los tutores de las especialidades que imparte.',
     'supervisor', 'admin', 'director', 'coordinador', 'coordinacion' => 'Acceso a todos los tutores institucionales.',
-    'asesor', 'gerente', 'recepcion', 'caja' => 'Asistente institucional para consultas generales del sistema.',
+    'asesor', 'gerente', 'recepcion', 'caja', 'marketing', 'imagen' => 'Asistente institucional para consultas generales del sistema.',
     default => 'Las respuestas priorizan el temario institucional de CNCM.',
 };
 ?>

@@ -28,8 +28,14 @@ function notificaciones_perfil_usuario(): string
     if ($rol === 'supervisor') {
         return 'supervisor';
     }
-    if ($rol === 'admin') {
+    if (in_array($rol, ['admin', 'recepcion'], true)) {
         return 'recepcion';
+    }
+    if ($rol === 'marketing') {
+        return 'gerente';
+    }
+    if ($rol === 'imagen') {
+        return 'general';
     }
     return 'general';
 }

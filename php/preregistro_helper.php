@@ -196,8 +196,18 @@ function preregistro_etiqueta_comision(PDO $pdo, array $row): string
 /** @return list<array{id_usuario:int,nombre:string,activo:bool}> */
 function preregistro_asesores_comision_opciones(PDO $pdo, int $idPlantel): array
 {
+    preregistro_ensure_schema($pdo);
+    if (function_exists('plantel_ensure_column')) {
+        plantel_ensure_column($pdo, 'usuarios', 'suspendido', 'TINYINT(1) NOT NULL DEFAULT 0', 'debe_cambiar_password');
+    }
+
     $out = [['id_usuario' => 0, 'nombre' => 'CNCM (sin comisión a asesor)', 'activo' => true]];
-    $equipo = function_exists('gerente_asesores_plantel') ? gerente_asesores_plantel($pdo, $idPlantel) : [];
+    try {
+        $equipo = function_exists('gerente_asesores_plantel') ? gerente_asesores_plantel($pdo, $idPlantel) : [];
+    } catch (Throwable $e) {
+        error_log('preregistro_asesores_comision_opciones equipo: ' . $e->getMessage());
+        $equipo = [];
+    }
     foreach ($equipo as $a) {
         $out[] = [
             'id_usuario' => (int) $a['id_usuario'],
@@ -205,17 +215,38 @@ function preregistro_asesores_comision_opciones(PDO $pdo, int $idPlantel): array
             'activo' => true,
         ];
     }
-    $st = $pdo->prepare(
-        "SELECT DISTINCT u.id_usuario, u.nombre, u.apellido,
+
+    $sqlConSuspendido = "SELECT DISTINCT u.id_usuario, u.nombre, u.apellido,
                 (u.suspendido IS NULL OR u.suspendido = 0) AS activo
          FROM usuarios u
          INNER JOIN preregistros p ON p.id_usuario_asesor = u.id_usuario OR p.id_usuario_registro = u.id_usuario
          WHERE p.id_plantel = ? AND u.rol IN ('asesor','gerente','ventas')
-         ORDER BY u.nombre, u.apellido"
-    );
-    $st->execute([$idPlantel]);
+         ORDER BY u.nombre, u.apellido";
+    $sqlSinSuspendido = "SELECT DISTINCT u.id_usuario, u.nombre, u.apellido, 1 AS activo
+         FROM usuarios u
+         INNER JOIN preregistros p ON p.id_usuario_registro = u.id_usuario
+         WHERE p.id_plantel = ? AND u.rol IN ('asesor','gerente','ventas')
+         ORDER BY u.nombre, u.apellido";
+
+    $rows = [];
+    try {
+        $st = $pdo->prepare($sqlConSuspendido);
+        $st->execute([$idPlantel]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        error_log('preregistro_asesores_comision_opciones hist: ' . $e->getMessage());
+        try {
+            $st = $pdo->prepare($sqlSinSuspendido);
+            $st->execute([$idPlantel]);
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e2) {
+            error_log('preregistro_asesores_comision_opciones hist fallback: ' . $e2->getMessage());
+            $rows = [];
+        }
+    }
+
     $ids = array_column(array_slice($out, 1), 'id_usuario');
-    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $u) {
+    foreach ($rows as $u) {
         $id = (int) $u['id_usuario'];
         if (in_array($id, $ids, true)) {
             continue;
@@ -588,7 +619,7 @@ function preregistro_puede_cobrar(): bool
         return true;
     }
 
-    return in_array($rol, ['admin', 'supervisor'], true);
+    return in_array($rol, ['admin', 'recepcion', 'supervisor'], true);
 }
 
 /** Completar datos fiscales, quitar marca de factura o activar factura post-inscripción. */
@@ -599,7 +630,7 @@ function preregistro_puede_gestionar_factura(): bool
     }
     $rol = function_exists('rbac_rol_efectivo') ? rbac_rol_efectivo() : ($_SESSION['rol'] ?? '');
 
-    return in_array($rol, ['admin', 'supervisor'], true);
+    return in_array($rol, ['admin', 'recepcion', 'supervisor'], true);
 }
 
 /** Resaltar fila en lista (factura pendiente solo para recepción). */
@@ -1534,6 +1565,7 @@ function preregistro_datatable_cells(array $p, array $labels): array
 /** @return array<int, array<string, mixed>> */
 function preregistro_listar(PDO $pdo, int $idPlantel, array $filtros = []): array
 {
+    preregistro_ensure_schema($pdo);
     preregistro_sync_lista_cache($pdo, $idPlantel);
 
     $sql = 'SELECT p.*,

@@ -500,7 +500,7 @@ function menu_cncm_usa_menu_compacto(): bool
 
     }
 
-    return in_array(rbac_rol_efectivo(), ['profesor', 'coordinador', 'admin', 'manuales'], true);
+    return in_array(rbac_rol_efectivo(), ['profesor', 'coordinador', 'admin', 'recepcion', 'imagen', 'manuales'], true);
 
 }
 
@@ -710,9 +710,41 @@ function menu_cncm_secciones_compactas(): array
 
     }
 
+    if ($rol === 'imagen') {
+
+        return [
+
+            [
+
+                'id' => 'imagen',
+
+                'titulo' => 'Imagen / Diseño',
+
+                'rol' => true,
+
+                'items' => [
+
+                    ['staff' => true, 'seccion' => 'inicio_panel', 'icon' => 'fa-home', 'text' => 'Inicio', 'title' => 'Inicio', 'breadcrumb' => 'INICIO'],
+
+                    ['cap' => 'menu_calendario_consulta', 'seccion' => 'calendario_consulta', 'icon' => 'fa-calendar', 'text' => 'Calendario institucional', 'title' => 'Calendario institucional', 'breadcrumb' => 'CALENDARIO INSTITUCIONAL'],
+
+                    ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
+
+                ],
+
+            ],
+
+            $desarrollo,
+
+            $soporte,
+
+        ];
+
+    }
 
 
-    // Recepción / caja (rol admin)
+
+    // Recepción / caja (admin legacy + recepcion)
 
     return [
 
@@ -853,6 +885,8 @@ function menu_cncm_secciones_por_rol(): array
                 ['seccion' => 'supervisor_grupos_historico', 'icon' => 'fa-history', 'text' => 'Carga histórica grupos', 'title' => 'Carga histórica de grupos', 'breadcrumb' => 'CARGA HISTÓRICA'],
 
                 ['callback' => 'migracion_csv_puede', 'seccion' => 'migracion_csv', 'icon' => 'fa-file-csv', 'text' => 'Migración CSV', 'title' => 'Migración selectiva legado por CSV', 'breadcrumb' => 'MIGRACIÓN CSV'],
+
+                ['callback' => 'supervisor_deploy_puede', 'seccion' => 'supervisor_deploy', 'icon' => 'fa-rocket', 'text' => 'Mantenimiento / promote', 'title' => 'Modo mantenimiento y promote develop→main', 'breadcrumb' => 'MANTENIMIENTO / PROMOTE'],
 
                 ['seccion' => 'reporte_bajas', 'icon' => 'fa-user-slash', 'text' => 'Reporte de bajas', 'title' => 'Reporte de bajas', 'breadcrumb' => 'REPORTE BAJAS'],
 

@@ -323,9 +323,9 @@ function rbac_departamento_para_rol(PDO $pdo, string $claveRol, int $idRol = 0):
     }
 
     return match ($claveRol) {
-        'asesor' => 'ventas',
-        'profesor' => 'ingles',
-        'admin', 'gerente', 'supervisor' => 'administrativo',
+        'asesor', 'gerente', 'marketing' => 'ventas',
+        'profesor', 'coordinador', 'coordinacion' => 'ingles',
+        'admin', 'recepcion', 'imagen', 'manuales', 'supervisor', 'director' => 'administrativo',
         default => 'administrativo',
     };
 }
@@ -338,6 +338,9 @@ function rbac_db_seed_departamentos_roles(PDO $pdo): void
         'gerente' => 'ventas',
         'coordinador' => 'ingles',
         'admin' => 'administrativo',
+        'recepcion' => 'administrativo',
+        'imagen' => 'administrativo',
+        'marketing' => 'ventas',
         'asesor' => 'ventas',
         'profesor' => 'ingles',
         'manuales' => 'administrativo',
@@ -360,6 +363,9 @@ function rbac_db_seed_alcance_planteles(PDO $pdo): void
         'gerente' => 'todos',
         'coordinador' => 'solo_usuario',
         'admin' => 'solo_usuario',
+        'recepcion' => 'solo_usuario',
+        'imagen' => 'solo_usuario',
+        'marketing' => 'todos',
         'asesor' => 'solo_usuario',
         'profesor' => 'solo_usuario',
         'manuales' => 'todos',
@@ -394,6 +400,121 @@ function rbac_db_agregar_privilegios_rol(PDO $pdo, string $claveRol, array $priv
         $p = trim((string) $p);
         if ($p !== '') {
             $ins->execute([(int) $rol['id_rol'], $p]);
+        }
+    }
+}
+
+/**
+ * Roles operativos recepción / imagen / marketing (separados de admin legacy).
+ * Idempotente: crea filas en `roles` y sincroniza privilegios del mapa de jerarquía.
+ */
+function rbac_db_ensure_roles_recepcion_imagen_marketing(PDO $pdo): void
+{
+    if (!rbac_db_tablas_listas($pdo)) {
+        return;
+    }
+
+    $defs = [
+        'recepcion' => [
+            'nombre' => 'Recepción / Caja',
+            'descripcion' => 'Alumnos, cobranza y mostrador (sin menú de gerencia ventas)',
+            'orden' => 5,
+            'alcance' => 'solo_usuario',
+            'departamento' => 'administrativo',
+        ],
+        'imagen' => [
+            'nombre' => 'Imagen / Diseño',
+            'descripcion' => 'Personal de imagen: sin acceso a alumnos ni caja',
+            'orden' => 6,
+            'alcance' => 'solo_usuario',
+            'departamento' => 'administrativo',
+        ],
+        'marketing' => [
+            'nombre' => 'Marketing',
+            'descripcion' => 'Estadísticas de captación, alumnos y banners; sin caja',
+            'orden' => 7,
+            'alcance' => 'todos',
+            'departamento' => 'ventas',
+        ],
+    ];
+
+    foreach ($defs as $clave => $meta) {
+        $st = $pdo->prepare('SELECT id_rol FROM roles WHERE clave = ? LIMIT 1');
+        $st->execute([$clave]);
+        $idRol = (int) ($st->fetchColumn() ?: 0);
+        if ($idRol <= 0) {
+            $pdo->prepare(
+                'INSERT INTO roles (clave, nombre, descripcion, acceso_total, es_sistema, activo, orden, alcance_planteles, departamento_default)
+                 VALUES (?,?,?,0,1,1,?,?,?)'
+            )->execute([
+                $clave,
+                $meta['nombre'],
+                $meta['descripcion'],
+                $meta['orden'],
+                $meta['alcance'],
+                $meta['departamento'],
+            ]);
+            $idRol = (int) $pdo->lastInsertId();
+        } else {
+            $pdo->prepare(
+                'UPDATE roles
+                 SET nombre = ?, descripcion = ?, es_sistema = 1, activo = 1,
+                     alcance_planteles = COALESCE(NULLIF(alcance_planteles, \'\'), ?),
+                     departamento_default = COALESCE(NULLIF(departamento_default, \'\'), ?)
+                 WHERE id_rol = ?'
+            )->execute([
+                $meta['nombre'],
+                $meta['descripcion'],
+                $meta['alcance'],
+                $meta['departamento'],
+                $idRol,
+            ]);
+        }
+
+        $privs = function_exists('rbac_jerarquia_privilegios_fallback')
+            ? rbac_jerarquia_privilegios_fallback($clave)
+            : [];
+        if ($privs === []) {
+            continue;
+        }
+        $pdo->prepare('DELETE FROM role_privilegios WHERE id_rol = ?')->execute([$idRol]);
+        $ins = $pdo->prepare('INSERT IGNORE INTO role_privilegios (id_rol, privilegio) VALUES (?,?)');
+        foreach ($privs as $p) {
+            if (is_string($p) && $p !== '') {
+                $ins->execute([$idRol, $p]);
+            }
+        }
+    }
+
+    // Marketing no debe heredar caja / cobros / comisiones operativas
+    $mkt = rbac_rol_por_clave($pdo, 'marketing');
+    if ($mkt) {
+        $deny = [
+            'menu_caja', 'menu_punto_venta', 'menu_venta_productos', 'menu_reportes',
+            'menu_consulta_adeudo', 'cobro_precio_lista', 'menu_audifonos',
+            'menu_transferencias_ver', 'menu_transferencias_confirmar',
+            'menu_comisiones_admin', 'menu_comisiones_nomina_print',
+            'descuento_inscripcion_gerente', 'descuento_inscripcion_asesor',
+            'cartas_definir_minimo', 'hay_eval_gestionar', 'menu_gerente_hay',
+            'admin_usuarios', 'admin_catalogo', 'menu_admin',
+        ];
+        $del = $pdo->prepare('DELETE FROM role_privilegios WHERE id_rol = ? AND privilegio = ?');
+        foreach ($deny as $p) {
+            $del->execute([(int) $mkt['id_rol'], $p]);
+        }
+    }
+
+    // Imagen: denegar datos sensibles por si el mapa se amplió
+    $img = rbac_rol_por_clave($pdo, 'imagen');
+    if ($img) {
+        $denyImg = [
+            'menu_alumnos', 'menu_caja', 'menu_punto_venta', 'menu_venta_productos',
+            'menu_reportes', 'menu_consulta_adeudo', 'menu_credenciales',
+            'admin_usuarios', 'menu_preregistro', 'menu_cronologia',
+        ];
+        $del = $pdo->prepare('DELETE FROM role_privilegios WHERE id_rol = ? AND privilegio = ?');
+        foreach ($denyImg as $p) {
+            $del->execute([(int) $img['id_rol'], $p]);
         }
     }
 }
@@ -487,7 +608,10 @@ function rbac_db_ensure_mejoras_operativas_lote(PDO $pdo): void
     foreach ($grants as $rol => $caps) {
         rbac_db_agregar_privilegios_rol($pdo, $rol, $caps);
     }
-    foreach (['asesor', 'gerente', 'admin', 'profesor', 'coordinador', 'coordinacion', 'director', 'supervisor', 'manuales'] as $rolStaff) {
+    foreach ([
+        'asesor', 'gerente', 'admin', 'recepcion', 'imagen', 'marketing',
+        'profesor', 'coordinador', 'coordinacion', 'director', 'supervisor', 'manuales',
+    ] as $rolStaff) {
         rbac_db_agregar_privilegios_rol($pdo, $rolStaff, ['menu_tareas']);
     }
 
@@ -626,6 +750,9 @@ function rbac_db_reparar_roles_sistema(PDO $pdo): void
         }
     }
 
+    if (function_exists('rbac_db_ensure_roles_recepcion_imagen_marketing')) {
+        rbac_db_ensure_roles_recepcion_imagen_marketing($pdo);
+    }
     if (function_exists('rbac_db_ensure_mejoras_operativas_lote')) {
         rbac_db_ensure_mejoras_operativas_lote($pdo);
     }

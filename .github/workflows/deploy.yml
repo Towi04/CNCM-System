@@ -40,13 +40,15 @@ jobs:
             export TARGET=staging
             export REF=develop
             cd /var/www/sistema-pruebas
+            # Unstick dirty tree BEFORE running deploy_release.sh (chicken-egg:
+            # a dirty local script cannot update itself via that same script).
+            sudo chown -R "$(id -un):www-data" .
+            git fetch --prune origin
+            git checkout -f -B develop origin/develop
+            git reset --hard origin/develop
             if [ -f scripts/gcp/deploy_release.sh ]; then
               bash scripts/gcp/deploy_release.sh
             else
-              # First deploy after bootstrap, before script exists on disk
-              git fetch --prune origin
-              git checkout -B develop origin/develop
-              git reset --hard origin/develop
               sudo systemctl reload apache2 || true
             fi
 
@@ -70,6 +72,10 @@ jobs:
             export TARGET=production
             export REF=main
             cd /var/www/sistema
+            sudo chown -R "$(id -un):www-data" .
+            git fetch --prune origin
+            git checkout -f -B main origin/main
+            git reset --hard origin/main
             if [ -f scripts/gcp/deploy_release.sh ]; then
               bash scripts/gcp/deploy_release.sh
             else

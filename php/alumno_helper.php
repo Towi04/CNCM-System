@@ -278,7 +278,7 @@ function alumno_datos_puede_editar(): bool
     }
     $rol = function_exists('rbac_rol_efectivo') ? rbac_rol_efectivo() : ($_SESSION['rol'] ?? '');
 
-    return in_array($rol, ['admin', 'coordinador', 'coordinacion', 'director'], true);
+    return in_array($rol, ['admin', 'recepcion', 'coordinador', 'coordinacion', 'director'], true);
 }
 
 function alumno_nombre_puede_cambio_drastico(): bool

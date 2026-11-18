@@ -373,6 +373,12 @@ function migracion_csv_importar_personal(PDO $pdo, array $rows, ?int $forzarPlan
             $actualizados++;
         } else {
             $pass = function_exists('cuenta_password_inicial') ? cuenta_password_inicial() : 'Cncm*1234';
+            $depto = function_exists('rbac_departamento_para_rol')
+                ? rbac_departamento_para_rol($pdo, $rol)
+                : 'administrativo';
+            if (!in_array($depto, ['ingles', 'computacion', 'administrativo', 'ventas', 'otro'], true)) {
+                $depto = 'administrativo';
+            }
             $pdo->prepare(
                 'INSERT INTO usuarios (nombre, apellido, username, email, password, rol, departamento, id_plantel, fecha_creacion)
                  VALUES (?,?,?,?,?,?,?,?,NOW())'
@@ -383,7 +389,7 @@ function migracion_csv_importar_personal(PDO $pdo, array $rows, ?int $forzarPlan
                 $email,
                 password_hash($pass, PASSWORD_BCRYPT),
                 $rol,
-                '',
+                $depto,
                 $idPlantel,
             ]);
             $idHay = (int) $pdo->lastInsertId();
@@ -1043,7 +1049,8 @@ function migracion_csv_provisionar_cuentas(PDO $pdo, ?int $idPlantel = null, int
     foreach ($stU->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $idU = (int) $row['id_usuario'];
         if (function_exists('cuenta_externa_provisionar_staff')) {
-            $res = cuenta_externa_provisionar_staff($pdo, $idU, true);
+            // false = crear Google Workspace si el correo aún no existe
+            $res = cuenta_externa_provisionar_staff($pdo, $idU, false);
             if (!empty($res['ok'])) {
                 $stOk++;
             } else {
@@ -1075,6 +1082,468 @@ function migracion_csv_provisionar_cuentas(PDO $pdo, ?int $idPlantel = null, int
     ];
 }
 
+/**
+ * Plantilla CSV mínima: email + plantel (+ rol opcional / nombres opcionales).
+ *
+ * @return list<string>
+ */
+function migracion_csv_staff_emails_headers(): array
+{
+    return [
+        'email',
+        'plantel_slug',
+        'rol',
+        'nombres',
+        'apellido_paterno',
+        'apellido_materno',
+    ];
+}
+
+/** @return array{nombre:string, apellido:string} */
+function migracion_csv_nombre_desde_email(string $email): array
+{
+    $local = strtolower((string) (explode('@', $email, 2)[0] ?? 'usuario'));
+    $parts = preg_split('/[._\-]+/', $local) ?: [];
+    $parts = array_values(array_filter(array_map('trim', $parts), static fn ($p) => $p !== ''));
+    $nombre = isset($parts[0]) ? ucfirst($parts[0]) : 'Usuario';
+    $apellido = count($parts) > 1
+        ? implode(' ', array_map('ucfirst', array_slice($parts, 1)))
+        : 'Staff';
+
+    return ['nombre' => $nombre, 'apellido' => $apellido];
+}
+
+/**
+ * Busca nombre en BD legado (si LEGACY_DB_* está configurado).
+ *
+ * @return array{ok:bool, nombres?:string, apellido_paterno?:string, apellido_materno?:string, id?:int}|null
+ */
+function migracion_csv_legacy_user_by_email(string $email): ?array
+{
+    $email = strtolower(trim($email));
+    if ($email === '' || !function_exists('legacy_import_pdo_legacy')) {
+        return null;
+    }
+    try {
+        $leg = legacy_import_pdo_legacy();
+        if (!$leg instanceof PDO) {
+            return null;
+        }
+        $st = $leg->prepare('SELECT * FROM users WHERE LOWER(TRIM(email)) = ? LIMIT 1');
+        $st->execute([$email]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+
+        $nombres = trim((string) ($row['nombres'] ?? $row['name'] ?? $row['nombre'] ?? ''));
+        $apPat = trim((string) ($row['apellido_paterno'] ?? $row['last_name'] ?? $row['apellido'] ?? ''));
+        $apMat = trim((string) ($row['apellido_materno'] ?? ''));
+
+        return [
+            'ok' => true,
+            'id' => (int) ($row['id'] ?? 0),
+            'nombres' => $nombres,
+            'apellido_paterno' => $apPat,
+            'apellido_materno' => $apMat,
+        ];
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+/**
+ * Resuelve nombres: CSV → Google → legado → email.
+ *
+ * @param array<string,string> $row
+ * @return array{
+ *   email:string, nombres:string, apellido:string, fuente_nombre:string,
+ *   google_existe:?bool, google_error?:string, id_legado?:int
+ * }
+ */
+function migracion_csv_resolver_identidad_staff(array $row): array
+{
+    $email = strtolower(trim((string) ($row['email'] ?? $row['correo'] ?? '')));
+    $nombres = trim((string) ($row['nombres'] ?? $row['nombre'] ?? ''));
+    $apPat = trim((string) ($row['apellido_paterno'] ?? ''));
+    $apMat = trim((string) ($row['apellido_materno'] ?? ''));
+    $apellido = trim($apPat . ' ' . $apMat);
+    if ($apellido === '' && isset($row['apellido'])) {
+        $apellido = trim((string) $row['apellido']);
+    }
+
+    $fuente = 'csv';
+    $googleExiste = null;
+    $googleError = null;
+    $idLegado = null;
+
+    // Siempre consultar Google en preview/import para saber existe|crear|error de API
+    // (no confundir "error" con "ya existe": existe se muestra como "existe").
+    if ($email !== '' && function_exists('google_usuario_obtener')) {
+        $g = google_usuario_obtener($email);
+        if (!empty($g['ok'])) {
+            $googleExiste = !empty($g['existe']);
+            if ($googleExiste) {
+                if ($nombres === '' && trim((string) ($g['nombre'] ?? '')) !== '') {
+                    $nombres = trim((string) $g['nombre']);
+                    $fuente = 'google';
+                }
+                if ($apellido === '' && trim((string) ($g['apellido'] ?? '')) !== '') {
+                    $apellido = trim((string) $g['apellido']);
+                    $fuente = 'google';
+                }
+            }
+        } else {
+            $googleError = (string) ($g['message'] ?? 'Error Google');
+        }
+    }
+
+    if (($nombres === '' || $apellido === '') && $email !== '') {
+        $leg = migracion_csv_legacy_user_by_email($email);
+        if (is_array($leg) && !empty($leg['ok'])) {
+            $idLegado = (int) ($leg['id'] ?? 0) ?: null;
+            if ($nombres === '' && trim((string) ($leg['nombres'] ?? '')) !== '') {
+                $nombres = trim((string) $leg['nombres']);
+                $fuente = 'legado';
+            }
+            if ($apellido === '') {
+                $ap = trim(
+                    trim((string) ($leg['apellido_paterno'] ?? '')) . ' '
+                    . trim((string) ($leg['apellido_materno'] ?? ''))
+                );
+                if ($ap !== '') {
+                    $apellido = $ap;
+                    $fuente = 'legado';
+                }
+            }
+        }
+    }
+
+    if ($nombres === '' || $apellido === '') {
+        $fb = migracion_csv_nombre_desde_email($email !== '' ? $email : 'usuario@cncm.edu.mx');
+        if ($nombres === '') {
+            $nombres = $fb['nombre'];
+        }
+        if ($apellido === '') {
+            $apellido = $fb['apellido'];
+        }
+        if ($fuente === 'csv') {
+            $fuente = 'email';
+        }
+    }
+
+    return [
+        'email' => $email,
+        'nombres' => $nombres,
+        'apellido' => $apellido,
+        'fuente_nombre' => $fuente,
+        'google_existe' => $googleExiste,
+        'google_error' => $googleError,
+        'id_legado' => $idLegado,
+    ];
+}
+
+/**
+ * Roles sugeridos en la vista previa / import de personal por correos.
+ *
+ * @return list<string>
+ */
+function migracion_csv_staff_roles_opciones(): array
+{
+    return [
+        'profesor', 'asesor', 'gerente', 'coordinador',
+        'recepcion', 'imagen', 'marketing',
+        'admin', 'director', 'supervisor', 'manuales',
+    ];
+}
+
+/**
+ * Vista previa enriquecida del CSV de personal por correos.
+ *
+ * @return array{
+ *   ok:bool, message?:string, headers?:list<string>, muestra?:list<array<string,string>>,
+ *   total_filas?:int, offset?:int, limit?:int, errores?:list<string>, roles?:list<string>
+ * }
+ */
+function migracion_csv_preview_staff_emails(
+    PDO $pdo,
+    string $tmpPath,
+    ?int $idPlantel = null,
+    int $offset = 0,
+    int $limit = 50
+): array {
+    if (!migracion_csv_puede()) {
+        return ['ok' => false, 'message' => 'No autorizado'];
+    }
+    $parsed = migracion_csv_leer_archivo($tmpPath);
+    if (!empty($parsed['error'])) {
+        return ['ok' => false, 'message' => $parsed['error']];
+    }
+    $rows = $parsed['rows'];
+    if ($rows === []) {
+        return ['ok' => false, 'message' => 'Sin filas de datos'];
+    }
+
+    $total = count($rows);
+    $limit = max(10, min(100, $limit));
+    $offset = max(0, min($offset, max(0, $total - 1)));
+
+    $headers = [
+        'email', 'plantel_slug', 'rol', 'nombres', 'apellido', 'fuente_nombre',
+        'google', 'hay', 'accion',
+    ];
+    $muestra = [];
+    $errores = [];
+    $end = min($total, $offset + $limit);
+    for ($i = $offset; $i < $end; $i++) {
+        $r = $rows[$i];
+        $id = migracion_csv_resolver_identidad_staff($r);
+        $email = $id['email'];
+        $plantelRaw = trim((string) ($r['plantel_slug'] ?? $r['plantel'] ?? ''));
+        $idP = migracion_csv_resolver_plantel($pdo, $plantelRaw, $idPlantel);
+        $rol = trim((string) ($r['rol'] ?? ''));
+        if ($rol === '') {
+            $rol = 'profesor';
+        }
+        $hayId = null;
+        if ($email !== '') {
+            $st = $pdo->prepare('SELECT id_usuario FROM usuarios WHERE LOWER(email) = ? LIMIT 1');
+            $st->execute([$email]);
+            $ex = $st->fetchColumn();
+            if ($ex !== false) {
+                $hayId = (int) $ex;
+            }
+        }
+        if ($id['google_existe'] === null) {
+            $gErr = trim((string) ($id['google_error'] ?? ''));
+            $googleLabel = $gErr !== ''
+                ? ('error: ' . (function_exists('mb_substr') ? mb_substr($gErr, 0, 80) : substr($gErr, 0, 80)))
+                : '?';
+            if ($gErr !== '' && count($errores) < 5) {
+                $errores[] = 'Google API: ' . $gErr;
+            }
+        } else {
+            $googleLabel = $id['google_existe'] ? 'existe' : 'crear';
+        }
+        $accion = $hayId ? 'actualizar+provisionar' : 'crear+provisionar';
+        if ($email === '' || !str_contains($email, '@')) {
+            $accion = 'ERROR: email';
+            $errores[] = 'Fila ' . ($i + 2) . ': correo inválido';
+        } elseif ($idP === null || $idP <= 0) {
+            $accion = 'ERROR: plantel';
+            $errores[] = 'Fila ' . ($i + 2) . ': plantel no resuelto (' . $plantelRaw . ')';
+        }
+        $muestra[] = [
+            'email' => $email,
+            'plantel_slug' => $plantelRaw,
+            'rol' => $rol,
+            'nombres' => $id['nombres'],
+            'apellido' => $id['apellido'],
+            'fuente_nombre' => $id['fuente_nombre'],
+            'google' => $googleLabel,
+            'hay' => $hayId ? ('#' . $hayId) : 'nuevo',
+            'accion' => $accion,
+            'fila' => $i + 2,
+        ];
+    }
+
+    $roles = migracion_csv_staff_roles_opciones();
+    $labels = function_exists('rbac_roles_etiquetas') ? rbac_roles_etiquetas() : [];
+    $roleLabels = [];
+    foreach ($roles as $clave) {
+        $roleLabels[$clave] = $labels[$clave] ?? $clave;
+    }
+
+    return [
+        'ok' => true,
+        'headers' => $headers,
+        'muestra' => $muestra,
+        'total_filas' => $total,
+        'offset' => $offset,
+        'limit' => $limit,
+        'errores' => $errores,
+        'roles' => $roles,
+        'role_labels' => $roleLabels,
+        'message' => $total . ' fila(s); mostrando ' . ($offset + 1) . '–' . $end,
+    ];
+}
+
+/**
+ * Importa personal activo por email+plantel y provisiona Google (crea si falta) + Moodle.
+ *
+ * CSV mínimo: email, plantel_slug
+ * Opcional: rol, nombres, apellido_paterno, apellido_materno
+ * $overrides: mapa email → {rol?, nombres?, apellido?} desde la UI de vista previa
+ *
+ * @param array<string, array{rol?:string, nombres?:string, apellido?:string}> $overrides
+ * @return array{ok:bool,message:string,creados?:int,actualizados?:int,google_creados?:int,moodle_ok?:int,errores?:list<string>}
+ */
+function migracion_csv_importar_staff_emails(
+    PDO $pdo,
+    string $tmpPath,
+    ?int $idPlantel = null,
+    bool $provisionar = true,
+    array $overrides = []
+): array {
+    if (!migracion_csv_puede()) {
+        return ['ok' => false, 'message' => 'No autorizado'];
+    }
+    migracion_csv_ensure_schema($pdo);
+    if (function_exists('usuario_ensure_schema')) {
+        usuario_ensure_schema($pdo);
+    }
+    if (!function_exists('cuenta_externa_provisionar_staff') && is_file(__DIR__ . '/cuenta_externa_helper.php')) {
+        require_once __DIR__ . '/cuenta_externa_helper.php';
+    }
+
+    $parsed = migracion_csv_leer_archivo($tmpPath);
+    if (!empty($parsed['error'])) {
+        return ['ok' => false, 'message' => $parsed['error']];
+    }
+    $rows = $parsed['rows'];
+    if ($rows === []) {
+        return ['ok' => false, 'message' => 'Sin filas de datos'];
+    }
+
+    $rolesOk = migracion_csv_staff_roles_opciones();
+    $creados = 0;
+    $actualizados = 0;
+    $googleCreados = 0;
+    $moodleOk = 0;
+    $errores = [];
+
+    foreach ($rows as $i => $r) {
+        $line = $i + 2;
+        $id = migracion_csv_resolver_identidad_staff($r);
+        $email = $id['email'];
+        if ($email === '' || !str_contains($email, '@')) {
+            $errores[] = "Línea {$line}: correo inválido";
+            continue;
+        }
+        $ov = $overrides[$email] ?? $overrides[strtolower($email)] ?? [];
+        if (!is_array($ov)) {
+            $ov = [];
+        }
+        $plantelRaw = trim((string) ($r['plantel_slug'] ?? $r['plantel'] ?? ''));
+        $idP = migracion_csv_resolver_plantel($pdo, $plantelRaw, $idPlantel);
+        if ($idP === null || $idP <= 0) {
+            $errores[] = "Línea {$line}: plantel no resuelto ({$plantelRaw})";
+            continue;
+        }
+        $rol = trim((string) ($ov['rol'] ?? $r['rol'] ?? ''));
+        if ($rol === '') {
+            $rol = 'profesor';
+        }
+        if (function_exists('rbac_normalizar_rol_clave')) {
+            $rol = rbac_normalizar_rol_clave($rol);
+        }
+        if (!in_array($rol, $rolesOk, true)) {
+            $errores[] = "Línea {$line}: rol no permitido ({$rol})";
+            continue;
+        }
+        $nombres = trim((string) ($ov['nombres'] ?? ''));
+        if ($nombres === '') {
+            $nombres = $id['nombres'];
+        }
+        $apellido = trim((string) ($ov['apellido'] ?? ''));
+        if ($apellido === '') {
+            $apellido = $id['apellido'];
+        }
+        $username = strtolower((string) (explode('@', $email, 2)[0] ?? ''));
+        $username = preg_replace('/[^a-z0-9._-]/', '', $username) ?? '';
+        if ($username === '') {
+            $username = 'user' . $line;
+        }
+
+        $st = $pdo->prepare('SELECT id_usuario FROM usuarios WHERE LOWER(email) = ? OR username = ? LIMIT 1');
+        $st->execute([$email, $username]);
+        $existing = $st->fetchColumn();
+        $idHay = $existing !== false ? (int) $existing : 0;
+
+        $passPlain = function_exists('cuenta_password_inicial') ? cuenta_password_inicial() : 'Cncm*1234';
+        $depto = function_exists('rbac_departamento_para_rol')
+            ? rbac_departamento_para_rol($pdo, $rol)
+            : 'administrativo';
+        if (!in_array($depto, ['ingles', 'computacion', 'administrativo', 'ventas', 'otro'], true)) {
+            $depto = 'administrativo';
+        }
+
+        if ($idHay > 0) {
+            $pdo->prepare(
+                'UPDATE usuarios SET nombre=?, apellido=?, rol=?, departamento=?, id_plantel=?, email=?, username=? WHERE id_usuario=?'
+            )->execute([$nombres, $apellido, $rol, $depto, $idP, $email, $username, $idHay]);
+            $actualizados++;
+        } else {
+            // Evitar choque de username
+            $stU = $pdo->prepare('SELECT id_usuario FROM usuarios WHERE username = ? LIMIT 1');
+            $stU->execute([$username]);
+            if ($stU->fetchColumn() !== false) {
+                $username .= $line;
+            }
+            $pdo->prepare(
+                'INSERT INTO usuarios (nombre, apellido, username, email, password, rol, departamento, id_plantel, fecha_creacion)
+                 VALUES (?,?,?,?,?,?,?,?,NOW())'
+            )->execute([
+                $nombres,
+                $apellido,
+                $username,
+                $email,
+                password_hash($passPlain, PASSWORD_BCRYPT),
+                $rol,
+                $depto,
+                $idP,
+            ]);
+            $idHay = (int) $pdo->lastInsertId();
+            $creados++;
+        }
+
+        $mapKey = $id['id_legado'] ? (string) $id['id_legado'] : $email;
+        migracion_csv_map_set($pdo, 'usuario', $mapKey, $idHay, $email);
+
+        if (!$provisionar) {
+            continue;
+        }
+
+        if (function_exists('cuenta_externa_provisionar_staff')) {
+            $prov = cuenta_externa_provisionar_staff($pdo, $idHay, false, $email, $passPlain);
+            if (empty($prov['ok'])) {
+                $errores[] = "Línea {$line} ({$email}): " . ($prov['message'] ?? 'provisión falló');
+                continue;
+            }
+            $msg = (string) ($prov['message'] ?? '');
+            if (stripos($msg, 'creado en Google') !== false || stripos($msg, 'Usuario creado') !== false) {
+                $googleCreados++;
+            }
+            if (!empty($prov['moodle_ok'])) {
+                $moodleOk++;
+            } elseif (array_key_exists('moodle_ok', $prov) && empty($prov['moodle_ok'])) {
+                $errores[] = "Línea {$line} ({$email}): " . ($prov['message'] ?? 'Moodle pendiente');
+            }
+        } elseif (function_exists('moodle_user_ensure_staff')) {
+            $m = moodle_user_ensure_staff($pdo, $idHay, $passPlain);
+            if (!empty($m['ok'])) {
+                $moodleOk++;
+            } else {
+                $errores[] = "Línea {$line} Moodle: " . ($m['message'] ?? 'error');
+            }
+        }
+    }
+
+    $msg = "Personal correos: {$creados} creados, {$actualizados} actualizados"
+        . ($provisionar ? "; Google nuevos ~{$googleCreados}; Moodle OK {$moodleOk}" : '');
+    migracion_csv_log($pdo, 'staff_emails', 'info', $msg);
+
+    return [
+        'ok' => ($creados + $actualizados) > 0,
+        'message' => $msg,
+        'creados' => $creados,
+        'actualizados' => $actualizados,
+        'google_creados' => $googleCreados,
+        'moodle_ok' => $moodleOk,
+        'errores' => array_slice($errores, 0, 40),
+    ];
+}
+
 /** @return array{ok:bool, message:string, ...} */
 function migracion_csv_importar_tipo(PDO $pdo, string $tipo, string $tmpPath, ?int $idPlantel = null): array
 {
@@ -1089,6 +1558,7 @@ function migracion_csv_importar_tipo(PDO $pdo, string $tipo, string $tmpPath, ?i
 
     return match ($tipo) {
         'personal' => migracion_csv_importar_personal($pdo, $rows, $idPlantel),
+        'staff_emails' => migracion_csv_importar_staff_emails($pdo, $tmpPath, $idPlantel, true),
         'aulas' => migracion_csv_importar_aulas($pdo, $rows, $idPlantel),
         'grupos' => migracion_csv_importar_grupos($pdo, $rows, $idPlantel),
         'alumnos' => migracion_csv_importar_alumnos($pdo, $rows, $idPlantel),

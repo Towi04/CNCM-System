@@ -58,6 +58,21 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
 
     login_security_registrar_exito($pdo, $idUsuario);
 
+    if (!function_exists('hay_maintenance_activo') && is_file(__DIR__ . '/maintenance_helper.php')) {
+        require_once __DIR__ . '/maintenance_helper.php';
+    }
+    if (function_exists('hay_maintenance_activo') && hay_maintenance_activo()) {
+        $rolLogin = function_exists('rbac_normalizar_rol_clave')
+            ? rbac_normalizar_rol_clave((string) ($usuario['rol'] ?? ''))
+            : strtolower(trim((string) ($usuario['rol'] ?? '')));
+        if ($rolLogin !== 'supervisor') {
+            header('Location: ../index.php?error=1&msg=' . urlencode(
+                'Sistema en actualización. Solo supervisión puede iniciar sesión ahora.'
+            ));
+            exit;
+        }
+    }
+
     if (ini_get('session.use_cookies')) {
         hay_session_preparar_nuevo_login();
     } else {
@@ -82,10 +97,19 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
     usuario_actualizar_acceso($pdo, $idUsuario);
     $_SESSION['debe_cambiar_password'] = (int) ($usuario['debe_cambiar_password'] ?? 0);
 
-    session_regenerate_id(true);
+    if (session_status() !== PHP_SESSION_ACTIVE || empty($_SESSION['user_id'])) {
+        header('Location: ../index.php?error=sesion&msg=' . urlencode('La sesión PHP no quedó activa tras el login.'));
+        exit;
+    }
+    @session_regenerate_id(true);
     hay_session_no_cache_headers();
     if (function_exists('session_write_close')) {
-        session_write_close();
+        @session_write_close();
+    }
+    $savePath = function_exists('hay_session_save_path') ? hay_session_save_path() : null;
+    if ($savePath === null) {
+        header('Location: ../index.php?error=sesion&msg=' . urlencode('storage/sessions no es escribible por el usuario de PHP.'));
+        exit;
     }
     if (!empty($usuario['debe_cambiar_password'])) {
         header('Location: ../dashboard.php?cambiar_password=1');
