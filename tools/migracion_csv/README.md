@@ -88,9 +88,10 @@ Pareja kids con horarios distintos: duplicar la fila del mismo `id_grupo_legado`
 `numero_control`, nombres, `id_grupo_legado` (o `clave_legado` del grupo ya importado),
 `fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
 
-**No se crean al importar grupos.** En XAMPP, con el mismo `grupos_filtro.txt` de los
-grupos activos, descargue `04_alumnos.csv` y en el Portal elija tipo **04 Alumnos** → Importar.
-Kids: un alumno del grupo legado se inscribe en IK y CK (dual).
+**No se crean al importar grupos.** Con el mismo filtro de grupos, descargue `04_alumnos.csv`
+(Portal → Descargar del legado) e Importe. Kids: un alumno del grupo legado → IK y CK (dual).
+Al importar se provisiona cuenta HAY + Google Workspace + Moodle (si faltan), con las mismas
+reglas del sistema (número de control / correo institucional).
 
 ### 05_pagos
 

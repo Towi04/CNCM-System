@@ -478,6 +478,8 @@
       aviso = '¿Importar personal y provisionar Google/Moodle?\nSe creará el correo en Google Workspace si no existe.\nSe usarán los roles/nombres que editó en la vista previa.\nCon ~100 filas puede tardar varios minutos.';
     } else if (tipo === 'grupos') {
       aviso = '¿Importar grupos?\nSe crearán con clave HAY nueva según la especialidad (CSV o la que eligió en la tabla).\nEl profesor será el del desplegable (por defecto el más parecido al CSV).\nLa clave/id legado se guarda en clave_anterior y en el mapa de migración.';
+    } else if (tipo === 'alumnos') {
+      aviso = '¿Importar alumnos?\nSe vincularán a los grupos ya migrados y se creará (si falta) usuario HAY, correo Google Workspace y Moodle con las mismas reglas del sistema (NC como usuario / correo institucional).';
     }
     if (!confirm(aviso)) return;
     const fd = new FormData();
