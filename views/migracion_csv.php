@@ -22,8 +22,8 @@ if (function_exists('plantel_list')) {
   <div class="catalog-header">
     <h2><i class="fas fa-file-csv"></i> Migración CSV (legado → HAY)</h2>
     <p style="color:#666; margin:0; max-width:900px;">
-      Importe en orden: personal → aulas → grupos → alumnos → pagos.
-      Use <strong>Vista previa</strong> para corregir especialidad y profesor antes de Importar.
+      Descargue del legado en el servidor (o suba un CSV), revise con <strong>Vista previa</strong> e
+      <strong>Importar</strong> en orden: personal → aulas → grupos → alumnos → pagos.
     </p>
   </div>
 
@@ -56,6 +56,30 @@ if (function_exists('plantel_list')) {
     </button>
   </div>
 
+  <div class="catalog-card" style="margin-top:14px; padding:14px 16px; border:1px solid #dde3ea; border-radius:10px; background:#fff; max-width:960px;">
+    <h3 style="margin:0 0 8px; font-size:1rem;"><i class="fas fa-database"></i> Descargar desde BD legado (servidor)</h3>
+    <p id="migcsv-legado-status" style="margin:0 0 10px; color:#666; font-size:0.9rem;">Comprobando LEGACY_DB_*…</p>
+    <div class="catalog-toolbar" style="flex-wrap:wrap; gap:12px; align-items:flex-end; margin:0;">
+      <div class="field" style="flex:1; min-width:260px;">
+        <label for="migcsv-filtro">Grupos activos (id o clave legado, uno por línea)</label>
+        <textarea id="migcsv-filtro" rows="4" placeholder="IKCF0085&#10;IKCF0098&#10;502" style="width:100%; min-width:260px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
+      </div>
+      <div class="field">
+        <label for="migcsv-sucursal">Sucursal legado (opcional)</label>
+        <select id="migcsv-sucursal">
+          <option value="0">Todas</option>
+        </select>
+      </div>
+      <button type="button" class="primary" id="migcsv-export-legado" title="Genera el CSV del tipo seleccionado desde la BD legado del servidor">
+        <i class="fas fa-cloud-download-alt"></i> Descargar del legado
+      </button>
+    </div>
+    <p style="margin:10px 0 0; color:#777; font-size:0.85rem;">
+      Requiere <code>LEGACY_DB_*</code> en <code>config.local.php</code>. Para grupos/alumnos/pagos el filtro es obligatorio.
+      Luego use el archivo descargado en Vista previa → Importar.
+    </p>
+  </div>
+
   <div class="catalog-toolbar" style="margin-top:8px; gap:10px; align-items:center; flex-wrap:wrap;">
     <label for="migcsv-page-size" style="margin:0;">Filas por página</label>
     <select id="migcsv-page-size">
@@ -84,9 +108,14 @@ if (function_exists('plantel_list')) {
       <strong>CSV de ejemplo:</strong> el botón de arriba descarga columnas + 2–3 filas de muestra
       según el tipo seleccionado. Planteles válidos: <?php echo $slugsTxt; ?>.
     </p>
-    <p style="margin:0; color:#777;">
+    <p style="margin:0 0 8px; color:#777;">
       En grupos, la vista previa permite elegir especialidad y profesor; kids = repetir la misma
       clave legado en 2 filas (inglés + cómputo) o una fila <code>ING-K</code>.
+    </p>
+    <p style="margin:0; color:#777;">
+      <strong>Alumnos:</strong> no se migran solos con los grupos. Con el mismo filtro de claves,
+      descargue <code>04_alumnos</code> del legado → Importar. Enlazan por
+      <code>id_grupo_legado</code> o <code>clave_legado</code>.
     </p>
   </div>
 </div>
@@ -109,4 +138,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118f'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118h'), ENT_QUOTES, 'UTF-8'); ?>"></script>

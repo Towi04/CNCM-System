@@ -1,9 +1,15 @@
 # Extractor CSV legado → HAY
 
-Herramienta **local (XAMPP)** para exportar solo grupos activos (y sus alumnos/pagos) desde la BD del sistema anterior, sin subir el dump completo al servidor.
+Exporta grupos activos (y sus alumnos/pagos) desde la BD legado.
 
-En el Portal HAY: menú **Migración CSV** (`views/migracion_csv.php`).
-Ahí puede descargar un **CSV de ejemplo** (columnas + 2–3 filas) por cada tipo.
+**En el servidor (recomendado):** si el dump legado ya está en MariaDB y
+`LEGACY_DB_*` está en `config.local.php`, use el Portal → **Migración CSV** →
+bloque *Descargar desde BD legado*: pegue ids/claves de grupos y descargue
+`03_grupos` / `04_alumnos` / `05_pagos` (también personal/aulas).
+
+**Opcional local (XAMPP):** esta carpeta `tools/migracion_csv/` sigue sirviendo
+si prefiere extraer en su PC. En el Portal también hay **CSV de ejemplo**
+(columnas + 2–3 filas) por tipo.
 
 ## Requisitos
 
@@ -79,7 +85,12 @@ Pareja kids con horarios distintos: duplicar la fila del mismo `id_grupo_legado`
 
 ### 04_alumnos
 
-`numero_control`, nombres, `id_grupo_legado`, `fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
+`numero_control`, nombres, `id_grupo_legado` (o `clave_legado` del grupo ya importado),
+`fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
+
+**No se crean al importar grupos.** En XAMPP, con el mismo `grupos_filtro.txt` de los
+grupos activos, descargue `04_alumnos.csv` y en el Portal elija tipo **04 Alumnos** → Importar.
+Kids: un alumno del grupo legado se inscribe en IK y CK (dual).
 
 ### 05_pagos
 

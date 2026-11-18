@@ -73,7 +73,7 @@ switch ($tipo) {
         $rows = migcsv_export_alumnos($pdo, $idsGrupos);
         migcsv_csv_enviar('04_alumnos.csv', [
             'id_alumno_legado', 'numero_control', 'nombres', 'apellido_paterno', 'apellido_materno',
-            'email', 'telefono', 'id_sucursal_legado', 'plantel_slug', 'id_grupo_legado',
+            'email', 'telefono', 'id_sucursal_legado', 'plantel_slug', 'id_grupo_legado', 'clave_legado',
             'fecha_inicio', 'forma_pago', 'id_asesor_legado', 'asesor_nombre', 'status_legado',
         ], $rows);
 

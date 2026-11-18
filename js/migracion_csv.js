@@ -42,7 +42,7 @@
   }
 
   function setBusy(busy, label) {
-    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-template'].forEach((id) => {
+    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-template', 'migcsv-export-legado'].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = !!busy;
     });
@@ -119,6 +119,8 @@
 
   async function refreshEstado() {
     const el = $('migcsv-estado');
+    const legEl = $('migcsv-legado-status');
+    const selSuc = $('migcsv-sucursal');
     try {
       const fd = new FormData();
       fd.append('action', 'estado');
@@ -136,6 +138,28 @@
         'kids CK <strong>' + (m.grupo_comp || 0) + '</strong> · ' +
         'alumnos <strong>' + (m.alumno || 0) + '</strong> · ' +
         'pagos <strong>' + (m.pago || 0) + '</strong>';
+      const leg = data.legado || {};
+      if (legEl) {
+        if (leg.ok) {
+          legEl.innerHTML = 'Legado conectado: <code>' + (leg.db || 'ok') + '</code>. Elija tipo, pegue claves e ids de grupos y descargue.';
+          legEl.style.color = '#0a7a32';
+        } else {
+          legEl.innerHTML = 'Sin legado: ' + (leg.error || 'configure LEGACY_DB_* en config.local.php') +
+            '. Puede seguir subiendo CSV manualmente.';
+          legEl.style.color = '#c47b00';
+        }
+      }
+      if (selSuc && Array.isArray(leg.sucursales)) {
+        const cur = selSuc.value || '0';
+        selSuc.innerHTML = '<option value="0">Todas</option>';
+        leg.sucursales.forEach((s) => {
+          const opt = document.createElement('option');
+          opt.value = String(s.id || '');
+          opt.textContent = (s.id || '') + ' — ' + (s.nombre || '');
+          selSuc.appendChild(opt);
+        });
+        selSuc.value = cur;
+      }
     } catch (e) {
       el.textContent = 'Error de red al cargar estado';
     }
@@ -508,6 +532,40 @@
       tipo: tipo,
       id_plantel: String(idPlantel || 0),
     });
+    window.location.href = api + '?' + qs.toString();
+  });
+
+  const FILTRO_KEY = 'hay_migcsv_filtro_grupos';
+  try {
+    const saved = localStorage.getItem(FILTRO_KEY);
+    if (saved && $('migcsv-filtro')) $('migcsv-filtro').value = saved;
+  } catch (e) { /* ignore */ }
+
+  $('migcsv-filtro')?.addEventListener('change', () => {
+    try {
+      localStorage.setItem(FILTRO_KEY, $('migcsv-filtro').value || '');
+    } catch (e) { /* ignore */ }
+  });
+
+  $('migcsv-export-legado')?.addEventListener('click', () => {
+    const tipo = $('migcsv-tipo')?.value || 'grupos';
+    const filtro = ($('migcsv-filtro')?.value || '').trim();
+    const idSuc = $('migcsv-sucursal')?.value || '0';
+    if (['grupos', 'alumnos', 'pagos'].indexOf(tipo) >= 0 && !filtro) {
+      showMsg('Pegue ids o claves de grupos (uno por línea) para exportar ' + tipo + ' desde el legado.', false);
+      return;
+    }
+    try {
+      localStorage.setItem(FILTRO_KEY, filtro);
+    } catch (e) { /* ignore */ }
+    const qs = new URLSearchParams({
+      action: 'export_legado',
+      tipo: tipo === 'staff_emails' ? 'personal' : tipo,
+      id_sucursal: String(idSuc),
+      id_plantel: String(idPlantel || 0),
+      filtro: filtro,
+    });
+    showMsg('Descargando CSV desde la BD legado del servidor…', true);
     window.location.href = api + '?' + qs.toString();
   });
 

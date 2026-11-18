@@ -719,6 +719,16 @@ function migcsv_export_alumnos(PDO $pdo, array $idsGrupos): array
                 $asesorNom = trim(preg_replace('/\s+/', ' ', (string) $ins['nom']) ?? '');
             }
         }
+        $claveGrupo = '';
+        if (migcsv_column_exists($pdo, 'grupos', 'clave')) {
+            static $claveCache = [];
+            if (!array_key_exists($gid, $claveCache)) {
+                $stC = $pdo->prepare('SELECT clave FROM grupos WHERE id = ? LIMIT 1');
+                $stC->execute([$gid]);
+                $claveCache[$gid] = (string) ($stC->fetchColumn() ?: '');
+            }
+            $claveGrupo = $claveCache[$gid];
+        }
         $out[] = [
             'id_alumno_legado' => $idAl,
             'numero_control' => $nc > 0 ? (string) $nc : '',
@@ -730,6 +740,7 @@ function migcsv_export_alumnos(PDO $pdo, array $idsGrupos): array
             'id_sucursal_legado' => (int) ($r['id_sucursal'] ?? 0),
             'plantel_slug' => migcsv_slug_sucursal((string) ($r['sucursal_nombre'] ?? '')),
             'id_grupo_legado' => $gid,
+            'clave_legado' => $claveGrupo,
             'fecha_inicio' => $fechaIni ?? '',
             'forma_pago' => trim((string) ($r['forma_pago'] ?? 'mensual')),
             'id_asesor_legado' => $idAsesor > 0 ? $idAsesor : '',
