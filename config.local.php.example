@@ -21,6 +21,9 @@
 /** Producción en subdominio (archivos en raíz): deje vacío o comente la línea. */
 // define('HAY_WEB_ROOT', '');
 
+/** Forzar HTTPS en redirects/cookies si el proxy no envía X-Forwarded-Proto (raro en GCP). */
+// define('HAY_FORCE_HTTPS', true);
+
 /**
  * MySQL / MariaDB — valores de ejemplo para GCP.
  * Neubox/cPanel usaba cncmedum_hay_system / cncmedum_tovar (ya no aplica en GCP).
