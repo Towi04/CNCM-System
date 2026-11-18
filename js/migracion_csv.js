@@ -16,7 +16,7 @@
   ];
   const defaultRoleLabels = cfg.role_labels || {};
 
-  /** @type {{headers:string[], rows:object[], total:number, offset:number, limit:number, roles:string[], roleLabels:object, especialidades?:object[], tipo?:string}|null} */
+  /** @type {{headers:string[], rows:object[], total:number, offset:number, limit:number, roles:string[], roleLabels:object, especialidades?:object[], profesores?:object[], tipo?:string}|null} */
   let previewState = null;
   /** Overrides por email (staff) — persisten al paginar / reentrar */
   if (!window.__hayMigCsvOverrides) {
@@ -51,6 +51,14 @@
     }
   }
 
+  function profOverrideKey(row) {
+    const idLeg = String(row.id_grupo_legado || '').trim();
+    const line = row._line != null ? String(row._line) : '';
+    if (idLeg && line) return idLeg + '@L' + line;
+    if (line) return 'L' + line;
+    return idLeg;
+  }
+
   function applyOverrideToRow(row) {
     const email = String(row.email || '').toLowerCase();
     const ov = overrides[email];
@@ -73,6 +81,24 @@
           clave_nueva_sugerida: out.clave_nueva_sugerida || '(se genera al importar)',
         });
       }
+    }
+    const pKey = profOverrideKey(out);
+    const pov = pKey ? grupoOverrides[pKey] : null;
+    if (pov && pov.id_profesor) {
+      const pid = String(pov.id_profesor);
+      const profesores = (previewState && previewState.profesores) || [];
+      let nombre = out.profesor_sugerido || '';
+      for (let i = 0; i < profesores.length; i++) {
+        if (String(profesores[i].id_usuario) === pid) {
+          nombre = profesores[i].nombre || nombre;
+          break;
+        }
+      }
+      out = Object.assign({}, out, {
+        profesor_id: pid,
+        profesor_sugerido: nombre,
+        prof_estado: 'ok',
+      });
     }
     return out;
   }
@@ -214,6 +240,53 @@
             renderPreview();
           });
           td.appendChild(sel);
+        } else if (h === 'profesor_sugerido' && (previewState.tipo === 'grupos' || headers.indexOf('prof_estado') >= 0)) {
+          const profesores = (previewState && previewState.profesores) || [];
+          const sel = document.createElement('select');
+          sel.className = 'migcsv-prof';
+          sel.style.minWidth = '200px';
+          sel.title = 'Profesor HAY. Por defecto el más parecido al CSV (ignora acentos/mayúsculas).';
+          const opt0 = document.createElement('option');
+          opt0.value = '';
+          opt0.textContent = '— Sin profesor —';
+          sel.appendChild(opt0);
+          const actualId = row.profesor_id != null && row.profesor_id !== '' ? String(row.profesor_id) : '';
+          let found = false;
+          profesores.forEach((p) => {
+            const id = String(p.id_usuario || '');
+            const opt = document.createElement('option');
+            opt.value = id;
+            const user = p.username ? ' (' + p.username + ')' : '';
+            opt.textContent = (p.nombre || ('#' + id)) + user;
+            if (id && id === actualId) {
+              opt.selected = true;
+              found = true;
+            }
+            sel.appendChild(opt);
+          });
+          if (actualId && !found) {
+            const opt = document.createElement('option');
+            opt.value = actualId;
+            opt.textContent = (row.profesor_sugerido || ('#' + actualId)) + ' (sugerido)';
+            opt.selected = true;
+            sel.appendChild(opt);
+          }
+          if (row.prof_estado === 'sin_match' || row.prof_estado === 'vacio') {
+            sel.style.borderColor = '#c47b00';
+          } else if (row.prof_estado === 'aproximado') {
+            sel.style.borderColor = '#0b57d0';
+            sel.title = 'Coincidencia aproximada con el CSV — verifique antes de importar.';
+          }
+          sel.addEventListener('change', () => {
+            const key = profOverrideKey(row);
+            if (!key) {
+              showMsg('No se pudo guardar el profesor de esta fila.', false);
+              return;
+            }
+            setGrupoOverride(key, 'id_profesor', sel.value);
+            renderPreview();
+          });
+          td.appendChild(sel);
         } else if (h === 'rol') {
           const sel = document.createElement('select');
           sel.className = 'migcsv-rol';
@@ -272,6 +345,21 @@
             td.style.color = '#c47b00';
             td.style.fontWeight = '600';
           }
+          if (h === 'prof_estado') {
+            if (v === 'sin_match' || v === 'vacio') {
+              td.style.color = '#c47b00';
+              td.style.fontWeight = '600';
+              td.title = 'No hubo coincidencia clara; elija el profesor en el desplegable.';
+            } else if (v === 'aproximado') {
+              td.style.color = '#0b57d0';
+              td.title = 'Nombre parecido (acentos/mayúsculas/orden). Confirme en el desplegable.';
+            } else if (v === 'ok') {
+              td.style.color = '#0a7a32';
+            }
+          }
+          if (h === 'profesor_csv' && v) {
+            td.title = 'Texto original del CSV';
+          }
           if (h === 'clave_legado' && v) {
             td.title = 'Clave legado: se guardará en grupos.clave_anterior';
           }
@@ -315,8 +403,23 @@
         roles: data.roles || defaultRoles,
         roleLabels: data.role_labels || defaultRoleLabels,
         especialidades: data.especialidades || [],
+        profesores: data.profesores || [],
         tipo: tipo,
       };
+      // Preselección: si hay match fuzzy y el usuario no ha tocado la fila, guardar
+      // override para que Importar use exactamente lo mostrado en el desplegable.
+      if (tipo === 'grupos' && previewState.rows.length) {
+        previewState.rows.forEach((raw) => {
+          const key = profOverrideKey(raw);
+          if (!key) return;
+          if (grupoOverrides[key] && Object.prototype.hasOwnProperty.call(grupoOverrides[key], 'id_profesor')) {
+            return;
+          }
+          if (raw.profesor_id) {
+            setGrupoOverride(key, 'id_profesor', String(raw.profesor_id));
+          }
+        });
+      }
       let text = data.message || ('Vista previa: ' + previewState.total + ' fila(s)');
       if (data.errores && data.errores.length) {
         text += ' — ' + data.errores.slice(0, 2).join('; ');
@@ -350,7 +453,7 @@
     if (tipo === 'staff_emails') {
       aviso = '¿Importar personal y provisionar Google/Moodle?\nSe creará el correo en Google Workspace si no existe.\nSe usarán los roles/nombres que editó en la vista previa.\nCon ~100 filas puede tardar varios minutos.';
     } else if (tipo === 'grupos') {
-      aviso = '¿Importar grupos?\nSe crearán con clave HAY nueva según la especialidad (CSV o la que eligió en la tabla).\nLa clave/id legado se guarda en clave_anterior y en el mapa de migración.';
+      aviso = '¿Importar grupos?\nSe crearán con clave HAY nueva según la especialidad (CSV o la que eligió en la tabla).\nEl profesor será el del desplegable (por defecto el más parecido al CSV).\nLa clave/id legado se guarda en clave_anterior y en el mapa de migración.';
     }
     if (!confirm(aviso)) return;
     const fd = new FormData();

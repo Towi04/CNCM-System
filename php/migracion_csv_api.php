@@ -105,6 +105,7 @@ try {
                 'muestra' => $res['muestra'] ?? [],
                 'errores' => $res['errores'] ?? [],
                 'especialidades' => $res['especialidades'] ?? [],
+                'profesores' => $res['profesores'] ?? [],
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -173,9 +174,51 @@ try {
                         if ($key === '' || !is_array($vals)) {
                             continue;
                         }
-                        $overrides[$key] = [
+                        $idProf = (int) ($vals['id_profesor'] ?? 0);
+                        // Clave por línea: "123@L5" o "L5" (parejas kids / sin id legado)
+                        if (preg_match('/^(.+)@L(\d+)$/', $key, $mKey)) {
+                            $idBase = $mKey[1];
+                            $lineN = (int) $mKey[2];
+                            if (!isset($overrides[$idBase]) || !is_array($overrides[$idBase])) {
+                                $overrides[$idBase] = [];
+                            }
+                            if (!isset($overrides[$idBase]['profesores_por_linea']) || !is_array($overrides[$idBase]['profesores_por_linea'])) {
+                                $overrides[$idBase]['profesores_por_linea'] = [];
+                            }
+                            if ($idProf > 0) {
+                                $overrides[$idBase]['profesores_por_linea'][$lineN] = $idProf;
+                            }
+                            $esp = strtoupper(trim((string) ($vals['clave_especialidad'] ?? '')));
+                            if ($esp !== '') {
+                                $overrides[$idBase]['clave_especialidad'] = $esp;
+                            }
+                            continue;
+                        }
+                        if (preg_match('/^L(\d+)$/', $key, $mLine)) {
+                            if ($idProf > 0) {
+                                $overrides[$key] = ['id_profesor' => $idProf];
+                            }
+                            continue;
+                        }
+                        $entry = [
                             'clave_especialidad' => strtoupper(trim((string) ($vals['clave_especialidad'] ?? ''))),
                         ];
+                        if ($idProf > 0) {
+                            $entry['id_profesor'] = $idProf;
+                        }
+                        if (isset($vals['profesores_por_linea']) && is_array($vals['profesores_por_linea'])) {
+                            $porLinea = [];
+                            foreach ($vals['profesores_por_linea'] as $ln => $pid) {
+                                $pid = (int) $pid;
+                                if ($pid > 0) {
+                                    $porLinea[(int) $ln] = $pid;
+                                }
+                            }
+                            if ($porLinea !== []) {
+                                $entry['profesores_por_linea'] = $porLinea;
+                            }
+                        }
+                        $overrides[$key] = $entry;
                     }
                 }
             }

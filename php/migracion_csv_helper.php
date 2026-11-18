@@ -244,7 +244,7 @@ function migracion_csv_especialidades_opciones(PDO $pdo): array
 /**
  * Vista previa paginada de grupos: marca especialidad faltante/desconocida y sugiere clave HAY.
  *
- * @return array{ok:bool, message?:string, headers?:list<string>, total_filas?:int, offset?:int, limit?:int, muestra?:list<array<string,mixed>>, errores?:list<string>, especialidades?:list<array{clave:string,nombre:string}>}
+ * @return array{ok:bool, message?:string, headers?:list<string>, total_filas?:int, offset?:int, limit?:int, muestra?:list<array<string,mixed>>, errores?:list<string>, especialidades?:list<array{clave:string,nombre:string}>, profesores?:list<array{id_usuario:int,nombre:string,username:string,id_plantel:int}>}
  */
 function migracion_csv_preview_grupos(
     PDO $pdo,
@@ -281,6 +281,43 @@ function migracion_csv_preview_grupos(
         $ordenKeys[$k][] = $idx;
     }
 
+    // Profesores por plantel (cache) + lista global para el desplegable
+    /** @var array<int, list<array{id_usuario:int,nombre:string,username:string,id_plantel:int}>> $profCache */
+    $profCache = [];
+    $profesoresAll = [];
+    $seenProf = [];
+    $plantelesCsv = [];
+    if ($forzarPlantel) {
+        $plantelesCsv[$forzarPlantel] = true;
+    }
+    foreach ($rows as $rr) {
+        $idp = migracion_csv_resolver_plantel(
+            $pdo,
+            (string) ($rr['plantel_slug'] ?? $rr['sucursal'] ?? ''),
+            $forzarPlantel
+        );
+        if ($idp) {
+            $plantelesCsv[$idp] = true;
+        }
+    }
+    foreach (array_keys($plantelesCsv) as $idp) {
+        $lista = migracion_csv_profesores_opciones($pdo, (int) $idp);
+        $profCache[(int) $idp] = $lista;
+        foreach ($lista as $p) {
+            $pid = (int) $p['id_usuario'];
+            if (!isset($seenProf[$pid])) {
+                $seenProf[$pid] = true;
+                $profesoresAll[] = $p;
+            }
+        }
+    }
+    if ($profesoresAll === []) {
+        $profesoresAll = migracion_csv_profesores_opciones($pdo, null);
+    }
+    usort($profesoresAll, static function ($a, $b) {
+        return strcasecmp((string) $a['nombre'], (string) $b['nombre']);
+    });
+
     $headers = [
         'id_grupo_legado',
         'clave_legado',
@@ -291,13 +328,16 @@ function migracion_csv_preview_grupos(
         'infantil',
         'dias_clase',
         'hora_inicio',
+        'profesor_csv',
         'profesor_sugerido',
+        'prof_estado',
         'aula_codigo',
         'accion',
     ];
     $errores = [];
     $muestra = [];
     $faltanEsp = 0;
+    $faltanProf = 0;
 
     foreach ($slice as $i => $r) {
         $line = $offset + $i + 2;
@@ -336,6 +376,23 @@ function migracion_csv_preview_grupos(
             (string) ($r['plantel_slug'] ?? $r['sucursal'] ?? ''),
             $forzarPlantel
         );
+
+        $profCsv = trim((string) ($r['profesor_sugerido'] ?? ''));
+        $profUser = trim((string) ($r['profesor_username'] ?? ''));
+        if ($profCsv === '' && $profUser !== '') {
+            $profCsv = $profUser;
+        }
+        $candidatos = $idPlantel && isset($profCache[$idPlantel])
+            ? $profCache[$idPlantel]
+            : $profesoresAll;
+        $matchProf = migracion_csv_mejor_profesor($profUser, $profCsv, $candidatos);
+        $profEstado = (string) $matchProf['estado'];
+        $profesorId = $matchProf['id_usuario'];
+        if ($profEstado === 'sin_match' || $profEstado === 'vacio') {
+            if (!$ya && ($profCsv !== '' || $profUser !== '')) {
+                $faltanProf++;
+            }
+        }
 
         // En pareja CSV la especialidad puede ir vacía (se asume ING-K / COMP-K)
         if ($claveEsp === '' && !$esParejaCsv && !$esKids) {
@@ -393,16 +450,23 @@ function migracion_csv_preview_grupos(
             'infantil' => ($infantil || $esParejaCsv) ? '1' : '0',
             'dias_clase' => trim((string) ($r['dias_clase'] ?? '')),
             'hora_inicio' => trim((string) ($r['hora_inicio'] ?? '')),
-            'profesor_sugerido' => trim((string) ($r['profesor_sugerido'] ?? $r['profesor_username'] ?? '')),
+            'profesor_csv' => $profCsv,
+            'profesor_sugerido' => $matchProf['nombre'] !== '' ? $matchProf['nombre'] : $profCsv,
+            'profesor_id' => $profesorId,
+            'prof_estado' => $profEstado,
             'aula_codigo' => trim((string) ($r['aula_codigo'] ?? '')),
             'accion' => $accion,
             '_line' => $line,
+            '_id_plantel' => $idPlantel,
         ];
     }
 
     $msg = "Vista previa grupos: {$total} fila(s)";
     if ($faltanEsp > 0) {
         $msg .= ". {$faltanEsp} en esta página sin especialidad válida — elíjala en la tabla antes de Importar.";
+    }
+    if ($faltanProf > 0) {
+        $msg .= ". {$faltanProf} sin profesor claro — elija en el desplegable (se preselecciona el nombre más parecido).";
     }
     $msg .= ' Kids: repita la misma clave/id legado en 2 filas (inglés + cómputo) o use ING-K (parte 2h+2h).';
 
@@ -416,6 +480,7 @@ function migracion_csv_preview_grupos(
         'muestra' => $muestra,
         'errores' => array_slice($errores, 0, 20),
         'especialidades' => $especialidades,
+        'profesores' => $profesoresAll,
     ];
 }
 
@@ -515,6 +580,204 @@ function migracion_csv_resolver_fase(
     return (int) ($fases[$idx]['id_fase'] ?? $fases[0]['id_fase']);
 }
 
+/**
+ * Texto comparable: minúsculas, sin acentos, solo letras/números/espacios.
+ */
+function migracion_csv_texto_normalizado(string $texto): string
+{
+    if (function_exists('alumno_nombre_normalizado_para_comparar')) {
+        return alumno_nombre_normalizado_para_comparar($texto);
+    }
+    $texto = trim($texto);
+    if ($texto === '') {
+        return '';
+    }
+    if (function_exists('iconv')) {
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
+        if (is_string($ascii) && $ascii !== '') {
+            $texto = $ascii;
+        }
+    }
+    $texto = mb_strtolower($texto, 'UTF-8');
+    $texto = preg_replace('/[^a-z0-9\s]/i', ' ', $texto) ?? '';
+    $texto = preg_replace('/\s+/', ' ', $texto) ?? '';
+
+    return trim($texto);
+}
+
+/**
+ * Similitud 0–100 entre dos nombres (ignora acentos, mayúsculas y orden de tokens).
+ */
+function migracion_csv_similitud_nombre(string $a, string $b): float
+{
+    $na = migracion_csv_texto_normalizado($a);
+    $nb = migracion_csv_texto_normalizado($b);
+    if ($na === '' || $nb === '') {
+        return 0.0;
+    }
+    if ($na === $nb) {
+        return 100.0;
+    }
+    $ta = preg_split('/\s+/', $na) ?: [];
+    $tb = preg_split('/\s+/', $nb) ?: [];
+    sort($ta);
+    sort($tb);
+    $sa = implode(' ', $ta);
+    $sb = implode(' ', $tb);
+    if ($sa === $sb) {
+        return 99.0;
+    }
+    $pct = 0.0;
+    similar_text($na, $nb, $pct);
+    $pct2 = 0.0;
+    similar_text($sa, $sb, $pct2);
+    $best = max((float) $pct, (float) $pct2);
+    // Bonus si todos los tokens del CSV aparecen en HAY (o viceversa)
+    if ($ta !== [] && $tb !== []) {
+        $setB = array_fill_keys($tb, true);
+        $hit = 0;
+        foreach ($ta as $tok) {
+            if (isset($setB[$tok])) {
+                $hit++;
+            }
+        }
+        $cover = 100.0 * $hit / max(count($ta), count($tb));
+        $best = max($best, $cover);
+    }
+
+    return $best;
+}
+
+/**
+ * Profesores (y roles docentes) de un plantel para el desplegable de migración.
+ *
+ * @return list<array{id_usuario:int,nombre:string,username:string,id_plantel:int}>
+ */
+function migracion_csv_profesores_opciones(PDO $pdo, ?int $idPlantel = null): array
+{
+    $sql = "SELECT id_usuario, username, email, nombre, apellido, id_plantel, rol
+            FROM usuarios
+            WHERE suspendido = 0
+              AND rol IN ('profesor','gerente','supervisor','coordinador')";
+    $params = [];
+    if ($idPlantel !== null && $idPlantel > 0) {
+        $sql .= ' AND id_plantel = ?';
+        $params[] = $idPlantel;
+    }
+    $sql .= ' ORDER BY nombre ASC, apellido ASC';
+    try {
+        $st = $pdo->prepare($sql);
+        $st->execute($params);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+    $out = [];
+    foreach ($rows as $r) {
+        $nom = trim((string) ($r['nombre'] ?? '') . ' ' . (string) ($r['apellido'] ?? ''));
+        if ($nom === '') {
+            $nom = trim((string) ($r['username'] ?? $r['email'] ?? '')) ?: ('#' . (int) $r['id_usuario']);
+        }
+        $out[] = [
+            'id_usuario' => (int) $r['id_usuario'],
+            'nombre' => $nom,
+            'username' => trim((string) ($r['username'] ?? '')),
+            'id_plantel' => (int) ($r['id_plantel'] ?? 0),
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * Elige el profesor HAY más parecido al texto del CSV.
+ *
+ * @param list<array{id_usuario:int,nombre:string,username?:string}> $candidatos
+ * @return array{id_usuario:?int, score:float, estado:string, nombre:string}
+ */
+function migracion_csv_mejor_profesor(
+    string $username,
+    string $nombreSugerido,
+    array $candidatos,
+    float $umbral = 75.0
+): array {
+    $username = trim($username);
+    $nombreSugerido = trim(preg_replace('/\s+/', ' ', $nombreSugerido) ?? '');
+    $vacio = ['id_usuario' => null, 'score' => 0.0, 'estado' => 'vacio', 'nombre' => ''];
+    if ($username === '' && $nombreSugerido === '') {
+        return $vacio;
+    }
+    if ($candidatos === []) {
+        return [
+            'id_usuario' => null,
+            'score' => 0.0,
+            'estado' => 'sin_match',
+            'nombre' => $nombreSugerido !== '' ? $nombreSugerido : $username,
+        ];
+    }
+
+    $bestId = null;
+    $bestScore = -1.0;
+    $bestNombre = '';
+    $exacto = false;
+    $userNorm = migracion_csv_texto_normalizado($username);
+    $nomNorm = migracion_csv_texto_normalizado($nombreSugerido);
+
+    foreach ($candidatos as $c) {
+        $id = (int) ($c['id_usuario'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        $cn = (string) ($c['nombre'] ?? '');
+        $cu = (string) ($c['username'] ?? '');
+        $score = 0.0;
+
+        if ($username !== '') {
+            if (strcasecmp($cu, $username) === 0) {
+                $score = 100.0;
+                $exacto = true;
+            } elseif ($userNorm !== '' && migracion_csv_texto_normalizado($cu) === $userNorm) {
+                $score = 100.0;
+                $exacto = true;
+            } elseif ($userNorm !== '' && str_contains(migracion_csv_texto_normalizado($cu), $userNorm)) {
+                $score = max($score, 92.0);
+            }
+        }
+        if ($nombreSugerido !== '') {
+            $s = migracion_csv_similitud_nombre($nombreSugerido, $cn);
+            if ($nomNorm !== '' && migracion_csv_texto_normalizado($cn) === $nomNorm) {
+                $s = 100.0;
+                $exacto = true;
+            }
+            $score = max($score, $s);
+        }
+        if ($score > $bestScore) {
+            $bestScore = $score;
+            $bestId = $id;
+            $bestNombre = $cn;
+        }
+    }
+
+    if ($bestId === null || $bestScore < $umbral) {
+        return [
+            'id_usuario' => null,
+            'score' => max(0.0, $bestScore),
+            'estado' => 'sin_match',
+            'nombre' => $nombreSugerido !== '' ? $nombreSugerido : $username,
+        ];
+    }
+
+    return [
+        'id_usuario' => $bestId,
+        'score' => $bestScore,
+        'estado' => ($exacto || $bestScore >= 99.0) ? 'ok' : 'aproximado',
+        'nombre' => $bestNombre,
+    ];
+}
+
+/**
+ * Resuelve id de profesor: username exacto, nombre exacto (sin acentos) o fuzzy.
+ */
 function migracion_csv_buscar_profesor(PDO $pdo, int $idPlantel, string $username, string $nombreSugerido): ?int
 {
     $username = trim($username);
@@ -529,7 +792,6 @@ function migracion_csv_buscar_profesor(PDO $pdo, int $idPlantel, string $usernam
         if ($id !== false) {
             return (int) $id;
         }
-        // sin filtro plantel
         $st = $pdo->prepare('SELECT id_usuario FROM usuarios WHERE username = ? OR email LIKE ? LIMIT 1');
         $st->execute([$username, $username . '%']);
         $id = $st->fetchColumn();
@@ -537,20 +799,54 @@ function migracion_csv_buscar_profesor(PDO $pdo, int $idPlantel, string $usernam
             return (int) $id;
         }
     }
-    $nom = trim(preg_replace('/\s+/', ' ', $nombreSugerido) ?? '');
-    if ($nom === '') {
-        return null;
-    }
-    $st = $pdo->prepare(
-        'SELECT id_usuario FROM usuarios
-         WHERE id_plantel = ?
-           AND LOWER(CONCAT(nombre, \' \', apellido)) = LOWER(?)
-         LIMIT 1'
-    );
-    $st->execute([$idPlantel, $nom]);
-    $id = $st->fetchColumn();
 
-    return $id === false ? null : (int) $id;
+    $candidatos = migracion_csv_profesores_opciones($pdo, $idPlantel);
+    $match = migracion_csv_mejor_profesor($username, $nombreSugerido, $candidatos);
+    if ($match['id_usuario'] !== null) {
+        return (int) $match['id_usuario'];
+    }
+
+    // Último intento: todos los planteles (nombre muy parecido)
+    if ($nombreSugerido !== '' || $username !== '') {
+        $matchGlobal = migracion_csv_mejor_profesor(
+            $username,
+            $nombreSugerido,
+            migracion_csv_profesores_opciones($pdo, null),
+            90.0
+        );
+        if ($matchGlobal['id_usuario'] !== null) {
+            return (int) $matchGlobal['id_usuario'];
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Lee id_profesor override (por línea CSV o por id_grupo_legado).
+ *
+ * @param array<string, array<string, mixed>> $overrides
+ */
+function migracion_csv_override_id_profesor(array $overrides, string $idLeg, int $line): ?int
+{
+    if ($idLeg !== '' && isset($overrides[$idLeg]) && is_array($overrides[$idLeg])) {
+        $porLinea = $overrides[$idLeg]['profesores_por_linea'] ?? null;
+        if (is_array($porLinea) && isset($porLinea[$line]) && (int) $porLinea[$line] > 0) {
+            return (int) $porLinea[$line];
+        }
+        if (is_array($porLinea) && isset($porLinea[(string) $line]) && (int) $porLinea[(string) $line] > 0) {
+            return (int) $porLinea[(string) $line];
+        }
+        if (!empty($overrides[$idLeg]['id_profesor']) && (int) $overrides[$idLeg]['id_profesor'] > 0) {
+            return (int) $overrides[$idLeg]['id_profesor'];
+        }
+    }
+    $lineKey = 'L' . $line;
+    if (isset($overrides[$lineKey]['id_profesor']) && (int) $overrides[$lineKey]['id_profesor'] > 0) {
+        return (int) $overrides[$lineKey]['id_profesor'];
+    }
+
+    return null;
 }
 
 function migracion_csv_asegurar_aula(PDO $pdo, int $idPlantel, string $codigo): ?int
@@ -800,8 +1096,27 @@ function migracion_csv_grupo_normalizar_fila(array $r, int $line, array $overrid
     $r['_clave_anterior'] = $claveAnterior;
     $r['_horario_texto'] = $horarioTexto;
     $r['_clave_fase'] = trim((string) ($r['clave_fase_estimada'] ?? ''));
+    $r['_id_profesor_override'] = migracion_csv_override_id_profesor($overrides, $idLeg, $line);
 
     return $r;
+}
+
+/**
+ * Resuelve profesor de una fila normalizada (override UI → búsqueda fuzzy).
+ */
+function migracion_csv_resolver_profesor_fila(PDO $pdo, int $idPlantel, array $r): ?int
+{
+    $ov = $r['_id_profesor_override'] ?? null;
+    if ($ov !== null && (int) $ov > 0) {
+        return (int) $ov;
+    }
+
+    return migracion_csv_buscar_profesor(
+        $pdo,
+        $idPlantel,
+        (string) ($r['profesor_username'] ?? ''),
+        (string) ($r['profesor_sugerido'] ?? '')
+    );
 }
 
 /**
@@ -858,7 +1173,7 @@ function migracion_csv_kids_ordenar_filas(array $pair): array
 }
 
 /**
- * @param array<string, array{clave_especialidad?:string}> $overrides clave = id_grupo_legado
+ * @param array<string, array{clave_especialidad?:string,id_profesor?:int,profesores_por_linea?:array<int,int>}> $overrides
  * @return array{ok:bool, message:string, creados?:int, omitidos?:int, errores?:list<string>}
  */
 function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlantel = null, array $overrides = []): array
@@ -954,12 +1269,10 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                 if ($claveEspIng === '' || str_starts_with($claveEspIng, 'COMP')) {
                     $claveEspIng = 'ING-K';
                 }
-                $idProf = migracion_csv_buscar_profesor(
-                    $pdo,
-                    $idPlantel,
-                    (string) ($ing['profesor_username'] ?? $comp['profesor_username'] ?? ''),
-                    (string) ($ing['profesor_sugerido'] ?? $comp['profesor_sugerido'] ?? '')
-                );
+                $idProf = migracion_csv_resolver_profesor_fila($pdo, $idPlantel, $ing);
+                if ($idProf === null) {
+                    $idProf = migracion_csv_resolver_profesor_fila($pdo, $idPlantel, $comp);
+                }
                 $idEspIng = grupo_id_especialidad_infantil($pdo, 'ingles');
                 $idEspComp = grupo_id_especialidad_infantil($pdo, 'computacion');
                 $fecha = (string) ($ing['_fecha'] ?? date('Y-m-d'));
@@ -1019,12 +1332,7 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                         ->execute([$claveAnterior, $idIng, $idComp]);
                 }
                 // Profesor de la 2ª fila si difiere
-                $idProfComp = migracion_csv_buscar_profesor(
-                    $pdo,
-                    $idPlantel,
-                    (string) ($comp['profesor_username'] ?? ''),
-                    (string) ($comp['profesor_sugerido'] ?? '')
-                );
+                $idProfComp = migracion_csv_resolver_profesor_fila($pdo, $idPlantel, $comp);
                 if ($idProfComp && $idProfComp !== $idProf) {
                     $pdo->prepare('UPDATE grupos SET id_profesor = ? WHERE id_grupo = ?')
                         ->execute([$idProfComp, $idComp]);
@@ -1051,12 +1359,7 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                 $dias = $r['_dias'];
                 $horaIni = (string) $r['_hora_ini'];
                 $horaFin = (string) $r['_hora_fin'];
-                $idProf = migracion_csv_buscar_profesor(
-                    $pdo,
-                    $idPlantel,
-                    (string) ($r['profesor_username'] ?? ''),
-                    (string) ($r['profesor_sugerido'] ?? '')
-                );
+                $idProf = migracion_csv_resolver_profesor_fila($pdo, $idPlantel, $r);
                 $idAula = migracion_csv_asegurar_aula($pdo, $idPlantel, (string) ($r['aula_codigo'] ?? ''));
                 $area = $metaEsp['area'];
                 $ext = !empty($metaEsp['extensivo']);
