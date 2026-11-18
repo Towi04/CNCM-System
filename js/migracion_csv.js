@@ -16,13 +16,18 @@
   ];
   const defaultRoleLabels = cfg.role_labels || {};
 
-  /** @type {{headers:string[], rows:object[], total:number, offset:number, limit:number, roles:string[], roleLabels:object}|null} */
+  /** @type {{headers:string[], rows:object[], total:number, offset:number, limit:number, roles:string[], roleLabels:object, especialidades?:object[], tipo?:string}|null} */
   let previewState = null;
-  /** Overrides por email (persisten al cambiar de página de preview / reentrar sección) */
+  /** Overrides por email (staff) — persisten al paginar / reentrar */
   if (!window.__hayMigCsvOverrides) {
     window.__hayMigCsvOverrides = Object.create(null);
   }
   const overrides = window.__hayMigCsvOverrides;
+  /** Overrides por id_grupo_legado (grupos) */
+  if (!window.__hayMigCsvGrupoOverrides) {
+    window.__hayMigCsvGrupoOverrides = Object.create(null);
+  }
+  const grupoOverrides = window.__hayMigCsvGrupoOverrides;
 
   function $(id) {
     return document.getElementById(id);
@@ -49,12 +54,27 @@
   function applyOverrideToRow(row) {
     const email = String(row.email || '').toLowerCase();
     const ov = overrides[email];
-    if (!ov) return row;
-    return Object.assign({}, row, {
-      rol: ov.rol != null && ov.rol !== '' ? ov.rol : row.rol,
-      nombres: ov.nombres != null && ov.nombres !== '' ? ov.nombres : row.nombres,
-      apellido: ov.apellido != null && ov.apellido !== '' ? ov.apellido : row.apellido,
-    });
+    let out = row;
+    if (ov) {
+      out = Object.assign({}, out, {
+        rol: ov.rol != null && ov.rol !== '' ? ov.rol : out.rol,
+        nombres: ov.nombres != null && ov.nombres !== '' ? ov.nombres : out.nombres,
+        apellido: ov.apellido != null && ov.apellido !== '' ? ov.apellido : out.apellido,
+      });
+    }
+    const idLeg = String(out.id_grupo_legado || '').trim();
+    const gov = idLeg ? grupoOverrides[idLeg] : null;
+    if (gov && gov.clave_especialidad) {
+      out = Object.assign({}, out, { clave_especialidad: gov.clave_especialidad });
+      if (out.esp_estado === 'falta' || out.esp_estado === 'desconocida') {
+        out = Object.assign({}, out, {
+          esp_estado: 'ok',
+          accion: 'crear (esp. definida)',
+          clave_nueva_sugerida: out.clave_nueva_sugerida || '(se genera al importar)',
+        });
+      }
+    }
+    return out;
   }
 
   function setOverride(email, field, value) {
@@ -62,6 +82,13 @@
     if (!key) return;
     if (!overrides[key]) overrides[key] = {};
     overrides[key][field] = value;
+  }
+
+  function setGrupoOverride(idLegado, field, value) {
+    const key = String(idLegado || '').trim();
+    if (!key) return;
+    if (!grupoOverrides[key]) grupoOverrides[key] = {};
+    grupoOverrides[key][field] = value;
   }
 
   async function refreshEstado() {
@@ -142,7 +169,52 @@
         td.style.padding = '8px 10px';
         td.style.verticalAlign = 'middle';
 
-        if (h === 'rol') {
+        if (h === 'clave_especialidad' && (previewState.tipo === 'grupos' || headers.indexOf('esp_estado') >= 0)) {
+          const idLeg = String(row.id_grupo_legado || '').trim();
+          const especialidades = (previewState && previewState.especialidades) || [];
+          const sel = document.createElement('select');
+          sel.className = 'migcsv-esp';
+          sel.style.minWidth = '160px';
+          const opt0 = document.createElement('option');
+          opt0.value = '';
+          opt0.textContent = '— Seleccionar —';
+          sel.appendChild(opt0);
+          const actual = String(row.clave_especialidad || '').toUpperCase();
+          let found = false;
+          especialidades.forEach((e) => {
+            const clave = String(e.clave || e).toUpperCase();
+            const nombre = e.nombre || clave;
+            const opt = document.createElement('option');
+            opt.value = clave;
+            opt.textContent = clave + ' — ' + nombre;
+            if (clave === actual) {
+              opt.selected = true;
+              found = true;
+            }
+            sel.appendChild(opt);
+          });
+          if (actual && !found) {
+            const opt = document.createElement('option');
+            opt.value = actual;
+            opt.textContent = actual + ' (CSV)';
+            opt.selected = true;
+            sel.appendChild(opt);
+          }
+          if (row.esp_estado === 'falta' || row.esp_estado === 'desconocida') {
+            sel.style.borderColor = '#c47b00';
+            sel.title = 'Especialidad no identificada: elija una de HAY. Se generará clave nueva y se guardará la legado.';
+          }
+          sel.addEventListener('change', () => {
+            if (!idLeg) {
+              showMsg('Esta fila no tiene id_grupo_legado; no se puede guardar el override.', false);
+              return;
+            }
+            setGrupoOverride(idLeg, 'clave_especialidad', sel.value);
+            // refrescar colores/acción en la fila
+            renderPreview();
+          });
+          td.appendChild(sel);
+        } else if (h === 'rol') {
           const sel = document.createElement('select');
           sel.className = 'migcsv-rol';
           sel.dataset.email = email;
@@ -196,6 +268,13 @@
           if (h === 'accion' && /^ERROR/i.test(v)) {
             td.style.color = '#b00020';
           }
+          if (h === 'esp_estado' && (v === 'falta' || v === 'desconocida')) {
+            td.style.color = '#c47b00';
+            td.style.fontWeight = '600';
+          }
+          if (h === 'clave_legado' && v) {
+            td.title = 'Clave legado: se guardará en grupos.clave_anterior';
+          }
         }
         tr.appendChild(td);
       });
@@ -235,6 +314,8 @@
         limit: data.limit || limit,
         roles: data.roles || defaultRoles,
         roleLabels: data.role_labels || defaultRoleLabels,
+        especialidades: data.especialidades || [],
+        tipo: tipo,
       };
       let text = data.message || ('Vista previa: ' + previewState.total + ' fila(s)');
       if (data.errores && data.errores.length) {
@@ -265,9 +346,12 @@
       showMsg('Seleccione un archivo CSV', false);
       return;
     }
-    const aviso = tipo === 'staff_emails'
-      ? '¿Importar personal y provisionar Google/Moodle?\nSe creará el correo en Google Workspace si no existe.\nSe usarán los roles/nombres que editó en la vista previa.\nCon ~100 filas puede tardar varios minutos.'
-      : '¿Importar «' + file.name + '» como ' + tipo + '?';
+    let aviso = '¿Importar «' + file.name + '» como ' + tipo + '?';
+    if (tipo === 'staff_emails') {
+      aviso = '¿Importar personal y provisionar Google/Moodle?\nSe creará el correo en Google Workspace si no existe.\nSe usarán los roles/nombres que editó en la vista previa.\nCon ~100 filas puede tardar varios minutos.';
+    } else if (tipo === 'grupos') {
+      aviso = '¿Importar grupos?\nSe crearán con clave HAY nueva según la especialidad (CSV o la que eligió en la tabla).\nLa clave/id legado se guarda en clave_anterior y en el mapa de migración.';
+    }
     if (!confirm(aviso)) return;
     const fd = new FormData();
     fd.append('action', 'import');
@@ -276,6 +360,8 @@
     fd.append('csv', file);
     if (tipo === 'staff_emails') {
       fd.append('overrides', JSON.stringify(overrides));
+    } else if (tipo === 'grupos') {
+      fd.append('overrides', JSON.stringify(grupoOverrides));
     }
     setBusy(true, 'Importando… (Google/Moodle por fila). Espere; en Network debe aparecer migracion_csv_api.php');
     try {

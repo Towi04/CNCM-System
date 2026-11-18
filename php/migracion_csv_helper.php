@@ -148,6 +148,209 @@ function migracion_csv_resolver_especialidad(PDO $pdo, string $clave): ?int
 }
 
 /**
+ * Área / extensivo para grupo_clave_* a partir de clave_especialidad HAY.
+ *
+ * @return array{area:string, extensivo:bool, kids:bool}
+ */
+function migracion_csv_area_desde_clave_especialidad(string $claveEsp): array
+{
+    $claveEsp = strtoupper(trim($claveEsp));
+    $kids = in_array($claveEsp, ['ING-K', 'ING-K-EXT', 'COMP-K'], true) || str_ends_with($claveEsp, '-K');
+    $area = 'I';
+    if ($kids) {
+        $area = 'K';
+    } elseif (str_starts_with($claveEsp, 'COMP') || $claveEsp === 'C') {
+        $area = 'C';
+    } elseif (str_starts_with($claveEsp, 'PREP-AB') || $claveEsp === 'PA') {
+        $area = 'PA';
+    } elseif (str_starts_with($claveEsp, 'PREP') || $claveEsp === 'PE') {
+        $area = 'PE';
+    }
+    $ext = str_contains($claveEsp, 'EXT');
+
+    return ['area' => $area, 'extensivo' => $ext, 'kids' => $kids];
+}
+
+/**
+ * Catálogo activo para el selector de especialidad en preview de grupos.
+ *
+ * @return list<array{clave:string, nombre:string, id_especialidad:int}>
+ */
+function migracion_csv_especialidades_opciones(PDO $pdo): array
+{
+    if (function_exists('catalog_ensure_schema')) {
+        catalog_ensure_schema($pdo);
+    }
+    try {
+        $rows = $pdo->query(
+            "SELECT id_especialidad, clave, nombre
+             FROM especialidades
+             WHERE activo = 1
+             ORDER BY orden ASC, nombre ASC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return [];
+    }
+    $out = [];
+    foreach ($rows as $r) {
+        $clave = strtoupper(trim((string) ($r['clave'] ?? '')));
+        if ($clave === '') {
+            continue;
+        }
+        $out[] = [
+            'id_especialidad' => (int) $r['id_especialidad'],
+            'clave' => $clave,
+            'nombre' => trim((string) ($r['nombre'] ?? $clave)),
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * Vista previa paginada de grupos: marca especialidad faltante/desconocida y sugiere clave HAY.
+ *
+ * @return array{ok:bool, message?:string, headers?:list<string>, total_filas?:int, offset?:int, limit?:int, muestra?:list<array<string,mixed>>, errores?:list<string>, especialidades?:list<array{clave:string,nombre:string}>}
+ */
+function migracion_csv_preview_grupos(
+    PDO $pdo,
+    string $tmpPath,
+    ?int $forzarPlantel = null,
+    int $offset = 0,
+    int $limit = 50
+): array {
+    migracion_csv_ensure_schema($pdo);
+    if (function_exists('grupo_clave_ensure_schema')) {
+        grupo_clave_ensure_schema($pdo);
+    }
+    $parsed = migracion_csv_leer_archivo($tmpPath);
+    if (!empty($parsed['error'])) {
+        return ['ok' => false, 'message' => $parsed['error']];
+    }
+    $rows = $parsed['rows'];
+    $total = count($rows);
+    $offset = max(0, $offset);
+    $limit = max(10, min(200, $limit));
+    $slice = array_slice($rows, $offset, $limit);
+    $especialidades = migracion_csv_especialidades_opciones($pdo);
+    $headers = [
+        'id_grupo_legado',
+        'clave_legado',
+        'clave_especialidad',
+        'esp_estado',
+        'clave_nueva_sugerida',
+        'plantel_slug',
+        'infantil',
+        'dias_clase',
+        'hora_inicio',
+        'profesor_sugerido',
+        'aula_codigo',
+        'accion',
+    ];
+    $errores = [];
+    $muestra = [];
+    $faltanEsp = 0;
+
+    foreach ($slice as $i => $r) {
+        $line = $offset + $i + 2;
+        $idLeg = trim((string) ($r['id_grupo_legado'] ?? ''));
+        $claveLeg = trim((string) ($r['clave_legado'] ?? ''));
+        $claveEsp = strtoupper(trim((string) ($r['clave_especialidad'] ?? '')));
+        $infantil = !empty($r['infantil']) && (string) $r['infantil'] !== '0';
+        if ($claveEsp === '' && $infantil) {
+            $claveEsp = 'ING-K';
+        }
+        $ya = ($idLeg !== '' && migracion_csv_map_get($pdo, 'grupo', $idLeg) !== null);
+        $espEstado = 'ok';
+        $accion = $ya ? 'omitir (ya mapeado)' : 'crear';
+        $claveNueva = '';
+        $idPlantel = migracion_csv_resolver_plantel(
+            $pdo,
+            (string) ($r['plantel_slug'] ?? $r['sucursal'] ?? ''),
+            $forzarPlantel
+        );
+
+        if ($claveEsp === '') {
+            $espEstado = 'falta';
+            $faltanEsp++;
+            if (!$ya) {
+                $accion = 'definir especialidad';
+            }
+        } elseif (migracion_csv_resolver_especialidad($pdo, $claveEsp) === null) {
+            $espEstado = 'desconocida';
+            $faltanEsp++;
+            if (!$ya) {
+                $accion = 'corregir especialidad';
+            }
+            $errores[] = "Línea {$line}: especialidad {$claveEsp} no existe en HAY";
+        }
+
+        if ($idPlantel && $claveEsp !== '' && $espEstado === 'ok' && !$ya) {
+            try {
+                $meta = migracion_csv_area_desde_clave_especialidad($claveEsp);
+                $dias = migracion_csv_parse_dias((string) ($r['dias_clase'] ?? ''));
+                $horaIni = trim((string) ($r['hora_inicio'] ?? '08:00')) ?: '08:00';
+                $codH = migracion_csv_infer_codigo_horario($dias !== [] ? $dias : [6], $horaIni);
+                if (!empty($meta['kids'])) {
+                    if (function_exists('grupo_infantil_vista_previa')) {
+                        $prev = grupo_infantil_vista_previa($pdo, $idPlantel);
+                        $claveNueva = (string) ($prev['clave'] ?? ((string) ($prev['clave_ingles'] ?? '') . ' + ' . (string) ($prev['clave_computacion'] ?? '')));
+                    } else {
+                        $claveNueva = '(pareja kids)';
+                    }
+                } elseif (function_exists('grupo_clave_vista_previa')) {
+                    $prev = grupo_clave_vista_previa(
+                        $pdo,
+                        $idPlantel,
+                        $meta['area'],
+                        $codH,
+                        $meta['extensivo'],
+                        false,
+                        ''
+                    );
+                    $claveNueva = (string) ($prev['clave'] ?? '');
+                }
+            } catch (Throwable $e) {
+                $claveNueva = '(se genera al importar)';
+            }
+        }
+
+        $muestra[] = [
+            'id_grupo_legado' => $idLeg,
+            'clave_legado' => $claveLeg,
+            'clave_especialidad' => $claveEsp,
+            'esp_estado' => $espEstado,
+            'clave_nueva_sugerida' => $claveNueva,
+            'plantel_slug' => trim((string) ($r['plantel_slug'] ?? $r['sucursal'] ?? '')),
+            'infantil' => $infantil ? '1' : '0',
+            'dias_clase' => trim((string) ($r['dias_clase'] ?? '')),
+            'hora_inicio' => trim((string) ($r['hora_inicio'] ?? '')),
+            'profesor_sugerido' => trim((string) ($r['profesor_sugerido'] ?? $r['profesor_username'] ?? '')),
+            'aula_codigo' => trim((string) ($r['aula_codigo'] ?? '')),
+            'accion' => $accion,
+            '_line' => $line,
+        ];
+    }
+
+    $msg = "Vista previa grupos: {$total} fila(s)";
+    if ($faltanEsp > 0) {
+        $msg .= ". {$faltanEsp} en esta página sin especialidad válida — elíjala en la tabla antes de Importar.";
+    }
+
+    return [
+        'ok' => true,
+        'message' => $msg,
+        'headers' => $headers,
+        'total_filas' => $total,
+        'offset' => $offset,
+        'limit' => $limit,
+        'muestra' => $muestra,
+        'errores' => array_slice($errores, 0, 20),
+        'especialidades' => $especialidades,
+    ];
+}
+
+/**
  * @return list<int>
  */
 function migracion_csv_parse_dias(string $dias): array
@@ -454,9 +657,10 @@ function migracion_csv_importar_aulas(PDO $pdo, array $rows, ?int $forzarPlantel
 }
 
 /**
+ * @param array<string, array{clave_especialidad?:string}> $overrides clave = id_grupo_legado
  * @return array{ok:bool, message:string, creados?:int, omitidos?:int, errores?:list<string>}
  */
-function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlantel = null): array
+function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlantel = null, array $overrides = []): array
 {
     if (!migracion_csv_puede()) {
         return ['ok' => false, 'message' => 'No autorizado'];
@@ -480,6 +684,12 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
     foreach ($rows as $i => $r) {
         $line = $i + 2;
         $idLeg = trim((string) ($r['id_grupo_legado'] ?? ''));
+        if ($idLeg !== '' && isset($overrides[$idLeg]) && is_array($overrides[$idLeg])) {
+            $ovEsp = strtoupper(trim((string) ($overrides[$idLeg]['clave_especialidad'] ?? '')));
+            if ($ovEsp !== '') {
+                $r['clave_especialidad'] = $ovEsp;
+            }
+        }
         if ($idLeg !== '' && migracion_csv_map_get($pdo, 'grupo', $idLeg) !== null) {
             $omitidos++;
             continue;
@@ -499,11 +709,11 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
             $claveEsp = 'ING-K';
         }
         if ($claveEsp === '') {
-            $errores[] = "Línea {$line}: falta clave_especialidad";
+            $errores[] = "Línea {$line}: falta clave_especialidad (defínala en la vista previa)";
             continue;
         }
-        $esKids = $infantil || in_array($claveEsp, ['ING-K', 'ING-K-EXT', 'COMP-K'], true)
-            || str_ends_with($claveEsp, '-K');
+        $metaEsp = migracion_csv_area_desde_clave_especialidad($claveEsp);
+        $esKids = $infantil || !empty($metaEsp['kids']);
 
         $fecha = trim((string) ($r['fecha_inicio_estimada'] ?? ''));
         if ($fecha === '') {
@@ -530,6 +740,9 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
         $idAula = migracion_csv_asegurar_aula($pdo, $idPlantel, (string) ($r['aula_codigo'] ?? ''));
         $claveFaseEst = trim((string) ($r['clave_fase_estimada'] ?? ''));
         $claveAnterior = trim((string) ($r['clave_legado'] ?? ''));
+        if ($claveAnterior === '' && $idLeg !== '') {
+            $claveAnterior = 'legado#' . $idLeg;
+        }
         $horarioTexto = trim((string) ($r['horario_legado'] ?? ''));
         if ($horarioTexto === '' && $dias !== []) {
             $horarioTexto = 'Días ' . implode(',', $dias) . ' ' . $horaIni;
@@ -563,6 +776,22 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                 }
                 $idIng = (int) $res['id_grupo_ingles'];
                 $idComp = (int) $res['id_grupo_computacion'];
+                $claveIng = '';
+                $claveComp = '';
+                try {
+                    $stCl = $pdo->prepare('SELECT id_grupo, clave FROM grupos WHERE id_grupo IN (?,?)');
+                    $stCl->execute([$idIng, $idComp]);
+                    foreach ($stCl->fetchAll(PDO::FETCH_ASSOC) as $cg) {
+                        if ((int) $cg['id_grupo'] === $idIng) {
+                            $claveIng = (string) ($cg['clave'] ?? '');
+                        }
+                        if ((int) $cg['id_grupo'] === $idComp) {
+                            $claveComp = (string) ($cg['clave'] ?? '');
+                        }
+                    }
+                } catch (Throwable $e) {
+                    // ignore
+                }
                 if ($claveAnterior !== '') {
                     $pdo->prepare('UPDATE grupos SET clave_anterior = ? WHERE id_grupo IN (?,?)')
                         ->execute([$claveAnterior, $idIng, $idComp]);
@@ -571,13 +800,14 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                     $pdo->prepare('UPDATE grupos SET id_aula = ?, aula = ? WHERE id_grupo IN (?,?)')
                         ->execute([$idAula, (string) ($r['aula_codigo'] ?? ''), $idIng, $idComp]);
                 }
-                // codigo_horario
                 $codH = migracion_csv_infer_codigo_horario($dias !== [] ? $dias : [6], $horaIni);
                 $pdo->prepare('UPDATE grupos SET codigo_horario = ? WHERE id_grupo IN (?,?)')
                     ->execute([$codH, $idIng, $idComp]);
                 if ($idLeg !== '') {
-                    migracion_csv_map_set($pdo, 'grupo', $idLeg, $idIng, 'kids_ingles');
-                    migracion_csv_map_set($pdo, 'grupo_comp', $idLeg, $idComp, 'kids_computacion');
+                    $detIng = 'kids_ingles; legado=' . $claveAnterior . '; hay=' . $claveIng;
+                    $detComp = 'kids_computacion; legado=' . $claveAnterior . '; hay=' . $claveComp;
+                    migracion_csv_map_set($pdo, 'grupo', $idLeg, $idIng, $detIng);
+                    migracion_csv_map_set($pdo, 'grupo_comp', $idLeg, $idComp, $detComp);
                 }
                 $creados += 2;
             } else {
@@ -586,15 +816,8 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                     $errores[] = "Línea {$line}: especialidad {$claveEsp} no existe en HAY";
                     continue;
                 }
-                $area = 'I';
-                if (str_starts_with($claveEsp, 'COMP') || str_starts_with($claveEsp, 'C')) {
-                    $area = 'C';
-                } elseif (str_starts_with($claveEsp, 'PREP-AB') || $claveEsp === 'PA') {
-                    $area = 'PA';
-                } elseif (str_starts_with($claveEsp, 'PREP')) {
-                    $area = 'PE';
-                }
-                $ext = str_contains($claveEsp, 'EXT');
+                $area = $metaEsp['area'];
+                $ext = !empty($metaEsp['extensivo']);
                 $codH = migracion_csv_infer_codigo_horario($dias !== [] ? $dias : [6], $horaIni);
                 $gen = grupo_clave_generar($pdo, $idPlantel, $area, $codH, $ext, false, '');
                 $clave = (string) ($gen['clave'] ?? ('G' . $line));
@@ -630,7 +853,13 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                     tutor_asignar_grupo($pdo, $idGrupo);
                 }
                 if ($idLeg !== '') {
-                    migracion_csv_map_set($pdo, 'grupo', $idLeg, $idGrupo, $clave);
+                    migracion_csv_map_set(
+                        $pdo,
+                        'grupo',
+                        $idLeg,
+                        $idGrupo,
+                        'legado=' . $claveAnterior . '; hay=' . $clave . '; esp=' . $claveEsp
+                    );
                 }
                 $creados++;
             }
