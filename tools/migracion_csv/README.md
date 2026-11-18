@@ -3,6 +3,7 @@
 Herramienta **local (XAMPP)** para exportar solo grupos activos (y sus alumnos/pagos) desde la BD del sistema anterior, sin subir el dump completo al servidor.
 
 En el Portal HAY: menú **Migración CSV** (`views/migracion_csv.php`).
+Ahí puede descargar un **CSV de ejemplo** (columnas + 2–3 filas) por cada tipo.
 
 ## Requisitos
 
