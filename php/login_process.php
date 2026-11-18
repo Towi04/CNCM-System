@@ -8,32 +8,28 @@ define('HAY_SKIP_SCHEMA_BOOTSTRAP', true);
 try {
     require __DIR__ . '/../config.php';
 } catch (Throwable $e) {
-    header('Location: ../index.php?error=db&msg=' . urlencode('Error de conexión a la base de datos.'));
-    exit;
+    hay_redirect('index.php?error=db&msg=' . urlencode('Error de conexión a la base de datos.'));
 }
 
 auth_ensure_email_column($pdo);
 login_security_ensure_schema($pdo);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ../index.php');
-    exit;
+    hay_redirect('index.php');
 }
 
 $user_input = trim($_POST['usuario'] ?? '');
 $pass_input = (string) ($_POST['password'] ?? '');
 
 if ($user_input === '' || $pass_input === '') {
-    header('Location: ../index.php?error=1');
-    exit;
+    hay_redirect('index.php?error=1');
 }
 
 $usuario = auth_find_user_by_login($pdo, $user_input);
 
 $bloqueo = login_security_verificar_acceso($pdo, $usuario, $user_input);
 if ($bloqueo !== null) {
-    header('Location: ../index.php?error=1&msg=' . urlencode($bloqueo));
-    exit;
+    hay_redirect('index.php?error=1&msg=' . urlencode($bloqueo));
 }
 
 if ($usuario && password_verify($pass_input, $usuario['password'])) {
@@ -46,14 +42,12 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
     }
     if ($msgSusp) {
         login_security_registrar_fallo($pdo, $usuario, $user_input, 'suspendido');
-        header('Location: ../index.php?error=1&msg=' . urlencode($msgSusp));
-        exit;
+        hay_redirect('index.php?error=1&msg=' . urlencode($msgSusp));
     }
 
     $idUsuario = (int) ($usuario['id_usuario'] ?? $usuario['id'] ?? 0);
     if ($idUsuario <= 0) {
-        header('Location: ../index.php?error=sesion&msg=' . urlencode('Usuario sin id en base de datos.'));
-        exit;
+        hay_redirect('index.php?error=sesion&msg=' . urlencode('Usuario sin id en base de datos.'));
     }
 
     login_security_registrar_exito($pdo, $idUsuario);
@@ -66,10 +60,9 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
             ? rbac_normalizar_rol_clave((string) ($usuario['rol'] ?? ''))
             : strtolower(trim((string) ($usuario['rol'] ?? '')));
         if ($rolLogin !== 'supervisor') {
-            header('Location: ../index.php?error=1&msg=' . urlencode(
+            hay_redirect('index.php?error=1&msg=' . urlencode(
                 'Sistema en actualización. Solo supervisión puede iniciar sesión ahora.'
             ));
-            exit;
         }
     }
 
@@ -98,25 +91,25 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
     $_SESSION['debe_cambiar_password'] = (int) ($usuario['debe_cambiar_password'] ?? 0);
 
     if (session_status() !== PHP_SESSION_ACTIVE || empty($_SESSION['user_id'])) {
-        header('Location: ../index.php?error=sesion&msg=' . urlencode('La sesión PHP no quedó activa tras el login.'));
-        exit;
+        hay_redirect('index.php?error=sesion&msg=' . urlencode('La sesión PHP no quedó activa tras el login.'));
     }
-    @session_regenerate_id(true);
+
+    // Una sola regeneración (después de llenar la sesión) para fijar la cookie final.
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        @session_regenerate_id(true);
+    }
     hay_session_no_cache_headers();
     if (function_exists('session_write_close')) {
         @session_write_close();
     }
     $savePath = function_exists('hay_session_save_path') ? hay_session_save_path() : null;
     if ($savePath === null) {
-        header('Location: ../index.php?error=sesion&msg=' . urlencode('storage/sessions no es escribible por el usuario de PHP.'));
-        exit;
+        hay_redirect('index.php?error=sesion&msg=' . urlencode('storage/sessions no es escribible por el usuario de PHP.'));
     }
     if (!empty($usuario['debe_cambiar_password'])) {
-        header('Location: ../dashboard.php?cambiar_password=1');
-        exit;
+        hay_redirect('dashboard.php?cambiar_password=1');
     }
-    header('Location: ../dashboard.php');
-    exit;
+    hay_redirect('dashboard.php');
 }
 
 login_security_registrar_fallo($pdo, $usuario, $user_input, 'password');
@@ -132,5 +125,4 @@ if ($usuario) {
     }
 }
 
-header('Location: ../index.php?error=1&msg=' . urlencode('Usuario o contraseña incorrectos.' . $restantes));
-exit;
+hay_redirect('index.php?error=1&msg=' . urlencode('Usuario o contraseña incorrectos.' . $restantes));

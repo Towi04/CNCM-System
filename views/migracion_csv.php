@@ -95,10 +95,17 @@ $idPlantel = (int) plantel_id_activo();
         }
         echo $slugs !== [] ? implode(', ', $slugs) : 'configure planteles en HAY';
       ?>
+      — el CSV usa <code>plantel_slug</code> por fila (no el plantel de la sesión).
+      Si el slug no existe en HAY, esa fila falla en lugar de caer en la sede activa.
     </p>
     <p><strong>Claves especialidad (alumnos/grupos):</strong>
       <code>ING</code>, <code>ING-EXT</code>, <code>ING-K</code>, <code>COMP</code>/<code>COMP24</code>/<code>COMP25</code>,
       <code>COMP-EXT</code>, <code>COMP-K</code>, <code>PREP-AB</code>, <code>PREP-ESC</code>.
+    </p>
+    <p><strong>Grupos activos:</strong> en Vista previa verá <code>clave_legado</code>, <code>esp_estado</code> y
+      <code>clave_nueva_sugerida</code>. Si la especialidad falta o no existe en HAY, elija una en la columna
+      <code>clave_especialidad</code> antes de Importar. El grupo se crea con <strong>clave HAY nueva</strong>
+      (directrices del plantel) y el legado queda en <code>clave_anterior</code> + mapa <code>hay_migracion_csv_map</code>.
     </p>
   </div>
 </div>
@@ -121,4 +128,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261117d'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118b'), ENT_QUOTES, 'UTF-8'); ?>"></script>

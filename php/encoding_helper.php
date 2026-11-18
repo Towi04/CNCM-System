@@ -34,31 +34,32 @@ function hay_json_response(array $data, int $code = 200): void
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
 }
 
-/** Raíz web de la aplicación (p. ej. `/` o `/hay/`), aunque el script esté en `/views/`. */
+/**
+ * Raíz web de la aplicación (p. ej. `/` o `/hay/`), aunque el script esté en `/views/`.
+ * Si la app corre en la raíz del dominio (GCP), ignora un HAY_WEB_ROOT=/hay/ legado de Neubox
+ * — si no, CSS/JS apuntan a /hay/... y el panel parece “en blanco” tras el login.
+ */
 function hay_web_root(): string
 {
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/dashboard.php');
+    $dir = dirname($script);
+    if (preg_match('#/(views|php)$#', $dir)) {
+        $dir = dirname($dir);
+    }
+
+    if ($dir === '/' || $dir === '.' || $dir === '') {
+        return '/';
+    }
+
     if (defined('HAY_WEB_ROOT') && (string) HAY_WEB_ROOT !== '') {
         $root = str_replace('\\', '/', (string) HAY_WEB_ROOT);
         if ($root === '/' || $root === '') {
             return '/';
         }
-
-        return rtrim($root, '/') . '/';
-    }
-
-    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/dashboard.php');
-    $dir = dirname($script);
-    if (preg_match('#/views$#', $dir) || preg_match('#/php$#', $dir)) {
-        $dir = dirname($dir);
-    }
-
-    if ($dir === '/' || $dir === '.' || $dir === '') {
-        $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
-        if (preg_match('#^(/.+?)/(views|php)/#', $uri, $m)) {
-            return $m[1] . '/';
+        $normalized = rtrim($root, '/') . '/';
+        if ($normalized !== '/' && str_starts_with($dir . '/', rtrim($normalized, '/') . '/')) {
+            return $normalized;
         }
-
-        return '/';
     }
 
     return rtrim($dir, '/') . '/';
