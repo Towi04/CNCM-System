@@ -69,7 +69,7 @@ if (!empty($_SESSION['user_id']) && empty($_GET['force_login']) && empty($_GET['
                 <p class="login-alert login-alert--success" role="status">Contraseña actualizada. Ya puedes iniciar sesión.</p>
             <?php endif; ?>
 
-            <form id="form-login" action="<?php echo htmlspecialchars(function_exists('hay_asset_url') ? hay_asset_url('php/login_process.php') : 'php/login_process.php', ENT_QUOTES, 'UTF-8'); ?>" method="POST" autocomplete="on">
+            <form id="form-login" action="/php/login_process.php" method="POST" autocomplete="on">
                 <div class="input-group">
                     <label for="usuario">Correo electrónico</label>
                     <input
@@ -131,6 +131,6 @@ if (!empty($_SESSION['user_id']) && empty($_GET['force_login']) && empty($_GET['
     </section>
 </div>
 
-<script src="js/login.js?v=20261118c"></script>
+<script src="/js/login.js?v=20261118d"></script>
 </body>
 </html>
