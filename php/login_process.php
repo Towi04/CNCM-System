@@ -95,8 +95,12 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
     }
 
     // Una sola regeneración (después de llenar la sesión) para fijar la cookie final.
-    if (session_status() === PHP_SESSION_ACTIVE) {
-        @session_regenerate_id(true);
+    try {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_regenerate_id(true);
+        }
+    } catch (Throwable $e) {
+        error_log('HAY login regenerate_id: ' . $e->getMessage());
     }
     hay_session_no_cache_headers();
     if (function_exists('session_write_close')) {
@@ -106,10 +110,12 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
     if ($savePath === null) {
         hay_redirect('index.php?error=sesion&msg=' . urlencode('storage/sessions no es escribible por el usuario de PHP.'));
     }
+    // Ir a / (index) — el usuario confirma que esa URL sí abre el panel;
+    // index reenvía a dashboard si la sesión quedó activa.
     if (!empty($usuario['debe_cambiar_password'])) {
         hay_redirect('dashboard.php?cambiar_password=1');
     }
-    hay_redirect('dashboard.php');
+    hay_redirect('index.php');
 }
 
 login_security_registrar_fallo($pdo, $usuario, $user_input, 'password');

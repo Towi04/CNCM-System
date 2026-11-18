@@ -648,10 +648,28 @@ function hay_absolute_url(string $pathFromAppRoot): string
     return $scheme . '://' . $host . $urlPath;
 }
 
+function hay_wants_json_response(): bool
+{
+    $xrw = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    if ($xrw === 'fetch' || $xrw === 'xmlhttprequest') {
+        return true;
+    }
+    $accept = strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? ''));
+    if (str_contains($accept, 'application/json')) {
+        return true;
+    }
+    if (!empty($_POST['ajax']) || !empty($_GET['ajax'])) {
+        return true;
+    }
+
+    return false;
+}
+
 /**
- * Redirect PRG tras login.
- * Usa Location con ruta del mismo host (/dashboard.php) para no degradar https→http
- * detrás del balanceador; además meta+JS por si el header no se envía.
+ * Redirect tras login.
+ * - Si el cliente pidió JSON (fetch del formulario): 200 + {redirect:"/..."}.
+ * - Si no: Location en ruta del host + HTML/JS (los 303 tras POST a veces no
+ *   navegan y dejan la barra en /php/login_process.php en blanco).
  */
 function hay_redirect(string $pathFromAppRoot, int $status = 303): void
 {
@@ -661,10 +679,26 @@ function hay_redirect(string $pathFromAppRoot, int $status = 303): void
 
     $path = hay_app_path($pathFromAppRoot);
     $abs = hay_absolute_url($pathFromAppRoot);
+    $isError = str_contains($path, 'error=') || str_contains($path, 'sesion=');
+
+    if (hay_wants_json_response()) {
+        if (!headers_sent()) {
+            hay_session_no_cache_headers();
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(200);
+        }
+        echo json_encode([
+            'status' => $isError ? 'error' : 'ok',
+            'redirect' => $path,
+            'redirect_abs' => $abs,
+            'message' => $isError ? 'Requiere atención' : 'OK',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
 
     if (!headers_sent()) {
         hay_session_no_cache_headers();
-        // Ruta relativa al host: el navegador conserva https://sistema.cncm.edu.mx
+        // Ruta relativa al host: el navegador conserva https://…
         header('Location: ' . $path, true, $status);
         header('Content-Type: text/html; charset=utf-8');
     }
@@ -676,7 +710,7 @@ function hay_redirect(string $pathFromAppRoot, int $status = 303): void
         . '<meta http-equiv="refresh" content="0;url=' . $safePath . '">'
         . '<title>Redirigiendo…</title>'
         . '<script>try{location.replace(' . $jsPath . ');}catch(e){location.href=' . $jsPath . ';}</script>'
-        . '</head><body style="font-family:system-ui,sans-serif;padding:2rem;">'
+        . '</head><body style="font-family:system-ui,sans-serif;padding:2rem;background:#fff;color:#111;">'
         . '<p>Entrando al panel…</p>'
         . '<p><a href="' . $safePath . '">Continuar</a>'
         . ' · <a href="' . $safeAbs . '">Abrir panel</a></p>'
