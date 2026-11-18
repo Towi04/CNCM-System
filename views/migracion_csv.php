@@ -84,9 +84,15 @@ if (function_exists('plantel_list')) {
       <strong>CSV de ejemplo:</strong> el botón de arriba descarga columnas + 2–3 filas de muestra
       según el tipo seleccionado. Planteles válidos: <?php echo $slugsTxt; ?>.
     </p>
-    <p style="margin:0; color:#777;">
+    <p style="margin:0 0 8px; color:#777;">
       En grupos, la vista previa permite elegir especialidad y profesor; kids = repetir la misma
       clave legado en 2 filas (inglés + cómputo) o una fila <code>ING-K</code>.
+    </p>
+    <p style="margin:0; color:#777;">
+      <strong>Alumnos:</strong> no se migran solos con los grupos. En el extractor XAMPP use el mismo
+      <code>grupos_filtro.txt</code> → descargue <code>04_alumnos.csv</code> → aquí tipo
+      <em>04 Alumnos</em> → Importar. Enlazan por <code>id_grupo_legado</code> o
+      <code>clave_legado</code> del grupo ya importado.
     </p>
   </div>
 </div>
@@ -109,4 +115,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118f'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118g'), ENT_QUOTES, 'UTF-8'); ?>"></script>

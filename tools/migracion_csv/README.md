@@ -79,7 +79,12 @@ Pareja kids con horarios distintos: duplicar la fila del mismo `id_grupo_legado`
 
 ### 04_alumnos
 
-`numero_control`, nombres, `id_grupo_legado`, `fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
+`numero_control`, nombres, `id_grupo_legado` (o `clave_legado` del grupo ya importado),
+`fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
+
+**No se crean al importar grupos.** En XAMPP, con el mismo `grupos_filtro.txt` de los
+grupos activos, descargue `04_alumnos.csv` y en el Portal elija tipo **04 Alumnos** → Importar.
+Kids: un alumno del grupo legado se inscribe en IK y CK (dual).
 
 ### 05_pagos
 
