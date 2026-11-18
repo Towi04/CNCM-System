@@ -37,7 +37,10 @@ En el Portal HAY: menú **Migración CSV** (`views/migracion_csv.php`).
 | `PREP-AB` | Preparatoria abierta |
 | `PREP-ESC` | Preparatoria escolarizada |
 
-Kids: bastan `ING-K` o `infantil=1`. Todos los alumnos de ese grupo se inscriben en **ambas** materias (dual); después puede dar de baja individual.
+Kids: bastan `ING-K` o `infantil=1` (una fila → pareja IK+CK con bloque 2h+2h el mismo día).
+También puede **repetir** el mismo `id_grupo_legado` / `clave_legado` en 2 filas (1ª inglés, 2ª cómputo)
+con distinta `hora_inicio` / `dias_clase` / `aula_codigo`; HAY asigna el mismo número a la pareja.
+Alumnos de ese grupo se inscriben en **ambas** materias (dual); después puede dar de baja individual.
 
 ## Convención de días y hora
 
@@ -63,7 +66,12 @@ Kids: bastan `ING-K` o `infantil=1`. Todos los alumnos de ese grupo se inscriben
 
 ### 03_grupos
 
-De BD + edición: `clave_especialidad` (obligatoria), `aula_codigo`, `profesor_username` (si el sugerido no sirve), `dias_clase`, `hora_inicio`, `fecha_inicio_estimada`, `clave_fase_estimada`.
+De BD + edición: `clave_especialidad` (obligatoria en adultos; en kids basta `ING-K` o 2 filas repetidas),
+`aula_codigo`, `profesor_username` (si el sugerido no sirve), `dias_clase`, `hora_inicio`,
+`fecha_inicio_estimada`, `clave_fase_estimada`.
+
+Pareja kids con horarios distintos: duplicar la fila del mismo `id_grupo_legado`/`clave_legado`
+(1ª = inglés, 2ª = cómputo) cambiando `hora_inicio`, `dias_clase` y/o `aula_codigo`.
 
 ### 04_alumnos
 
@@ -85,4 +93,4 @@ De BD + edición: `clave_especialidad` (obligatoria), `aula_codigo`, `profesor_u
 
 ## Fuera de alcance (por diseño)
 
-Becas, fotos, CFDI, ventas de mostrador, matrícula Moodle por curso de fase, croquis/capacidad de aulas, orden inglés/cómputo en el bloque kids, fusiones históricas.
+Becas, fotos, CFDI, ventas de mostrador, matrícula Moodle por curso de fase, croquis/capacidad de aulas, fusiones históricas.
