@@ -398,6 +398,12 @@ function hay_session_destroy_completa(): void
 
 
 
+/**
+ * Limpia datos de sesión antes de autenticar.
+ * NO regenera el id aquí: login_process regenera una sola vez después de
+ * llenar $_SESSION. Un doble regenerate_id(true) emite dos Set-Cookie y
+ * puede dejar al navegador con el id borrado → primer dashboard en blanco.
+ */
 function hay_session_preparar_nuevo_login(): void
 
 {
@@ -413,14 +419,6 @@ function hay_session_preparar_nuevo_login(): void
     $_SESSION = [];
 
     hay_session_purge_phpsessid_legacy();
-
-
-
-    if (session_status() === PHP_SESSION_ACTIVE) {
-
-        session_regenerate_id(true);
-
-    }
 
 }
 
@@ -562,5 +560,64 @@ function hay_session_no_cache_headers(): void
 
     header('Expires: 0');
 
+}
+
+/**
+ * URL absoluta (https://host/ruta) para Location post-login.
+ * Usa el mismo criterio de ruta que la cookie de sesión.
+ */
+function hay_absolute_url(string $pathFromAppRoot): string
+{
+    $pathFromAppRoot = str_replace('\\', '/', $pathFromAppRoot);
+    $qPos = strpos($pathFromAppRoot, '?');
+    $hashPos = strpos($pathFromAppRoot, '#');
+    $cut = strlen($pathFromAppRoot);
+    if ($qPos !== false) {
+        $cut = min($cut, $qPos);
+    }
+    if ($hashPos !== false) {
+        $cut = min($cut, $hashPos);
+    }
+    $pathOnly = substr($pathFromAppRoot, 0, $cut);
+    $suffix = substr($pathFromAppRoot, $cut);
+
+    if (preg_match('#^https?://#i', $pathOnly)) {
+        return $pathFromAppRoot;
+    }
+
+    $base = hay_app_cookie_path();
+    if ($base === '/' || $base === '') {
+        $urlPath = '/' . ltrim($pathOnly, '/');
+    } else {
+        $urlPath = rtrim($base, '/') . '/' . ltrim($pathOnly, '/');
+    }
+    $urlPath = preg_replace('#/+#', '/', $urlPath) ?: '/';
+
+    $https = function_exists('hay_request_is_https') ? hay_request_is_https() : false;
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $scheme = $https ? 'https' : 'http';
+
+    return $scheme . '://' . $host . $urlPath . $suffix;
+}
+
+/**
+ * Redirect PRG (303) con Location absoluto + HTML de respaldo (evita pantalla en blanco
+ * si el cliente no sigue bien un 302 vacío tras POST de login).
+ */
+function hay_redirect(string $pathFromAppRoot, int $status = 303): void
+{
+    $url = hay_absolute_url($pathFromAppRoot);
+    if (!headers_sent()) {
+        hay_session_no_cache_headers();
+        header('Location: ' . $url, true, $status);
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    $safe = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+    echo '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
+        . '<meta http-equiv="refresh" content="0;url=' . $safe . '">'
+        . '<title>Redirigiendo…</title></head><body>'
+        . '<p>Redirigiendo… <a href="' . $safe . '">Continuar</a></p>'
+        . '</body></html>';
+    exit;
 }
 

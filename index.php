@@ -9,20 +9,17 @@ hay_session_start();
 if (!empty($_GET['salir'])) {
     hay_session_no_cache_headers();
     hay_session_destroy_completa();
-    header('Location: index.php?sesion=1');
-    exit;
+    hay_redirect('index.php?sesion=1');
 }
 
 if (!empty($_GET['force_login'])) {
     hay_session_no_cache_headers();
     hay_session_destroy_completa();
-    header('Location: index.php?cookie_fix=1');
-    exit;
+    hay_redirect('index.php?cookie_fix=1');
 }
 
 if (!empty($_SESSION['user_id']) && empty($_GET['force_login']) && empty($_GET['sesion']) && empty($_GET['login'])) {
-    header('Location: dashboard.php');
-    exit;
+    hay_redirect('dashboard.php');
 }
 ?>
 <!DOCTYPE html>
@@ -134,6 +131,6 @@ if (!empty($_SESSION['user_id']) && empty($_GET['force_login']) && empty($_GET['
     </section>
 </div>
 
-<script src="js/login.js"></script>
+<script src="js/login.js?v=20261118c"></script>
 </body>
 </html>
