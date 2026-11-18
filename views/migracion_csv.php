@@ -95,6 +95,8 @@ $idPlantel = (int) plantel_id_activo();
         }
         echo $slugs !== [] ? implode(', ', $slugs) : 'configure planteles en HAY';
       ?>
+      — el CSV usa <code>plantel_slug</code> por fila (no el plantel de la sesión).
+      Si el slug no existe en HAY, esa fila falla en lugar de caer en la sede activa.
     </p>
     <p><strong>Claves especialidad (alumnos/grupos):</strong>
       <code>ING</code>, <code>ING-EXT</code>, <code>ING-K</code>, <code>COMP</code>/<code>COMP24</code>/<code>COMP25</code>,

@@ -114,24 +114,58 @@ function migracion_csv_leer_archivo(string $tmpPath): array
     return ['headers' => $headers, 'rows' => $rows];
 }
 
+/**
+ * Resuelve plantel por slug/nombre del CSV.
+ * El plantel de sesión ($forzarId) solo aplica si la fila no trae plantel_slug
+ * (antes se forzaba siempre y todos caían en la sede activa).
+ */
 function migracion_csv_resolver_plantel(PDO $pdo, string $slugOrName, ?int $forzarId = null): ?int
 {
+    $q = trim($slugOrName);
+    if ($q !== '') {
+        $candidates = array_values(array_unique(array_filter([
+            $q,
+            str_replace([' ', '-'], '_', strtolower($q)),
+            str_replace([' ', '_'], '-', strtolower($q)),
+        ], static fn ($v) => $v !== '')));
+
+        foreach ($candidates as $cand) {
+            $st = $pdo->prepare(
+                'SELECT id_plantel FROM planteles
+                 WHERE LOWER(slug) = LOWER(?) OR LOWER(nombre) = LOWER(?)
+                 ORDER BY id_plantel ASC LIMIT 1'
+            );
+            $st->execute([$cand, $cand]);
+            $id = $st->fetchColumn();
+            if ($id !== false) {
+                return (int) $id;
+            }
+        }
+
+        // Coincidencia parcial por slug o nombre (ej. irapuato_guerrero ≈ plantel_irapuato_guerrero)
+        foreach ($candidates as $cand) {
+            $st = $pdo->prepare(
+                'SELECT id_plantel FROM planteles
+                 WHERE LOWER(slug) LIKE LOWER(?) OR LOWER(nombre) LIKE LOWER(?)
+                 ORDER BY id_plantel ASC LIMIT 1'
+            );
+            $like = '%' . $cand . '%';
+            $st->execute([$like, $like]);
+            $id = $st->fetchColumn();
+            if ($id !== false) {
+                return (int) $id;
+            }
+        }
+
+        // Slug del CSV no existe: no silenciar con la sede de sesión
+        return null;
+    }
+
     if ($forzarId !== null && $forzarId > 0) {
         return $forzarId;
     }
-    $q = trim($slugOrName);
-    if ($q === '') {
-        return function_exists('plantel_id_activo') ? plantel_id_activo() : null;
-    }
-    $st = $pdo->prepare(
-        'SELECT id_plantel FROM planteles
-         WHERE LOWER(slug) = LOWER(?) OR LOWER(nombre) = LOWER(?) OR LOWER(nombre) LIKE LOWER(?)
-         ORDER BY id_plantel ASC LIMIT 1'
-    );
-    $st->execute([$q, $q, '%' . $q . '%']);
-    $id = $st->fetchColumn();
 
-    return $id === false ? null : (int) $id;
+    return function_exists('plantel_id_activo') ? plantel_id_activo() : null;
 }
 
 function migracion_csv_resolver_especialidad(PDO $pdo, string $clave): ?int
