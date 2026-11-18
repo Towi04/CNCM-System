@@ -85,6 +85,29 @@ try {
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
+        if ($tipoPreview === 'grupos') {
+            $offset = (int) ($_POST['offset'] ?? 0);
+            $limit = (int) ($_POST['limit'] ?? 50);
+            $res = migracion_csv_preview_grupos(
+                $pdo,
+                $_FILES['csv']['tmp_name'],
+                $idPlantel > 0 ? $idPlantel : null,
+                $offset,
+                $limit
+            );
+            echo json_encode([
+                'status' => !empty($res['ok']) ? 'ok' : 'error',
+                'message' => $res['message'] ?? '',
+                'headers' => $res['headers'] ?? [],
+                'total_filas' => $res['total_filas'] ?? 0,
+                'offset' => $res['offset'] ?? $offset,
+                'limit' => $res['limit'] ?? $limit,
+                'muestra' => $res['muestra'] ?? [],
+                'errores' => $res['errores'] ?? [],
+                'especialidades' => $res['especialidades'] ?? [],
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         $parsed = migracion_csv_leer_archivo($_FILES['csv']['tmp_name']);
         if (!empty($parsed['error'])) {
             echo json_encode(['status' => 'error', 'message' => $parsed['error']], JSON_UNESCAPED_UNICODE);
@@ -96,6 +119,8 @@ try {
             'headers' => $parsed['headers'],
             'total_filas' => count($parsed['rows']),
             'muestra' => $sample,
+            'offset' => 0,
+            'limit' => count($sample),
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -135,6 +160,34 @@ try {
                 $_FILES['csv']['tmp_name'],
                 $idPlantel > 0 ? $idPlantel : null,
                 true,
+                $overrides
+            );
+        } elseif ($tipo === 'grupos') {
+            $overrides = [];
+            $rawOv = trim((string) ($_POST['overrides'] ?? ''));
+            if ($rawOv !== '') {
+                $decoded = json_decode($rawOv, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $idLeg => $vals) {
+                        $key = trim((string) $idLeg);
+                        if ($key === '' || !is_array($vals)) {
+                            continue;
+                        }
+                        $overrides[$key] = [
+                            'clave_especialidad' => strtoupper(trim((string) ($vals['clave_especialidad'] ?? ''))),
+                        ];
+                    }
+                }
+            }
+            $parsed = migracion_csv_leer_archivo($_FILES['csv']['tmp_name']);
+            if (!empty($parsed['error'])) {
+                echo json_encode(['status' => 'error', 'message' => $parsed['error']], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $res = migracion_csv_importar_grupos(
+                $pdo,
+                $parsed['rows'],
+                $idPlantel > 0 ? $idPlantel : null,
                 $overrides
             );
         } else {
