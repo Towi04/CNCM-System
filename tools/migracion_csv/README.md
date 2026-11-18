@@ -67,8 +67,11 @@ Alumnos de ese grupo se inscriben en **ambas** materias (dual); después puede d
 ### 03_grupos
 
 De BD + edición: `clave_especialidad` (obligatoria en adultos; en kids basta `ING-K` o 2 filas repetidas),
-`aula_codigo`, `profesor_username` (si el sugerido no sirve), `dias_clase`, `hora_inicio`,
+`aula_codigo`, `profesor_sugerido` / `profesor_username`, `dias_clase`, `hora_inicio`,
 `fecha_inicio_estimada`, `clave_fase_estimada`.
+
+En HAY (Vista previa) el profesor se elige en un **desplegable**; por defecto queda el nombre más
+parecido al CSV (sin importar acentos/mayúsculas). Corrija ahí si el match es solo aproximado.
 
 Pareja kids con horarios distintos: duplicar la fila del mismo `id_grupo_legado`/`clave_legado`
 (1ª = inglés, 2ª = cómputo) cambiando `hora_inicio`, `dias_clase` y/o `aula_codigo`.
