@@ -111,13 +111,43 @@ function hay_request_is_https(): bool
 
     }
 
-    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string) $_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') {
-
-        return true;
-
+    $fwd = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+    if ($fwd !== '') {
+        // Puede venir "https,http"
+        if (str_contains($fwd, 'https')) {
+            return true;
+        }
     }
 
+    if (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower((string) $_SERVER['HTTP_X_FORWARDED_SSL']) === 'on') {
+        return true;
+    }
 
+    if (!empty($_SERVER['HTTP_FRONT_END_HTTPS']) && strtolower((string) $_SERVER['HTTP_FRONT_END_HTTPS']) !== 'off') {
+        return true;
+    }
+
+    if (!empty($_SERVER['REQUEST_SCHEME']) && strtolower((string) $_SERVER['REQUEST_SCHEME']) === 'https') {
+        return true;
+    }
+
+    // Referer/Origin del formulario de login (si el proxy no pasó X-Forwarded-Proto)
+    foreach (['HTTP_ORIGIN', 'HTTP_REFERER'] as $hdr) {
+        $v = (string) ($_SERVER[$hdr] ?? '');
+        if (stripos($v, 'https://') === 0) {
+            return true;
+        }
+    }
+
+    if (defined('HAY_FORCE_HTTPS') && HAY_FORCE_HTTPS) {
+        return true;
+    }
+
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host !== '' && (str_ends_with($host, '.cncm.edu.mx') || $host === 'cncm.edu.mx')) {
+        // Producción/pruebas siempre van por TLS en esos hosts
+        return true;
+    }
 
     return isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443;
 
@@ -563,12 +593,21 @@ function hay_session_no_cache_headers(): void
 }
 
 /**
- * URL absoluta (https://host/ruta) para Location post-login.
- * Usa el mismo criterio de ruta que la cookie de sesión.
+ * Ruta absoluta en el host ( /dashboard.php ), sin esquema.
+ * Preferible en Location: mantiene https tras TLS termination.
  */
-function hay_absolute_url(string $pathFromAppRoot): string
+function hay_app_path(string $pathFromAppRoot): string
 {
     $pathFromAppRoot = str_replace('\\', '/', $pathFromAppRoot);
+    if (preg_match('#^https?://#i', $pathFromAppRoot)) {
+        $parts = parse_url($pathFromAppRoot);
+        $path = (string) ($parts['path'] ?? '/');
+        $query = isset($parts['query']) ? ('?' . $parts['query']) : '';
+        $frag = isset($parts['fragment']) ? ('#' . $parts['fragment']) : '';
+
+        return $path . $query . $frag;
+    }
+
     $qPos = strpos($pathFromAppRoot, '?');
     $hashPos = strpos($pathFromAppRoot, '#');
     $cut = strlen($pathFromAppRoot);
@@ -581,10 +620,6 @@ function hay_absolute_url(string $pathFromAppRoot): string
     $pathOnly = substr($pathFromAppRoot, 0, $cut);
     $suffix = substr($pathFromAppRoot, $cut);
 
-    if (preg_match('#^https?://#i', $pathOnly)) {
-        return $pathFromAppRoot;
-    }
-
     $base = hay_app_cookie_path();
     if ($base === '/' || $base === '') {
         $urlPath = '/' . ltrim($pathOnly, '/');
@@ -593,30 +628,92 @@ function hay_absolute_url(string $pathFromAppRoot): string
     }
     $urlPath = preg_replace('#/+#', '/', $urlPath) ?: '/';
 
+    return $urlPath . $suffix;
+}
+
+/**
+ * URL absoluta (https://host/ruta) para enlaces/meta refresh.
+ */
+function hay_absolute_url(string $pathFromAppRoot): string
+{
+    if (preg_match('#^https?://#i', $pathFromAppRoot)) {
+        return $pathFromAppRoot;
+    }
+
+    $urlPath = hay_app_path($pathFromAppRoot);
     $https = function_exists('hay_request_is_https') ? hay_request_is_https() : false;
     $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
     $scheme = $https ? 'https' : 'http';
 
-    return $scheme . '://' . $host . $urlPath . $suffix;
+    return $scheme . '://' . $host . $urlPath;
+}
+
+function hay_wants_json_response(): bool
+{
+    $xrw = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    if ($xrw === 'fetch' || $xrw === 'xmlhttprequest') {
+        return true;
+    }
+    $accept = strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? ''));
+    if (str_contains($accept, 'application/json')) {
+        return true;
+    }
+    if (!empty($_POST['ajax']) || !empty($_GET['ajax'])) {
+        return true;
+    }
+
+    return false;
 }
 
 /**
- * Redirect PRG (303) con Location absoluto + HTML de respaldo (evita pantalla en blanco
- * si el cliente no sigue bien un 302 vacío tras POST de login).
+ * Redirect tras login.
+ * - Si el cliente pidió JSON (fetch del formulario): 200 + {redirect:"/..."}.
+ * - Si no: Location en ruta del host + HTML/JS (los 303 tras POST a veces no
+ *   navegan y dejan la barra en /php/login_process.php en blanco).
  */
 function hay_redirect(string $pathFromAppRoot, int $status = 303): void
 {
-    $url = hay_absolute_url($pathFromAppRoot);
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
+
+    $path = hay_app_path($pathFromAppRoot);
+    $abs = hay_absolute_url($pathFromAppRoot);
+    $isError = str_contains($path, 'error=') || str_contains($path, 'sesion=');
+
+    if (hay_wants_json_response()) {
+        if (!headers_sent()) {
+            hay_session_no_cache_headers();
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(200);
+        }
+        echo json_encode([
+            'status' => $isError ? 'error' : 'ok',
+            'redirect' => $path,
+            'redirect_abs' => $abs,
+            'message' => $isError ? 'Requiere atención' : 'OK',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     if (!headers_sent()) {
         hay_session_no_cache_headers();
-        header('Location: ' . $url, true, $status);
+        // Ruta relativa al host: el navegador conserva https://…
+        header('Location: ' . $path, true, $status);
         header('Content-Type: text/html; charset=utf-8');
     }
-    $safe = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+
+    $safePath = htmlspecialchars($path, ENT_QUOTES, 'UTF-8');
+    $safeAbs = htmlspecialchars($abs, ENT_QUOTES, 'UTF-8');
+    $jsPath = json_encode($path, JSON_UNESCAPED_SLASHES);
     echo '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
-        . '<meta http-equiv="refresh" content="0;url=' . $safe . '">'
-        . '<title>Redirigiendo…</title></head><body>'
-        . '<p>Redirigiendo… <a href="' . $safe . '">Continuar</a></p>'
+        . '<meta http-equiv="refresh" content="0;url=' . $safePath . '">'
+        . '<title>Redirigiendo…</title>'
+        . '<script>try{location.replace(' . $jsPath . ');}catch(e){location.href=' . $jsPath . ';}</script>'
+        . '</head><body style="font-family:system-ui,sans-serif;padding:2rem;background:#fff;color:#111;">'
+        . '<p>Entrando al panel…</p>'
+        . '<p><a href="' . $safePath . '">Continuar</a>'
+        . ' · <a href="' . $safeAbs . '">Abrir panel</a></p>'
         . '</body></html>';
     exit;
 }

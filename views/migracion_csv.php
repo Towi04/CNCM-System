@@ -107,6 +107,18 @@ $idPlantel = (int) plantel_id_activo();
       <code>clave_especialidad</code> antes de Importar. El grupo se crea con <strong>clave HAY nueva</strong>
       (directrices del plantel) y el legado queda en <code>clave_anterior</code> + mapa <code>hay_migracion_csv_map</code>.
     </p>
+    <p><strong>Kids (IK+CK):</strong> una sola clave legado en el sistema anterior. En el CSV puede:
+      (1) poner <code>ING-K</code>/<code>infantil=1</code> en una fila → HAY crea la pareja y parte el bloque en
+      <em>2 h inglés + 2 h cómputo</em> el mismo día; o
+      (2) <strong>repetir</strong> el mismo <code>id_grupo_legado</code>/<code>clave_legado</code> en 2 filas
+      (1ª = inglés, 2ª = computación) con su <code>hora_inicio</code>, <code>dias_clase</code> y
+      <code>aula_codigo</code> distintos — mismo número HAY, horarios/aulas independientes.
+      Ej. sábado 08:00 aula1 + 10:00 lab; o lunes 15:00 + miércoles 15:00.
+    </p>
+    <p><strong>Profesor:</strong> en Vista previa elija el docente en el desplegable. Por defecto se
+      preselecciona el nombre HAY más parecido al del CSV (ignora acentos, mayúsculas y orden de
+      apellidos). Revise los marcados como <code>aproximado</code> o <code>sin_match</code>.
+    </p>
   </div>
 </div>
 
@@ -128,4 +140,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118b'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118e'), ENT_QUOTES, 'UTF-8'); ?>"></script>
