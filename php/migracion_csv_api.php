@@ -542,6 +542,15 @@ try {
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
+        $idSucursalLegado = (int) ($_POST['id_sucursal'] ?? 0);
+        if ($idSucursalLegado <= 0) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Elija la sucursal legado en el desplegable (de dónde leer los pagos). '
+                    . 'No hace falta que el nombre coincida con el plantel HAY.',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         $offset = max(0, (int) ($_POST['offset'] ?? 0));
         $lote = (int) ($_POST['lote'] ?? 40);
         $res = migracion_csv_importar_pagos_desde_legado(
@@ -549,7 +558,8 @@ try {
             $ncs,
             $idPlantel > 0 ? $idPlantel : null,
             $offset,
-            $lote
+            $lote,
+            $idSucursalLegado
         );
         echo json_encode([
             'status' => !empty($res['ok']) ? 'ok' : 'error',

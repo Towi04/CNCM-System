@@ -116,11 +116,10 @@ correo institucional).
 
 `numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`, `folio`. Colegiatura congelada se define después en HAY.
 
-**Recomendado:** con el **plantel activo** correcto, pegue `numero_control` (o suba
-el CSV / marque «usar alumnos ya mapeados») y pulse **Migrar pagos del legado**.
-El NC **no es único entre planteles**: solo se resuelven alumnos de la sucursal legado
-que coincide con ese plantel. Los ya migrados se omiten por `id_pago_legado`.
-El cobrador («Recibió») viene de `id_recibio` del legado.
+**Recomendado:** plantel HAY activo + **sucursal legado en el desplegable** (aunque el
+nombre no coincida) + `numero_control` (CSV / mapeados) → **Migrar pagos del legado**.
+El NC no es único entre planteles: solo se leen alumnos de la sucursal elegida.
+Los ya migrados se omiten por `id_pago_legado`. El cobrador viene de `id_recibio`.
 
 Para borrar pagos migrados de un plantel y reimportar:
 

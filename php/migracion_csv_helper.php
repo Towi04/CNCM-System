@@ -2796,7 +2796,8 @@ function migracion_csv_importar_pagos_desde_legado(
     array $numerosControl,
     ?int $idPlantel = null,
     int $offset = 0,
-    int $loteNc = 40
+    int $loteNc = 40,
+    ?int $idSucursalLegado = null
 ): array {
     if (!migracion_csv_puede()) {
         return ['ok' => false, 'message' => 'No autorizado'];
@@ -2817,7 +2818,7 @@ function migracion_csv_importar_pagos_desde_legado(
     if ($idPlantel === null || $idPlantel <= 0) {
         return [
             'ok' => false,
-            'message' => 'Seleccione el plantel: el número de control se repite entre planteles '
+            'message' => 'Seleccione el plantel HAY de destino: el número de control se repite entre planteles '
                 . '(p. ej. 100 en Guerrero ≠ 100 en Celaya)',
         ];
     }
@@ -2841,12 +2842,15 @@ function migracion_csv_importar_pagos_desde_legado(
     /** @var PDO $pdoLeg */
     $pdoLeg = $conn['pdo'];
 
-    $idSucursal = migracion_csv_resolver_sucursal_legado($pdoHay, $pdoLeg, $idPlantel);
+    // Preferir sucursal elegida en el desplegable (nombres HAY≠legado); fallback por slug
+    $idSucursal = ($idSucursalLegado !== null && $idSucursalLegado > 0)
+        ? $idSucursalLegado
+        : migracion_csv_resolver_sucursal_legado($pdoHay, $pdoLeg, $idPlantel);
     if ($idSucursal === null || $idSucursal <= 0) {
         return [
             'ok' => false,
-            'message' => 'No se pudo relacionar el plantel HAY con una sucursal del legado. '
-                . 'Revise que el slug/nombre del plantel coincida con la sucursal legado.',
+            'message' => 'Elija la sucursal legado en el desplegable (los nombres no tienen que coincidir '
+                . 'con el plantel HAY).',
         ];
     }
 
