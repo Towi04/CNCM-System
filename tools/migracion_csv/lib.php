@@ -777,13 +777,14 @@ function migcsv_export_alumnos(PDO $pdo, array $idsGrupos): array
 }
 
 /**
- * Resuelve ids de alumnos legado. Por defecto cada línea numérica = id_alumno_legado.
- * Use prefijo nc:2501001 para buscar por número de control.
+ * Resuelve ids de alumnos legado.
+ * Por defecto cada línea = número de control (también si es numérico).
+ * Prefijo id:123 = id interno legado; nc:2501001 = NC explícito.
  *
  * @param list<int|string> $filtro
  * @return list<int>
  */
-function migcsv_resolver_ids_alumnos(PDO $pdo, array $filtro): array
+function migcsv_resolver_ids_alumnos(PDO $pdo, array $filtro, bool $preferirNumeroControl = true): array
 {
     if ($filtro === [] || !migcsv_table_exists($pdo, 'alumnos')) {
         return [];
@@ -795,17 +796,26 @@ function migcsv_resolver_ids_alumnos(PDO $pdo, array $filtro): array
         if ($s === '' || str_starts_with($s, '#')) {
             continue;
         }
-        if (str_starts_with(strtolower($s), 'nc:')) {
+        $low = strtolower($s);
+        if (str_starts_with($low, 'id:')) {
+            $id = (int) trim(substr($s, 3));
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+            continue;
+        }
+        if (str_starts_with($low, 'nc:')) {
             $nc = trim(substr($s, 3));
             if ($nc !== '') {
                 $ncs[] = $nc;
             }
             continue;
         }
-        if (ctype_digit($s)) {
+        if (!$preferirNumeroControl && ctype_digit($s)) {
             $ids[] = (int) $s;
             continue;
         }
+        // Número de control (aunque sea solo dígitos)
         $ncs[] = $s;
     }
     $out = $ids;
@@ -855,9 +865,9 @@ function migcsv_export_pagos(PDO $pdo, array $idsGrupos): array
 }
 
 /**
- * Pagos filtrados solo por id_alumno_legado (sin pasar por grupos).
+ * Pagos filtrados por alumnos ya resueltos (típicamente vía numero_control).
  *
- * @param list<int> $idsAlumnos
+ * @param list<int> $idsAlumnos ids internos legado
  * @return list<array<string, mixed>>
  */
 function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array

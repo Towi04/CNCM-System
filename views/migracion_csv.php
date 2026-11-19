@@ -51,7 +51,7 @@ if (function_exists('plantel_list')) {
     <button type="button" class="secondary" id="migcsv-template" title="Descargar CSV de ejemplo del tipo seleccionado">
       <i class="fas fa-download"></i> <span id="migcsv-template-label">CSV de ejemplo</span>
     </button>
-    <button type="button" class="secondary" id="migcsv-provision" title="Google Workspace + Moodle para registros mapeados">
+    <button type="button" class="secondary" id="migcsv-provision" title="Tras confirmar alumnos: crea HAY + Google + Moodle de lo mapeado">
       <i class="fas fa-user-plus"></i> Re-provisionar mapeados
     </button>
     <button type="button" class="secondary" id="migcsv-revertir-grupos" title="Borra grupos del plantel (mapa o TODOS) y reinicia el contador de claves" style="border-color:#c47b00; color:#8a5a00;">
@@ -68,10 +68,10 @@ if (function_exists('plantel_list')) {
         <textarea id="migcsv-filtro" rows="4" placeholder="IKCF0085&#10;IKCF0098&#10;IS100" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
       </div>
       <div class="field" style="flex:1; min-width:220px;">
-        <label for="migcsv-filtro-alumnos">Alumnos para pagos (<code>id_alumno_legado</code>)</label>
-        <textarea id="migcsv-filtro-alumnos" rows="4" placeholder="9001&#10;9002&#10;9003" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
+        <label for="migcsv-filtro-alumnos">Alumnos para pagos (<code>numero_control</code>)</label>
+        <textarea id="migcsv-filtro-alumnos" rows="4" placeholder="2501001&#10;2501002&#10;2501003" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
         <label style="margin-top:6px; font-size:0.8rem; color:#666;">
-          O cargar CSV de alumnos:
+          O cargar CSV de alumnos (columna <code>numero_control</code>):
           <input type="file" id="migcsv-filtro-alumnos-file" accept=".csv,text/csv" style="display:block; margin-top:4px; font-size:0.8rem;">
         </label>
       </div>
@@ -87,8 +87,8 @@ if (function_exists('plantel_list')) {
     </div>
     <p style="margin:10px 0 0; color:#777; font-size:0.85rem;">
       Requiere <code>LEGACY_DB_*</code>. Grupos/alumnos: pegue las <strong>claves</strong> de grupo
-      (como en el legado). Pagos: basta pegar <code>id_alumno_legado</code>
-      (o subir el CSV de alumnos ya descargado).
+      (como en el legado). Pagos: pegue <code>numero_control</code>
+      (o suba el CSV de alumnos ya descargado; se lee esa columna).
     </p>
   </div>
 
@@ -130,12 +130,18 @@ if (function_exists('plantel_list')) {
       <strong>Alumnos:</strong> no se migran solos con los grupos. Use el <em>mismo</em> filtro
       de <code>clave_legado</code> con el que importó <code>03_grupos</code>, descargue
       <code>04_alumnos</code> → Vista previa (<code>grupo_estado</code>) → Importar.
-      El enlace es por <strong>clave de grupo</strong>. Si falta una clave en el mapa, vuelva a
+      El enlace es por <strong>clave de grupo</strong>. El <code>numero_control</code> del legado
+      se respeta tal cual en HAY. Si falta una clave en el mapa, vuelva a
       descargar/importar <code>03_grupos</code> incluyendo esa clave.
     </p>
+    <p style="margin:0 0 8px; color:#777;">
+      La importación de alumnos <strong>no</strong> crea Google Workspace ni Moodle:
+      solo ficha HAY + vínculo a grupo. Cuando confirme que todo está bien, use
+      <em>Re-provisionar mapeados</em> (usuario HAY + Google + Moodle con el NC).
+    </p>
     <p style="margin:0; color:#777;">
-      Al importar alumnos se crea (si falta) usuario HAY + Google + Moodle
-      (mismas reglas: NC / correo institucional).
+      <strong>Pagos:</strong> filtre y exporte por <code>numero_control</code>
+      (no hace falta <code>id_alumno_legado</code>). Puede pegar NCs o subir el CSV de alumnos.
     </p>
   </div>
 </div>

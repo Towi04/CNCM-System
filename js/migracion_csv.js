@@ -499,7 +499,11 @@
     } else if (tipo === 'grupos') {
       aviso = '¿Importar grupos?\nSe crearán con clave HAY nueva según la especialidad (CSV o la que eligió en la tabla).\nEl profesor será el del desplegable (por defecto el más parecido al CSV).\nLa clave_legado se guarda en clave_anterior y en el mapa de migración (el id interno es opcional).';
     } else if (tipo === 'alumnos') {
-      aviso = '¿Importar alumnos?\nSe vincularán a los grupos ya migrados por clave_legado y se creará (si falta) usuario HAY, correo Google Workspace y Moodle con las mismas reglas del sistema (NC como usuario / correo institucional).';
+      aviso =
+        '¿Importar alumnos (solo ficha HAY + vínculo a grupo)?\n\n' +
+        'NO se crearán aún usuarios en Google Workspace ni Moodle.\n' +
+        'Cuando revise que todo esté correcto, use «Re-provisionar mapeados».\n' +
+        'El número de control del CSV se respeta tal cual.';
     }
     if (!confirm(aviso)) return;
     const fd = new FormData();
@@ -507,12 +511,20 @@
     fd.append('tipo', tipo);
     fd.append('id_plantel', String(idPlantel));
     fd.append('csv', file);
+    if (tipo === 'alumnos') {
+      fd.append('provisionar', '0');
+    }
     if (tipo === 'staff_emails') {
       fd.append('overrides', JSON.stringify(overrides));
     } else if (tipo === 'grupos') {
       fd.append('overrides', JSON.stringify(grupoOverrides));
     }
-    setBusy(true, 'Importando… (Google/Moodle por fila). Espere; en Network debe aparecer migracion_csv_api.php');
+    setBusy(
+      true,
+      tipo === 'alumnos'
+        ? 'Importando alumnos (sin Google/Moodle)…'
+        : 'Importando… Espere; en Network debe aparecer migracion_csv_api.php'
+    );
     try {
       const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
       const data = await r.json();
@@ -577,8 +589,8 @@
     } catch (e) { /* ignore */ }
   });
 
-  /** Extrae id_alumno_legado de un CSV (columna o única columna). */
-  function extractIdsAlumnoFromCsvText(text) {
+  /** Extrae numero_control (o id_alumno_legado) de un CSV. */
+  function extractNumerosControlFromCsvText(text) {
     const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim() !== '');
     if (!lines.length) return [];
     const parseRow = (line) => {
@@ -601,12 +613,13 @@
       out.push(cur.trim());
       return out;
     };
-    const header = parseRow(lines[0]).map((h) => h.toLowerCase());
-    let col = header.indexOf('id_alumno_legado');
+    const header = parseRow(lines[0]).map((h) => h.toLowerCase().replace(/^\ufeff/, ''));
+    let col = header.indexOf('numero_control');
+    if (col < 0) col = header.indexOf('id_alumno_legado');
     let start = 1;
     if (col < 0) {
-      // Sin encabezado: una columna de ids
-      if (header.length === 1 && /^\d+$/.test(header[0])) {
+      // Sin encabezado: una columna de NC
+      if (header.length === 1 && header[0] !== '') {
         col = 0;
         start = 0;
       } else {
@@ -618,7 +631,7 @@
     for (let i = start; i < lines.length; i++) {
       const cols = parseRow(lines[i]);
       const v = String(cols[col] || '').trim();
-      if (!v || !/^\d+$/.test(v) || seen[v]) continue;
+      if (!v || seen[v]) continue;
       seen[v] = true;
       ids.push(v);
     }
@@ -630,9 +643,9 @@
     if (!file) return;
     try {
       const text = await file.text();
-      const ids = extractIdsAlumnoFromCsvText(text);
+      const ids = extractNumerosControlFromCsvText(text);
       if (!ids.length) {
-        showMsg('No se encontró columna id_alumno_legado en el CSV.', false);
+        showMsg('No se encontró columna numero_control (ni id_alumno_legado) en el CSV.', false);
         return;
       }
       const ta = $('migcsv-filtro-alumnos');
@@ -642,7 +655,7 @@
           localStorage.setItem(FILTRO_AL_KEY, ta.value);
         } catch (e) { /* ignore */ }
       }
-      showMsg('Cargados ' + ids.length + ' id_alumno_legado desde ' + file.name, true);
+      showMsg('Cargados ' + ids.length + ' número(s) de control desde ' + file.name, true);
     } catch (e) {
       showMsg('No se pudo leer el CSV de alumnos.', false);
     }
@@ -658,7 +671,7 @@
       return;
     }
     if (tipo === 'pagos' && !filtroAl && !filtro) {
-      showMsg('Para pagos pegue id_alumno_legado (o suba el CSV de alumnos), o use el filtro de grupos.', false);
+      showMsg('Para pagos pegue numero_control (o suba el CSV de alumnos), o use el filtro de grupos.', false);
       return;
     }
     try {
@@ -678,7 +691,11 @@
   });
 
   $('migcsv-provision')?.addEventListener('click', async () => {
-    if (!confirm('¿Crear correos institucionales (si faltan) y usuarios Moodle para lo ya importado (plantel actual)?')) return;
+    if (!confirm(
+      '¿Crear/actualizar cuentas externas de lo ya mapeado (alumnos y staff)?\n\n' +
+      'Alumnos: usuario HAY + Google Workspace + Moodle (NC como usuario).\n' +
+      'Hágalo solo cuando haya revisado que los alumnos importados están correctos.'
+    )) return;
     const fd = new FormData();
     fd.append('action', 'provision');
     fd.append('id_plantel', String(idPlantel));
