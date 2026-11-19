@@ -40,9 +40,18 @@
     return msg || 'No se pudo iniciar el lector';
   }
 
+  /** Evita apilar listeners en WebApi (cada startAcquisition re-adjuntaba y duplicaba checadas). */
+  function clearWebApiHandlers() {
+    if (!reader?.off) return;
+    try {
+      reader.off();
+    } catch (_) { /* ignore */ }
+  }
+
   function attachHandlers() {
     const r = getReader();
     if (!r) return;
+    clearWebApiHandlers();
     Object.keys(handlers).forEach((event) => {
       const fn = handlers[event];
       if (typeof fn === 'function') {
@@ -53,8 +62,8 @@
 
   function on(event, handler) {
     handlers[event] = handler;
-    const r = getReader();
-    if (r) r.on(event, handler);
+    // Re-adjuntar el mapa completo (sin apilar el mismo evento).
+    attachHandlers();
     return api;
   }
 
@@ -64,10 +73,9 @@
     } else {
       Object.keys(handlers).forEach((k) => delete handlers[k]);
     }
-    if (reader?.off) {
-      try {
-        reader.off(event);
-      } catch (_) { /* ignore */ }
+    clearWebApiHandlers();
+    if (event) {
+      attachHandlers();
     }
     return api;
   }

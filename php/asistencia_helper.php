@@ -416,6 +416,8 @@ function asistencia_registrar_huella_personal(
 ): array {
     $fecha = date('Y-m-d', strtotime($fechaHora));
     $hora = date('H:i:s', strtotime($fechaHora));
+    // Evita entrada→salida inmediato por doble evento del lector (mín. 2 min).
+    $minutosEntreEntradaSalida = 2;
 
     $ex = $pdo->prepare('SELECT id, hora_llegada, hora_salida FROM asistencia_personal WHERE id_usuario = ? AND fecha = ? LIMIT 1');
     $ex->execute([$idUsuario, $fecha]);
@@ -434,8 +436,31 @@ function asistencia_registrar_huella_personal(
     }
 
     if ($row && !empty($row['hora_llegada']) && empty($row['hora_salida'])) {
+        $tsEntrada = strtotime($fecha . ' ' . $row['hora_llegada']);
+        $tsAhora = strtotime($fechaHora);
+        if ($tsEntrada && $tsAhora && ($tsAhora - $tsEntrada) < ($minutosEntreEntradaSalida * 60)) {
+            return [
+                'ok' => true,
+                'message' => 'Entrada ya registrada',
+                'tipo' => 'entrada',
+                'duplicado' => true,
+            ];
+        }
         $pdo->prepare('UPDATE asistencia_personal SET hora_salida = ? WHERE id = ?')->execute([$hora, $row['id']]);
         return ['ok' => true, 'message' => 'Salida registrada (segunda checada)', 'tipo' => 'salida'];
+    }
+
+    if ($row && !empty($row['hora_llegada']) && !empty($row['hora_salida'])) {
+        $tsSalida = strtotime($fecha . ' ' . $row['hora_salida']);
+        $tsAhora = strtotime($fechaHora);
+        if ($tsSalida && $tsAhora && ($tsAhora - $tsSalida) < ($minutosEntreEntradaSalida * 60)) {
+            return [
+                'ok' => true,
+                'message' => 'Salida ya registrada',
+                'tipo' => 'salida',
+                'duplicado' => true,
+            ];
+        }
     }
 
     $pdo->prepare(
@@ -473,6 +498,10 @@ function asistencia_procesar_codigo_huella(
     $idEvento = (int) $pdo->lastInsertId();
 
     $ref = null;
+    $withEvento = static function (array $payload) use ($idEvento): array {
+        $payload['id_evento'] = $idEvento;
+        return $payload;
+    };
     if ($identHint && !empty($identHint['id_referencia']) && !empty($identHint['tipo'])) {
         $tipoHint = (string) $identHint['tipo'];
         if ($tipoHint === 'personal' || $tipoHint === 'usuario') {
@@ -494,7 +523,7 @@ function asistencia_procesar_codigo_huella(
     }
     if (!$ref) {
         asistencia_log_evento($pdo, $idEvento, 'desconocido', null, 0, 'Código no reconocido');
-        return ['ok' => false, 'message' => 'Huella no reconocida en el sistema'];
+        return $withEvento(['ok' => false, 'message' => 'Huella no reconocida en el sistema']);
     }
 
     if ($ref['tipo'] === 'alumno') {
@@ -502,10 +531,10 @@ function asistencia_procesar_codigo_huella(
         $idGrupo = asistencia_resolver_grupo_activo($pdo, $idAlumno, $idPlantel, $fechaHora);
         if (!$idGrupo) {
             asistencia_log_evento($pdo, $idEvento, 'alumno', $idAlumno, 0, 'Sin grupo activo');
-            return [
+            return $withEvento([
                 'ok' => false,
                 'message' => 'El alumno no tiene un grupo activo asignado. Verifique inscripción al grupo en el sistema.',
-            ];
+            ]);
         }
         $origen = $canal === 'movil' ? 'movil' : 'huella';
         $res = asistencia_registrar_huella_alumno($pdo, $idAlumno, $idGrupo, $idPlantel, $fechaHora, $origen);
@@ -513,29 +542,29 @@ function asistencia_procesar_codigo_huella(
         $res['id_alumno'] = $idAlumno;
         $res['id_grupo'] = $idGrupo;
         $res['nombre'] = $ref['nombre'] ?? '';
-        return $res;
+        return $withEvento($res);
     }
 
     // Personal: solo lector fijo en plantel (no celular del propio profesor)
     if ($canal === 'movil') {
         asistencia_log_evento($pdo, $idEvento, 'personal', (int) $ref['id_referencia'], 0, 'Personal no permitido desde móvil');
-        return [
+        return $withEvento([
             'ok' => false,
             'message' => 'La asistencia del personal solo se registra en el lector del plantel o por dirección.',
-        ];
+        ]);
     }
 
     $idUser = (int) $ref['id_referencia'];
     if ($idOperador > 0 && $idOperador === $idUser && $canal !== 'lector_fijo') {
         asistencia_log_evento($pdo, $idEvento, 'personal', $idUser, 0, 'Auto-registro bloqueado');
-        return ['ok' => false, 'message' => 'No puede registrar su propia asistencia desde este dispositivo.'];
+        return $withEvento(['ok' => false, 'message' => 'No puede registrar su propia asistencia desde este dispositivo.']);
     }
 
     $res = asistencia_registrar_huella_personal($pdo, $idUser, $idPlantel, $fechaHora);
     asistencia_log_evento($pdo, $idEvento, 'personal', $idUser, 1, $res['message']);
     $res['id_usuario'] = $idUser;
     $res['nombre'] = $ref['nombre'] ?? '';
-    return $res;
+    return $withEvento($res);
 }
 
 /** @return array{tipo:string,id_referencia:int,nombre:string}|null */
