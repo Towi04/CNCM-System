@@ -63,13 +63,14 @@ $dias = asistencia_lista_pdf_dias_grupo($pdo, $grupo);
 $semanas = asistencia_lista_pdf_semanas($semanaInicio, $totalSemanas);
 $alumnos = asistencia_lista_pdf_alumnos($pdo, $idGrupo);
 $logoDataUri = asistencia_lista_pdf_logo_data_uri($pdo, $idPlantel, $grupo);
-$html = asistencia_lista_pdf_html($grupo, $alumnos, $dias, $semanas, $incluirTelefonos, $logoDataUri);
 $filename = 'lista_asistencia_' . preg_replace('/[^A-Za-z0-9_-]+/', '_', (string) ($grupo['clave'] ?? $idGrupo)) . '.pdf';
 
 $autoload = dirname(__DIR__) . '/vendor/autoload.php';
 if (is_file($autoload)) {
     require_once $autoload;
     if (class_exists('Dompdf\\Dompdf') && class_exists('Dompdf\\Options')) {
+        // Sin barra de impresión: Dompdf la dibuja como imagen estática en el PDF
+        $htmlPdf = asistencia_lista_pdf_html($grupo, $alumnos, $dias, $semanas, $incluirTelefonos, $logoDataUri, false);
         $options = new Dompdf\Options();
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
@@ -78,7 +79,7 @@ if (is_file($autoload)) {
             $options->setChroot(HAY_ROOT);
         }
         $dompdf = new Dompdf\Dompdf($options);
-        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->loadHtml($htmlPdf, 'UTF-8');
         // Siempre horizontal (carta apaisada)
         $dompdf->setPaper('letter', 'landscape');
         $dompdf->render();
@@ -90,6 +91,8 @@ if (is_file($autoload)) {
     }
 }
 
+// Fallback HTML (sin Dompdf): sí mostrar botón de imprimir
+$html = asistencia_lista_pdf_html($grupo, $alumnos, $dias, $semanas, $incluirTelefonos, $logoDataUri, true);
 header('Content-Type: text/html; charset=UTF-8');
 echo $html;
 
@@ -307,7 +310,8 @@ function asistencia_lista_pdf_html(
     array $dias,
     array $semanas,
     bool $incluirTelefonos,
-    string $logoDataUri = ''
+    string $logoDataUri = '',
+    bool $mostrarBarraImpresion = false
 ): string {
     $numCols = count($dias) * count($semanas);
     $minRows = max(14, count($alumnos));
@@ -318,8 +322,8 @@ function asistencia_lista_pdf_html(
     $direccion = trim((string) ($grupo['plantel_direccion'] ?? ''));
     $cct = trim((string) ($grupo['cct_lista'] ?? ''));
     $rvoe = trim((string) ($grupo['rvoe_lista'] ?? ''));
-    $cellWidth = max(8, min(24, (int) floor(620 / max(1, $numCols))));
-    $nombreWidth = $incluirTelefonos ? 130 : 210;
+    // Celdas de asistencia fijas y compactas; NC/nombre/tel se ajustan al texto (1 línea)
+    $cellWidth = max(10, min(18, (int) floor(480 / max(1, $numCols))));
 
     ob_start();
     ?>
@@ -332,7 +336,7 @@ function asistencia_lista_pdf_html(
     @page { size: Letter landscape; margin: 8mm; }
     * { box-sizing: border-box; }
     html, body { width: 100%; }
-    body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; color:#111; margin:0; font-size:9.5px; }
+    body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; color:#111; margin:0; font-size:9px; }
     .no-print { text-align:center; margin: 0 0 10px; }
     .no-print button { padding:8px 14px; cursor:pointer; }
     .sheet { width:100%; }
@@ -347,15 +351,15 @@ function asistencia_lista_pdf_html(
     .head-left, .head-right { display:table-cell; width:50%; vertical-align:top; }
     .head strong { font-weight:700; }
     .materia { margin: 2px 0 5px; font-size:11px; }
-    table.lista { width:100%; border-collapse:collapse; table-layout:fixed; }
-    table.lista th, table.lista td { border:1px solid #222; padding:2px 3px; vertical-align:middle; }
+    table.lista { width:100%; border-collapse:collapse; table-layout:auto; }
+    table.lista th, table.lista td { border:1px solid #222; padding:2px 4px; vertical-align:middle; white-space:nowrap; }
     table.lista th { font-weight:700; text-align:center; background:#f7f7f7; }
-    table.lista td { height:18px; }
-    th.num, td.num { width:22px; text-align:center; }
-    th.ctrl, td.ctrl { width:48px; text-align:center; }
-    th.tel, td.tel { width:58px; font-size:8px; }
-    th.nombre, td.nombre { width: <?php echo (int) $nombreWidth; ?>px; text-align:left; }
-    th.asist, td.asist { width: <?php echo $cellWidth; ?>px; text-align:center; padding:0; }
+    table.lista td { height:17px; }
+    th.num, td.num { width:1%; text-align:center; white-space:nowrap; }
+    th.ctrl, td.ctrl { width:1%; text-align:center; white-space:nowrap; font-size:8.5px; }
+    th.tel, td.tel { width:1%; font-size:8px; white-space:nowrap; }
+    th.nombre, td.nombre { text-align:left; white-space:nowrap; font-size:8.5px; }
+    th.asist, td.asist { width: <?php echo $cellWidth; ?>px; min-width: <?php echo $cellWidth; ?>px; max-width: <?php echo $cellWidth; ?>px; text-align:center; padding:0; white-space:nowrap; }
     .obs { margin-top:8px; font-size:11px; }
     .obs-line { border-bottom:1px solid #111; height:16px; }
     .foot { margin-top:8px; text-align:center; font-size:10px; line-height:1.25; }
@@ -368,10 +372,12 @@ function asistencia_lista_pdf_html(
   </style>
 </head>
 <body>
+  <?php if ($mostrarBarraImpresion): ?>
   <div class="no-print">
     <p style="margin:0 0 8px;color:#555;">Orientación: <strong>horizontal (apaisada)</strong>. Si el diálogo de impresión muestra vertical, cámbielo a horizontal.</p>
     <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
   </div>
+  <?php endif; ?>
   <div class="sheet">
     <div class="brand">
       <div class="brand-logo">
@@ -404,8 +410,8 @@ function asistencia_lista_pdf_html(
       <thead>
         <tr>
           <th class="num" rowspan="2">N°</th>
-          <th class="nombre" rowspan="2">Nombre</th>
           <th class="ctrl" rowspan="2">N° Ctrl</th>
+          <th class="nombre" rowspan="2">Nombre</th>
           <?php if ($incluirTelefonos): ?>
             <th class="tel" rowspan="2">Tel</th>
             <th class="tel" rowspan="2">Tel 2</th>
@@ -427,8 +433,8 @@ function asistencia_lista_pdf_html(
           <?php $al = $alumnos[$i] ?? null; ?>
           <tr>
             <td class="num"><?php echo $i + 1; ?></td>
-            <td class="nombre"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_nombre_alumno($al)) : ''; ?></td>
             <td class="ctrl"><?php echo $al ? htmlspecialchars((string) ($al['numero_control'] ?? '')) : ''; ?></td>
+            <td class="nombre"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_nombre_alumno($al)) : ''; ?></td>
             <?php if ($incluirTelefonos): ?>
               <td class="tel"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_tel_principal($al)) : ''; ?></td>
               <td class="tel"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_tel_opcional($al)) : ''; ?></td>
