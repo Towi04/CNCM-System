@@ -80,8 +80,10 @@ De BD + edición: `clave_especialidad` (obligatoria en adultos; en kids basta `I
 En HAY (Vista previa) el profesor se elige en un **desplegable**; por defecto queda el nombre más
 parecido al CSV (sin importar acentos/mayúsculas). Corrija ahí si el match es solo aproximado.
 
-Pareja kids con horarios distintos: duplicar la fila de la misma `clave_legado`
-(1ª = inglés, 2ª = cómputo) cambiando `hora_inicio`, `dias_clase` y/o `aula_codigo`.
+Columna `infantil`: `0` = adulto, `1` = kids (se respeta en vista previa e import).
+Pareja kids con horarios distintos: `infantil=1` (o especialidad `ING-K`/`COMP-K`) y, si aplica,
+duplicar la misma `clave_legado` (1ª = inglés, 2ª = cómputo) cambiando `hora_inicio` /
+`dias_clase` / `aula_codigo`. Con `infantil=0` **no** se crea pareja kids aunque la clave se repita.
 El id interno de BD (`id_grupo_legado`) es opcional; el enlace operativo es la **clave**.
 
 ### 04_alumnos

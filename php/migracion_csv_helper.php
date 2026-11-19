@@ -347,7 +347,7 @@ function migracion_csv_preview_grupos(
     $conteoKeys = [];
     $ordenKeys = [];
     foreach ($rows as $idx => $rr) {
-        $k = migracion_csv_grupo_row_key($rr);
+        $k = migracion_csv_grupo_row_key($rr, (int) $idx);
         if (!isset($conteoKeys[$k])) {
             $conteoKeys[$k] = 0;
             $ordenKeys[$k] = [];
@@ -420,26 +420,38 @@ function migracion_csv_preview_grupos(
         $idLeg = trim((string) ($r['id_grupo_legado'] ?? ''));
         $claveLeg = trim((string) ($r['clave_legado'] ?? ''));
         $claveEsp = strtoupper(trim((string) ($r['clave_especialidad'] ?? '')));
-        $infantil = !empty($r['infantil']) && (string) $r['infantil'] !== '0';
-        if ($claveEsp === '' && $infantil) {
+        $flagInfantil = migracion_csv_parse_flag01($r['infantil'] ?? null);
+        $metaKids = $claveEsp !== '' ? migracion_csv_area_desde_clave_especialidad($claveEsp) : ['kids' => false];
+        if ($claveEsp === '' && $flagInfantil === true) {
             $claveEsp = 'ING-K';
+            $metaKids = migracion_csv_area_desde_clave_especialidad($claveEsp);
         }
-        $rowKey = migracion_csv_grupo_row_key($r);
+        $rowKey = migracion_csv_grupo_row_key($r, $globalIdx);
         $nDup = (int) ($conteoKeys[$rowKey] ?? 1);
         $posDup = 1;
         if (isset($ordenKeys[$rowKey])) {
             $pos = array_search($globalIdx, $ordenKeys[$rowKey], true);
             $posDup = $pos === false ? 1 : ((int) $pos + 1);
         }
-        $esParejaCsv = $nDup >= 2;
-        $metaKids = $claveEsp !== '' ? migracion_csv_area_desde_clave_especialidad($claveEsp) : ['kids' => false];
-        $esKids = $esParejaCsv || $infantil || !empty($metaKids['kids']);
+        // Pareja por clave repetida solo si no está marcado adulto (infantil=0)
+        $esParejaCsv = $nDup >= 2 && $flagInfantil !== false && ($claveLeg !== '' || $idLeg !== '');
+        if ($esParejaCsv && $flagInfantil === false) {
+            $esParejaCsv = false;
+        }
+        if ($flagInfantil === false && empty($metaKids['kids'])) {
+            $esKids = false;
+            $esParejaCsv = false;
+        } elseif ($flagInfantil === true || !empty($metaKids['kids'])) {
+            $esKids = true;
+        } else {
+            $esKids = $esParejaCsv;
+        }
 
         $ya = ($claveLeg !== '' && migracion_csv_map_get($pdo, 'grupo', $claveLeg) !== null)
             || ($idLeg !== '' && migracion_csv_map_get($pdo, 'grupo', $idLeg) !== null);
         $espEstado = 'ok';
         $accion = $ya ? 'omitir (ya mapeado)' : 'crear';
-        if (!$ya && $esParejaCsv) {
+        if (!$ya && $esParejaCsv && $esKids) {
             $accion = $posDup === 1
                 ? 'kids inglés (pareja CSV 1/' . $nDup . ')'
                 : 'kids cómputo (pareja CSV ' . $posDup . '/' . $nDup . ')';
@@ -523,7 +535,8 @@ function migracion_csv_preview_grupos(
             'esp_estado' => $espEstado,
             'clave_nueva_sugerida' => $claveNueva,
             'plantel_slug' => trim((string) ($r['plantel_slug'] ?? $r['sucursal'] ?? '')),
-            'infantil' => ($infantil || $esParejaCsv) ? '1' : '0',
+            'infantil' => $esKids ? '1' : '0',
+            'infantil_csv' => $flagInfantil === null ? '' : ($flagInfantil ? '1' : '0'),
             'dias_clase' => trim((string) ($r['dias_clase'] ?? '')),
             'hora_inicio' => trim((string) ($r['hora_inicio'] ?? '')),
             'profesor_csv' => $profCsv,
@@ -1139,10 +1152,53 @@ function migracion_csv_importar_aulas(PDO $pdo, array $rows, ?int $forzarPlantel
 }
 
 /**
+ * Interpreta flags CSV 0/1 (y variantes Excel/texto).
+ * null = vacío / no indicado.
+ */
+function migracion_csv_parse_flag01(mixed $v): ?bool
+{
+    if ($v === null) {
+        return null;
+    }
+    if (is_bool($v)) {
+        return $v;
+    }
+    if (is_int($v) || is_float($v)) {
+        if ((float) $v == 0.0) {
+            return false;
+        }
+        if ((float) $v == 1.0) {
+            return true;
+        }
+    }
+    $s = strtolower(trim((string) $v));
+    $s = preg_replace('/^\xEF\xBB\xBF/', '', $s) ?? $s;
+    if ($s === '' || $s === '-' || $s === '?' ) {
+        return null;
+    }
+    // Excel a veces deja "0.0"
+    if (preg_match('/^0+(?:\.0+)?$/', $s)) {
+        return false;
+    }
+    if (preg_match('/^1+(?:\.0+)?$/', $s)) {
+        return true;
+    }
+    if (in_array($s, ['false', 'no', 'n', 'off', 'falso'], true)) {
+        return false;
+    }
+    if (in_array($s, ['true', 'si', 'sí', 's', 'yes', 'y', 'on', 'verdadero'], true)) {
+        return true;
+    }
+
+    return null;
+}
+
+/**
  * Clave para agrupar filas del CSV de grupos (legado).
  * Preferir clave_legado (uso operativo); si no, id_grupo_legado.
+ * Sin clave/id no se agrupan entre sí (evita marcar todo el CSV como kids).
  */
-function migracion_csv_grupo_row_key(array $r): string
+function migracion_csv_grupo_row_key(array $r, ?int $rowIndex = null): string
 {
     $clave = trim((string) ($r['clave_legado'] ?? ''));
     $plantel = strtolower(trim((string) ($r['plantel_slug'] ?? $r['sucursal'] ?? '')));
@@ -1153,8 +1209,69 @@ function migracion_csv_grupo_row_key(array $r): string
     if ($idLeg !== '') {
         return 'id:' . $idLeg;
     }
+    $line = (int) ($r['_line'] ?? 0);
+    if ($line > 0) {
+        return 'row:L' . $line;
+    }
+    if ($rowIndex !== null) {
+        return 'row:i' . $rowIndex;
+    }
 
-    return 'clave:|' . $plantel;
+    return 'row:orphan|' . $plantel . '|' . md5(json_encode($r) ?: uniqid('', true));
+}
+
+/**
+ * Decide si un grupo es kids: respeta infantil=0/1 del CSV.
+ * Solo infiere pareja por filas repetidas si infantil no está en 0.
+ *
+ * @param list<array<string,mixed>> $filasNormalizadas
+ */
+function migracion_csv_filas_son_kids(array $filasNormalizadas, int $nFilas): bool
+{
+    $algunaTrue = false;
+    $algunaFalse = false;
+    $algunaEspKids = false;
+    foreach ($filasNormalizadas as $f) {
+        if (array_key_exists('_flag_infantil', $f)) {
+            $flag = $f['_flag_infantil'];
+        } else {
+            $flag = migracion_csv_parse_flag01($f['infantil'] ?? null);
+        }
+        if ($flag === true) {
+            $algunaTrue = true;
+        } elseif ($flag === false) {
+            $algunaFalse = true;
+        }
+        if (!empty($f['_es_kids_esp'])) {
+            $algunaEspKids = true;
+        } else {
+            $esp = strtoupper(trim((string) ($f['_clave_esp'] ?? $f['clave_especialidad'] ?? '')));
+            if ($esp !== '') {
+                $meta = migracion_csv_area_desde_clave_especialidad($esp);
+                if (!empty($meta['kids'])) {
+                    $algunaEspKids = true;
+                }
+            }
+        }
+    }
+    // Explícito: si TODAS las filas dicen infantil=0 y ninguna especialidad kids → adulto
+    if ($algunaFalse && !$algunaTrue && !$algunaEspKids) {
+        return false;
+    }
+    if ($algunaTrue || $algunaEspKids) {
+        return true;
+    }
+    // Sin flag: 2+ filas misma clave → pareja kids (conveniencia)
+    if ($nFilas >= 2) {
+        return true;
+    }
+    foreach ($filasNormalizadas as $f) {
+        if (!empty($f['_es_kids'])) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -1171,13 +1288,22 @@ function migracion_csv_grupo_normalizar_fila(array $r, int $line, array $overrid
     if ($ovEsp !== '') {
         $r['clave_especialidad'] = $ovEsp;
     }
-    $infantil = !empty($r['infantil']) && (string) $r['infantil'] !== '0';
+    $flagInfantil = migracion_csv_parse_flag01($r['infantil'] ?? null);
     $claveEsp = strtoupper(trim((string) ($r['clave_especialidad'] ?? '')));
-    if ($claveEsp === '' && $infantil) {
+    if ($claveEsp === '' && $flagInfantil === true) {
         $claveEsp = 'ING-K';
     }
     $metaEsp = $claveEsp !== '' ? migracion_csv_area_desde_clave_especialidad($claveEsp) : ['area' => 'I', 'extensivo' => false, 'kids' => false];
-    $esKids = $infantil || !empty($metaEsp['kids']);
+    // Por fila: el flag 0 gana sobre especialidad solo si no es *-K
+    if ($flagInfantil === false && empty($metaEsp['kids'])) {
+        $esKids = false;
+    } elseif ($flagInfantil === true || !empty($metaEsp['kids'])) {
+        $esKids = true;
+    } else {
+        $esKids = false;
+    }
+    $r['_flag_infantil'] = $flagInfantil;
+    $r['_es_kids_esp'] = !empty($metaEsp['kids']);
 
     $fecha = trim((string) ($r['fecha_inicio_estimada'] ?? ''));
     if ($fecha === '') {
@@ -1324,7 +1450,7 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
         if ($norm === null) {
             continue;
         }
-        $key = migracion_csv_grupo_row_key($norm);
+        $key = migracion_csv_grupo_row_key($norm, $i);
         if (!isset($grupos[$key])) {
             $grupos[$key] = [];
         }
@@ -1337,15 +1463,8 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
         $idLeg = (string) ($primera['_id_leg'] ?? '');
         $nFilas = count($filas);
 
-        // 2+ filas con la misma clave/id legado ⇒ pareja kids (aunque no diga infantil)
-        $esKids = $nFilas >= 2;
-        if (!$esKids) {
-            $esKids = !empty($primera['_es_kids']);
-        }
-        // Si hay 2 filas, forzar kids
-        if ($nFilas >= 2) {
-            $esKids = true;
-        }
+        // Respeta infantil=0; solo agrupa pareja kids si el CSV lo indica o no niega el flag
+        $esKids = migracion_csv_filas_son_kids($filas, $nFilas);
 
         $claveAntYa = (string) ($primera['_clave_anterior'] ?? '');
         $idLegNorm = migracion_csv_norm_id_legado($idLeg);
