@@ -110,12 +110,12 @@ function grupo_clave_armar_prefijo(string $area, string $horario, bool $extensiv
 }
 
 /** Sincroniza consecutivos desde grupos del plantel (por prefijo IS, CD, CM, etc.). */
-function grupo_clave_sincronizar_secuencias(PDO $pdo, int $idPlantel = 0): void
+function grupo_clave_sincronizar_secuencias(PDO $pdo, int $idPlantel = 0, bool $force = false): void
 {
     static $sincronizado = [];
     $idPlantel = $idPlantel > 0 ? grupo_clave_normalizar_plantel($pdo, $idPlantel) : 0;
     $cacheKey = $idPlantel > 0 ? (string) $idPlantel : '_todos';
-    if (!empty($sincronizado[$cacheKey])) {
+    if (!$force && !empty($sincronizado[$cacheKey])) {
         return;
     }
     $sincronizado[$cacheKey] = true;
@@ -182,6 +182,19 @@ function grupo_clave_sincronizar_secuencias(PDO $pdo, int $idPlantel = 0): void
         [$idPl, $prefijo] = explode('|', $key, 2);
         $ins->execute([(int) $idPl, $prefijo, $num]);
     }
+}
+
+/**
+ * Borra y recalcula consecutivos del plantel desde los grupos que queden.
+ * Usar tras eliminar grupos migrados para que las nuevas claves empiecen otra vez en 1
+ * (o en el máximo de los grupos restantes).
+ */
+function grupo_clave_reconstruir_secuencias(PDO $pdo, int $idPlantel): void
+{
+    $idPlantel = grupo_clave_normalizar_plantel($pdo, $idPlantel);
+    grupo_clave_ensure_schema($pdo);
+    $pdo->prepare('DELETE FROM grupo_clave_secuencia WHERE id_plantel = ?')->execute([$idPlantel]);
+    grupo_clave_sincronizar_secuencias($pdo, $idPlantel, true);
 }
 
 /** Siguiente número sin consumir la secuencia (solo vista previa). */

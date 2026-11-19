@@ -54,6 +54,9 @@ if (function_exists('plantel_list')) {
     <button type="button" class="secondary" id="migcsv-provision" title="Google Workspace + Moodle para registros mapeados">
       <i class="fas fa-user-plus"></i> Re-provisionar mapeados
     </button>
+    <button type="button" class="secondary" id="migcsv-revertir-grupos" title="Borra grupos creados por esta migración y reinicia el contador de claves del plantel" style="border-color:#c47b00; color:#8a5a00;">
+      <i class="fas fa-undo"></i> Revertir grupos migrados
+    </button>
   </div>
 
   <div class="catalog-card" style="margin-top:14px; padding:14px 16px; border:1px solid #dde3ea; border-radius:10px; background:#fff; max-width:960px;">
@@ -153,4 +156,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261119a'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261119b'), ENT_QUOTES, 'UTF-8'); ?>"></script>

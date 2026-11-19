@@ -42,7 +42,7 @@
   }
 
   function setBusy(busy, label) {
-    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-template', 'migcsv-export-legado'].forEach((id) => {
+    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-revertir-grupos', 'migcsv-template', 'migcsv-export-legado'].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = !!busy;
     });
@@ -695,6 +695,45 @@
       refreshEstado();
     } catch (e) {
       showMsg('Error de red en provisión', false);
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  $('migcsv-revertir-grupos')?.addEventListener('click', async () => {
+    const aviso =
+      'Esto BORRA del plantel actual los grupos creados por Migración CSV,\n' +
+      'quita sus vínculos con alumnos y REINICIA el contador de claves (IS1, IK1…).\n\n' +
+      'Luego podrá volver a importar 03_grupos limpio.\n\n' +
+      '¿Continuar?';
+    if (!confirm(aviso)) return;
+    const typed = window.prompt('Escriba REVERTIR para confirmar (mayúsculas):', '');
+    if (String(typed || '').trim().toUpperCase() !== 'REVERTIR') {
+      showMsg('Cancelado: debe escribir REVERTIR', false);
+      return;
+    }
+    const borrarAl = confirm(
+      '¿También borrar alumnos (y pagos) creados por esta migración en el plantel?\n\n' +
+      'Aceptar = sí, dejar limpio para reintentar alumnos.\n' +
+      'Cancelar = solo grupos (los alumnos quedan desvinculados).'
+    );
+    const fd = new FormData();
+    fd.append('action', 'revertir_grupos');
+    fd.append('id_plantel', String(idPlantel));
+    fd.append('confirm', 'REVERTIR');
+    fd.append('borrar_alumnos', borrarAl ? '1' : '0');
+    setBusy(true, 'Revirtiendo grupos migrados…');
+    try {
+      const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
+      const data = await r.json();
+      let text = data.message || '';
+      if (data.errores && data.errores.length) {
+        text += ' — ' + data.errores.slice(0, 3).join('; ');
+      }
+      showMsg(text, data.status === 'ok');
+      refreshEstado();
+    } catch (e) {
+      showMsg('Error de red al revertir grupos', false);
     } finally {
       setBusy(false);
     }

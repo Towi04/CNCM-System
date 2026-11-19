@@ -2128,6 +2128,251 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
 }
 
 /**
+ * Tablas hijas típicas de grupos (se ignoran si no existen).
+ *
+ * @return list<string>
+ */
+function migracion_csv_tablas_hijas_grupo(): array
+{
+    return [
+        'grupo_horarios',
+        'alumno_grupos',
+        'grupo_docente',
+        'grupo_suplencia',
+        'grupo_preinicio_contacto',
+        'grupo_fusion_log',
+        'asistencias',
+        'planeaciones',
+        'planeacion_semanal',
+        'evaluaciones',
+        'calificaciones',
+        'tutor_grupo',
+        'tutor_asignaciones',
+    ];
+}
+
+/**
+ * Borra grupos creados por Migración CSV (mapa grupo/grupo_comp), limpia vínculos
+ * y reconstruye el contador de claves del plantel para reintentar el import.
+ *
+ * @return array{
+ *   ok:bool, message:string, grupos_borrados?:int, mapas_borrados?:int,
+ *   alumnos_desvinculados?:int, planteles?:list<int>, errores?:list<string>
+ * }
+ */
+function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $borrarAlumnosMapeados = false): array
+{
+    if (!migracion_csv_puede()) {
+        return ['ok' => false, 'message' => 'No autorizado'];
+    }
+    migracion_csv_ensure_schema($pdo);
+    if (function_exists('grupo_clave_ensure_schema')) {
+        grupo_clave_ensure_schema($pdo);
+    }
+
+    $idPlantel = $idPlantel && $idPlantel > 0
+        ? $idPlantel
+        : (function_exists('plantel_id_activo') ? (int) plantel_id_activo() : 0);
+    if ($idPlantel <= 0) {
+        return ['ok' => false, 'message' => 'Seleccione un plantel activo'];
+    }
+
+    $errores = [];
+    $ids = [];
+    try {
+        $st = $pdo->prepare(
+            "SELECT DISTINCT m.id_hay
+             FROM hay_migracion_csv_map m
+             INNER JOIN grupos g ON g.id_grupo = m.id_hay
+             WHERE m.entidad IN ('grupo', 'grupo_comp')
+               AND g.id_plantel = ?"
+        );
+        $st->execute([$idPlantel]);
+        foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $ids[$id] = true;
+            }
+        }
+    } catch (Throwable $e) {
+        return ['ok' => false, 'message' => 'No se pudo leer el mapa de grupos: ' . $e->getMessage()];
+    }
+
+    $idList = array_keys($ids);
+    if ($idList === []) {
+        $mapasHuerfanos = 0;
+        try {
+            // Mapas que apuntan a grupos ya inexistentes
+            $mapasHuerfanos = (int) $pdo->exec(
+                "DELETE m FROM hay_migracion_csv_map m
+                 LEFT JOIN grupos g ON g.id_grupo = m.id_hay
+                 WHERE m.entidad IN ('grupo','grupo_comp') AND g.id_grupo IS NULL"
+            );
+        } catch (Throwable $e) {
+            // ignore
+        }
+        if (function_exists('grupo_clave_reconstruir_secuencias')) {
+            grupo_clave_reconstruir_secuencias($pdo, $idPlantel);
+        }
+        migracion_csv_log($pdo, 'grupos', 'info', 'Revertir grupos: nada que borrar; secuencias reconstruidas plantel #' . $idPlantel);
+
+        return [
+            'ok' => true,
+            'message' => 'No había grupos migrados en este plantel. Contador de claves reiniciado/reconstruido'
+                . ($mapasHuerfanos > 0 ? " ({$mapasHuerfanos} mapa(s) huérfano(s) limpiados)" : '') . '.',
+            'grupos_borrados' => 0,
+            'mapas_borrados' => $mapasHuerfanos,
+            'alumnos_desvinculados' => 0,
+            'planteles' => [$idPlantel],
+            'errores' => [],
+        ];
+    }
+
+    $ph = implode(',', array_fill(0, count($idList), '?'));
+    $alumnosDesvinculados = 0;
+    $gruposBorrados = 0;
+    $mapasBorrados = 0;
+
+    $ownTx = !$pdo->inTransaction();
+    if ($ownTx) {
+        $pdo->beginTransaction();
+    }
+    try {
+        // Desvincular alumnos de esos grupos
+        if (function_exists('plantel_table_exists') ? plantel_table_exists($pdo, 'alumno_grupos') : true) {
+            try {
+                $stAg = $pdo->prepare("DELETE FROM alumno_grupos WHERE id_grupo IN ($ph)");
+                $stAg->execute($idList);
+                $alumnosDesvinculados += $stAg->rowCount();
+            } catch (Throwable $e) {
+                $errores[] = 'alumno_grupos: ' . $e->getMessage();
+            }
+        }
+        try {
+            $stA = $pdo->prepare(
+                "UPDATE alumnos SET id_grupo = NULL WHERE id_grupo IN ($ph)"
+            );
+            $stA->execute($idList);
+        } catch (Throwable $e) {
+            // columna puede no existir / NOT NULL
+        }
+
+        foreach (migracion_csv_tablas_hijas_grupo() as $tabla) {
+            if ($tabla === 'alumno_grupos') {
+                continue;
+            }
+            if (function_exists('plantel_table_exists') && !plantel_table_exists($pdo, $tabla)) {
+                continue;
+            }
+            try {
+                $pdo->prepare("DELETE FROM {$tabla} WHERE id_grupo IN ($ph)")->execute($idList);
+            } catch (Throwable $e) {
+                // tabla sin columna id_grupo u otra causa: no bloquear
+            }
+        }
+
+        // Borrar alumnos creados por migración en este plantel (opcional, para reintentar limpio)
+        if ($borrarAlumnosMapeados) {
+            try {
+                $stAl = $pdo->prepare(
+                    "SELECT DISTINCT m.id_hay
+                     FROM hay_migracion_csv_map m
+                     INNER JOIN alumnos a ON a.id_alumno = m.id_hay
+                     WHERE m.entidad = 'alumno' AND a.id_plantel = ?"
+                );
+                $stAl->execute([$idPlantel]);
+                foreach ($stAl->fetchAll(PDO::FETCH_COLUMN) ?: [] as $aid) {
+                    $aid = (int) $aid;
+                    if ($aid <= 0) {
+                        continue;
+                    }
+                    try {
+                        if (function_exists('plantel_table_exists') && plantel_table_exists($pdo, 'pagos')) {
+                            $pagoIds = [];
+                            try {
+                                $stP = $pdo->prepare('SELECT id_pago FROM pagos WHERE id_alumno = ?');
+                                $stP->execute([$aid]);
+                                foreach ($stP->fetchAll(PDO::FETCH_COLUMN) ?: [] as $pid) {
+                                    $pid = (int) $pid;
+                                    if ($pid > 0) {
+                                        $pagoIds[] = $pid;
+                                    }
+                                }
+                            } catch (Throwable $e) {
+                                $pagoIds = [];
+                            }
+                            $pdo->prepare('DELETE FROM pagos WHERE id_alumno = ?')->execute([$aid]);
+                            if ($pagoIds !== []) {
+                                $phP = implode(',', array_fill(0, count($pagoIds), '?'));
+                                $pdo->prepare(
+                                    "DELETE FROM hay_migracion_csv_map WHERE entidad = 'pago' AND id_hay IN ($phP)"
+                                )->execute($pagoIds);
+                            }
+                        }
+                        $pdo->prepare("DELETE FROM hay_migracion_csv_map WHERE entidad = 'alumno' AND id_hay = ?")
+                            ->execute([$aid]);
+                        $pdo->prepare('DELETE FROM alumno_grupos WHERE id_alumno = ?')->execute([$aid]);
+                        $pdo->prepare('DELETE FROM alumnos WHERE id_alumno = ? AND id_plantel = ?')
+                            ->execute([$aid, $idPlantel]);
+                    } catch (Throwable $e) {
+                        $errores[] = 'alumno #' . $aid . ': ' . $e->getMessage();
+                    }
+                }
+            } catch (Throwable $e) {
+                $errores[] = 'limpieza alumnos: ' . $e->getMessage();
+            }
+        }
+
+        $stDel = $pdo->prepare("DELETE FROM grupos WHERE id_grupo IN ($ph) AND id_plantel = ?");
+        $stDel->execute([...$idList, $idPlantel]);
+        $gruposBorrados = $stDel->rowCount();
+
+        // Mapas: borrar entradas cuyo id_hay era de esos grupos
+        $stMap = $pdo->prepare(
+            "DELETE FROM hay_migracion_csv_map
+             WHERE entidad IN ('grupo','grupo_comp') AND id_hay IN ($ph)"
+        );
+        $stMap->execute($idList);
+        $mapasBorrados = $stMap->rowCount();
+
+        if (function_exists('grupo_clave_reconstruir_secuencias')) {
+            grupo_clave_reconstruir_secuencias($pdo, $idPlantel);
+        }
+
+        if ($ownTx) {
+            $pdo->commit();
+        }
+    } catch (Throwable $e) {
+        if ($ownTx && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        return [
+            'ok' => false,
+            'message' => 'Error al revertir grupos: ' . $e->getMessage(),
+            'errores' => $errores,
+        ];
+    }
+
+    $msg = "{$gruposBorrados} grupo(s) borrado(s), {$mapasBorrados} mapa(s) limpiado(s)";
+    if ($alumnosDesvinculados > 0) {
+        $msg .= ", {$alumnosDesvinculados} vínculo(s) alumno-grupo quitado(s)";
+    }
+    $msg .= '; contador de claves reconstruido para el plantel.';
+    migracion_csv_log($pdo, 'grupos', 'info', 'Revertir migración: ' . $msg);
+
+    return [
+        'ok' => true,
+        'message' => $msg,
+        'grupos_borrados' => $gruposBorrados,
+        'mapas_borrados' => $mapasBorrados,
+        'alumnos_desvinculados' => $alumnosDesvinculados,
+        'planteles' => [$idPlantel],
+        'errores' => array_slice($errores, 0, 20),
+    ];
+}
+
+/**
  * Provisión batch de correos/Moodle para alumnos y staff recién migrados.
  *
  * @return array{ok:bool, message:string, alumnos_ok?:int, alumnos_fail?:int, staff_ok?:int, staff_fail?:int, errores?:list<string>}
