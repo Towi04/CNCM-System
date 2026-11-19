@@ -28,7 +28,10 @@ if (!plantel_puede_cambiar_a($pdo, (int) $plantel['id_plantel'])) {
     exit;
 }
 
-plantel_set_sesion($plantel);
+plantel_set_sesion($plantel, $pdo);
+if (function_exists('plantel_recordar_ultimo')) {
+    plantel_recordar_ultimo($pdo, (int) $plantel['id_plantel']);
+}
 
 echo json_encode([
     'status' => 'ok',
