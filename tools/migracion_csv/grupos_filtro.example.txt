@@ -1,5 +1,6 @@
-# Lista de grupos activos a exportar (un id numérico o clave legado por línea).
-# Copiar a grupos_filtro.txt y editar.
-# Ejemplos:
-# 1234
-# IS-LEGADO-01
+# Claves de grupos activos a migrar (una por línea).
+# Use la misma clave con la que identifica el grupo en el legado.
+# El id numérico interno de BD es opcional y no es necesario.
+IKCF0085
+IKCF0098
+IS100

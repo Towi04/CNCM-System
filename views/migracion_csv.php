@@ -61,8 +61,8 @@ if (function_exists('plantel_list')) {
     <p id="migcsv-legado-status" style="margin:0 0 10px; color:#666; font-size:0.9rem;">Comprobando LEGACY_DB_*…</p>
     <div class="catalog-toolbar" style="flex-wrap:wrap; gap:12px; align-items:flex-end; margin:0;">
       <div class="field" style="flex:1; min-width:220px;">
-        <label for="migcsv-filtro">Grupos (id o clave, uno por línea)</label>
-        <textarea id="migcsv-filtro" rows="4" placeholder="IKCF0085&#10;IKCF0098&#10;502" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
+        <label for="migcsv-filtro">Claves de grupo (una por línea)</label>
+        <textarea id="migcsv-filtro" rows="4" placeholder="IKCF0085&#10;IKCF0098&#10;IS100" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
       </div>
       <div class="field" style="flex:1; min-width:220px;">
         <label for="migcsv-filtro-alumnos">Alumnos para pagos (<code>id_alumno_legado</code>)</label>
@@ -83,8 +83,9 @@ if (function_exists('plantel_list')) {
       </button>
     </div>
     <p style="margin:10px 0 0; color:#777; font-size:0.85rem;">
-      Requiere <code>LEGACY_DB_*</code>. Grupos/alumnos: filtro de grupos. Pagos: basta pegar
-      <code>id_alumno_legado</code> (o subir el CSV de alumnos ya descargado).
+      Requiere <code>LEGACY_DB_*</code>. Grupos/alumnos: pegue las <strong>claves</strong> de grupo
+      (como en el legado). Pagos: basta pegar <code>id_alumno_legado</code>
+      (o subir el CSV de alumnos ya descargado).
     </p>
   </div>
 
@@ -122,11 +123,10 @@ if (function_exists('plantel_list')) {
     </p>
     <p style="margin:0 0 8px; color:#777;">
       <strong>Alumnos:</strong> no se migran solos con los grupos. Use el <em>mismo</em> filtro
-      de ids/claves con el que importó <code>03_grupos</code>, descargue <code>04_alumnos</code>
-      → Vista previa (columna <code>grupo_estado</code>) → Importar. Enlazan por
-      <code>id_grupo_legado</code> o <code>clave_legado</code>. Si marca “grupo legado N no está
-      en el mapa”, ese N no está entre los grupos ya importados (aunque haya otros 21): vuelva a
-      descargar/importar <code>03_grupos</code> incluyendo ese id.
+      de <code>clave_legado</code> con el que importó <code>03_grupos</code>, descargue
+      <code>04_alumnos</code> → Vista previa (<code>grupo_estado</code>) → Importar.
+      El enlace es por <strong>clave de grupo</strong>. Si falta una clave en el mapa, vuelva a
+      descargar/importar <code>03_grupos</code> incluyendo esa clave.
     </p>
     <p style="margin:0; color:#777;">
       Al importar alumnos se crea (si falta) usuario HAY + Google + Moodle
@@ -153,4 +153,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118k'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261119a'), ENT_QUOTES, 'UTF-8'); ?>"></script>

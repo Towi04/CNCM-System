@@ -76,7 +76,8 @@ function migcsv_leer_filtro_grupos(string $path): array
 }
 
 /**
- * Resuelve ids de grupos a partir de ids numéricos o claves.
+ * Resuelve ids de grupos priorizando clave legado (como se identifica operativamente).
+ * Tokens numéricos solo se usan como id si no coinciden con ninguna clave.
  *
  * @param list<int|string> $filtro
  * @return list<int>
@@ -86,26 +87,49 @@ function migcsv_resolver_ids_grupos(PDO $pdo, array $filtro): array
     if ($filtro === []) {
         return [];
     }
-    $ids = [];
-    $claves = [];
+    $tokens = [];
     foreach ($filtro as $item) {
         $s = trim((string) $item);
-        if ($s === '') {
+        if ($s === '' || str_starts_with($s, '#')) {
             continue;
         }
-        if (ctype_digit($s)) {
-            $ids[] = (int) $s;
-        } else {
-            $claves[] = $s;
+        $tokens[] = $s;
+    }
+    if ($tokens === []) {
+        return [];
+    }
+
+    $out = [];
+    $matched = [];
+    if (migcsv_column_exists($pdo, 'grupos', 'clave')) {
+        $uppers = [];
+        foreach ($tokens as $t) {
+            $uppers[strtoupper($t)] = $t;
+        }
+        $keys = array_keys($uppers);
+        $ph = implode(',', array_fill(0, count($keys), '?'));
+        $st = $pdo->prepare("SELECT id, clave FROM grupos WHERE UPPER(clave) IN ($ph)");
+        $st->execute($keys);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0) {
+                $out[] = $id;
+            }
+            $matched[strtoupper((string) ($row['clave'] ?? ''))] = true;
         }
     }
-    $out = $ids;
-    if ($claves !== [] && migcsv_column_exists($pdo, 'grupos', 'clave')) {
-        $ph = implode(',', array_fill(0, count($claves), '?'));
-        $st = $pdo->prepare("SELECT id FROM grupos WHERE clave IN ($ph)");
-        $st->execute($claves);
-        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $id) {
-            $out[] = (int) $id;
+
+    // Solo ids numéricos que no se hayan resuelto ya como clave
+    foreach ($tokens as $t) {
+        if (!ctype_digit($t)) {
+            continue;
+        }
+        if (isset($matched[strtoupper($t)])) {
+            continue;
+        }
+        $id = (int) $t;
+        if ($id > 0) {
+            $out[] = $id;
         }
     }
 
