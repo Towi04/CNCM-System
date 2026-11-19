@@ -299,19 +299,41 @@ function grupo_es_area_infantil(string $area): bool
     return strtoupper(trim($area)) === 'K';
 }
 
-/** id_especialidad infantil: ingles → ING-K, computacion → COMP-K. */
+/** id_especialidad infantil: ingles → ING-K/IK, computacion → COMP-K/CK. */
 function grupo_id_especialidad_infantil(PDO $pdo, string $materia): ?int
 {
-    $clave = match (strtolower(trim($materia))) {
-        'computacion', 'comp', 'informatica' => 'COMP-K',
-        default => 'ING-K',
+    $claves = match (strtolower(trim($materia))) {
+        'computacion', 'comp', 'informatica', 'ck' => ['COMP-K', 'CK', 'COMPUTACION-K'],
+        default => ['ING-K', 'IK', 'INGLES-K', 'INGLES_K'],
     };
     $st = $pdo->prepare('SELECT id_especialidad FROM especialidades WHERE activo = 1 AND UPPER(clave) = ? LIMIT 1');
-    $st->execute([$clave]);
+    foreach ($claves as $clave) {
+        $st->execute([strtoupper($clave)]);
+        $id = (int) $st->fetchColumn();
+        if ($id > 0) {
+            return $id;
+        }
+    }
+    // Fallback por nombre
+    $like = match (strtolower(trim($materia))) {
+        'computacion', 'comp', 'informatica', 'ck' => '%comput%infantil%',
+        default => '%ingl%infantil%',
+    };
+    try {
+        $stN = $pdo->prepare(
+            'SELECT id_especialidad FROM especialidades
+             WHERE activo = 1 AND LOWER(nombre) LIKE ? ORDER BY id_especialidad ASC LIMIT 1'
+        );
+        $stN->execute([$like]);
+        $id = (int) $stN->fetchColumn();
+        if ($id > 0) {
+            return $id;
+        }
+    } catch (Throwable $e) {
+        // ignore
+    }
 
-    $id = (int) $st->fetchColumn();
-
-    return $id > 0 ? $id : null;
+    return null;
 }
 
 /**

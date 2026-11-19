@@ -32,22 +32,25 @@ si prefiere extraer en su PC. En el Portal también hay **CSV de ejemplo**
 
 ## Claves de especialidad HAY (`clave_especialidad`)
 
-| Clave | Uso |
-|-------|-----|
-| `ING` | Inglés adulto regular |
-| `ING-EXT` | Inglés extensivo |
-| `ING-K` | Inglés infantil → crea pareja IK+CK automáticamente |
-| `ING-K-EXT` | Extensivo inglés kids |
-| `COMP` / `COMP24` / `COMP25` | Informática (plan vigente del plantel) |
-| `COMP-EXT` | Extensivo informática |
-| `COMP-K` | Solo computación infantil |
-| `PREP-AB` | Preparatoria abierta |
-| `PREP-ESC` | Preparatoria escolarizada |
+Esto es el **catálogo de especialidad**, no la clave del grupo (IS1, CK3…).
+HAY genera la clave de grupo al importar. Puede usar la clave larga o el atajo:
 
-Kids: bastan `ING-K` o `infantil=1` (una fila → pareja IK+CK con bloque 2h+2h el mismo día).
-También puede **repetir** la misma `clave_legado` en 2 filas (1ª inglés, 2ª cómputo)
-con distinta `hora_inicio` / `dias_clase` / `aula_codigo`; HAY asigna el mismo número a la pareja.
-Alumnos de ese grupo se inscriben en **ambas** materias (dual); después puede dar de baja individual.
+| Atajo | Clave catálogo | Uso |
+|-------|----------------|-----|
+| `I` | `ING` | Inglés adulto |
+| `C` | `COMP` (o COMP25/24) | Informática adulto |
+| `IK` | `ING-K` | Inglés infantil |
+| `CK` | `COMP-K` | Computación infantil |
+| `PA` | `PREP-AB` | Preparatoria abierta |
+| `PE` | `PREP-ESC` | Preparatoria escolarizada |
+| `EI` | `ING-EXT` | Extensivo inglés |
+| `EC` | `COMP-EXT` | Extensivo informática |
+
+También valen `ING`, `ING-K`, `COMP`, `COMP-K`, etc. Fechas: `YYYY-MM-DD` o Excel MX `DD/MM/YYYY`.
+
+Kids: `infantil=1` + `IK`/`CK` (o `ING-K`), o la misma `clave_legado` en 2 filas
+(1ª inglés, 2ª cómputo) con distinto horario/aula. HAY crea la pareja `IK{n}+CK{n}`.
+Alumnos de ese grupo se inscriben en **ambas** materias (dual).
 
 ## Convención de días y hora
 

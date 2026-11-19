@@ -243,17 +243,153 @@ function migracion_csv_resolver_plantel(PDO $pdo, string $slugOrName, ?int $forz
     return function_exists('plantel_id_activo') ? plantel_id_activo() : null;
 }
 
+/**
+ * Atajos de área (I/C/IK/CK…) → clave de catálogo de especialidades (ING/COMP/ING-K…).
+ * Las claves de grupo (IS1, CK3…) las genera HAY; no van en clave_especialidad.
+ */
+function migracion_csv_normalizar_clave_especialidad(string $raw): string
+{
+    $c = strtoupper(trim($raw));
+    $c = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú'], ['A', 'E', 'I', 'O', 'U'], $c);
+    if ($c === '') {
+        return '';
+    }
+    static $map = [
+        'I' => 'ING',
+        'INGLES' => 'ING',
+        'C' => 'COMP',
+        'COMPU' => 'COMP',
+        'COMPUTACION' => 'COMP',
+        'INFORMATICA' => 'COMP',
+        'IK' => 'ING-K',
+        'CK' => 'COMP-K',
+        'K' => 'ING-K',
+        'INGLES-K' => 'ING-K',
+        'INGLES_K' => 'ING-K',
+        'COMPUTACION-K' => 'COMP-K',
+        'COMPUTACION_K' => 'COMP-K',
+        'PA' => 'PREP-AB',
+        'PREPA' => 'PREP-AB',
+        'PREPA-AB' => 'PREP-AB',
+        'PREPA-ABIERTA' => 'PREP-AB',
+        'PE' => 'PREP-ESC',
+        'PREPA-ESC' => 'PREP-ESC',
+        'EI' => 'ING-EXT',
+        'EIS' => 'ING-EXT',
+        'EC' => 'COMP-EXT',
+    ];
+
+    return $map[$c] ?? $c;
+}
+
+/**
+ * Candidatos de clave de especialidad a buscar en catálogo (incluye atajos y años COMP24/25).
+ *
+ * @return list<string>
+ */
+function migracion_csv_candidatos_especialidad(string $clave): array
+{
+    $clave = migracion_csv_normalizar_clave_especialidad($clave);
+    if ($clave === '') {
+        return [];
+    }
+    $out = [$clave];
+    $extra = match ($clave) {
+        'ING' => ['I', 'INGLES'],
+        'COMP' => ['C', 'COMP25', 'COMP24', 'COMPUTACION', 'INFORMATICA'],
+        'ING-K' => ['IK', 'INGLES-K', 'INGLES_K'],
+        'COMP-K' => ['CK', 'COMPUTACION-K'],
+        'PREP-AB' => ['PA', 'PREPA-ABIERTA'],
+        'PREP-ESC' => ['PE', 'PREPA-ESC'],
+        'ING-EXT' => ['EI', 'EIS'],
+        'COMP-EXT' => ['EC'],
+        default => [],
+    };
+    foreach ($extra as $e) {
+        if (!in_array($e, $out, true)) {
+            $out[] = $e;
+        }
+    }
+
+    return $out;
+}
+
 function migracion_csv_resolver_especialidad(PDO $pdo, string $clave): ?int
 {
-    $clave = strtoupper(trim($clave));
-    if ($clave === '') {
+    $candidatos = migracion_csv_candidatos_especialidad($clave);
+    if ($candidatos === []) {
         return null;
     }
-    $st = $pdo->prepare('SELECT id_especialidad FROM especialidades WHERE UPPER(clave) = ? LIMIT 1');
-    $st->execute([$clave]);
-    $id = $st->fetchColumn();
+    $st = $pdo->prepare(
+        'SELECT id_especialidad FROM especialidades WHERE activo = 1 AND UPPER(clave) = ? LIMIT 1'
+    );
+    foreach ($candidatos as $c) {
+        $st->execute([strtoupper($c)]);
+        $id = $st->fetchColumn();
+        if ($id !== false) {
+            return (int) $id;
+        }
+    }
+    // Sin filtro activo (por si el catálogo no marca activo)
+    $st2 = $pdo->prepare('SELECT id_especialidad FROM especialidades WHERE UPPER(clave) = ? LIMIT 1');
+    foreach ($candidatos as $c) {
+        $st2->execute([strtoupper($c)]);
+        $id = $st2->fetchColumn();
+        if ($id !== false) {
+            return (int) $id;
+        }
+    }
 
-    return $id === false ? null : (int) $id;
+    return null;
+}
+
+/**
+ * Fecha CSV → Y-m-d. Acepta ISO y formatos Excel MX (d/m/Y, d-m-Y).
+ */
+function migracion_csv_parse_fecha(string $raw): string
+{
+    $raw = trim($raw);
+    if ($raw === '') {
+        return '';
+    }
+    // Excel serial (raro en CSV texto, pero por si acaso)
+    if (preg_match('/^\d{4,5}(?:\.\d+)?$/', $raw)) {
+        $n = (int) $raw;
+        if ($n > 20000 && $n < 80000) {
+            $ts = strtotime('1899-12-30 +' . $n . ' days');
+            if ($ts !== false) {
+                return date('Y-m-d', $ts);
+            }
+        }
+    }
+    if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})/', $raw, $m)) {
+        return sprintf('%04d-%02d-%02d', (int) $m[1], (int) $m[2], (int) $m[3]);
+    }
+    // d/m/Y o d-m-Y (México)
+    if (preg_match('/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/', $raw, $m)) {
+        $d = (int) $m[1];
+        $mo = (int) $m[2];
+        $y = (int) $m[3];
+        if ($y < 100) {
+            $y += $y >= 70 ? 1900 : 2000;
+        }
+        // Si el primer número > 12, seguro es día; si ambos <= 12, preferir d/m/Y (MX)
+        if ($d > 31 || $mo > 12) {
+            // posible m/d/Y mal leído: intercambiar si ayuda
+            if ($mo <= 31 && $d <= 12) {
+                [$d, $mo] = [$mo, $d];
+            }
+        }
+        if (checkdate($mo, $d, $y)) {
+            return sprintf('%04d-%02d-%02d', $y, $mo, $d);
+        }
+    }
+    $ts = strtotime($raw);
+    if ($ts !== false) {
+        return date('Y-m-d', $ts);
+    }
+
+    return $raw;
 }
 
 /**
@@ -263,8 +399,11 @@ function migracion_csv_resolver_especialidad(PDO $pdo, string $clave): ?int
  */
 function migracion_csv_area_desde_clave_especialidad(string $claveEsp): array
 {
-    $claveEsp = strtoupper(trim($claveEsp));
-    $kids = in_array($claveEsp, ['ING-K', 'ING-K-EXT', 'COMP-K'], true) || str_ends_with($claveEsp, '-K');
+    $claveEsp = migracion_csv_normalizar_clave_especialidad($claveEsp);
+    $kids = in_array($claveEsp, ['ING-K', 'ING-K-EXT', 'COMP-K'], true)
+        || str_ends_with($claveEsp, '-K')
+        || $claveEsp === 'IK'
+        || $claveEsp === 'CK';
     $area = 'I';
     if ($kids) {
         $area = 'K';
@@ -278,6 +417,42 @@ function migracion_csv_area_desde_clave_especialidad(string $claveEsp): array
     $ext = str_contains($claveEsp, 'EXT');
 
     return ['area' => $area, 'extensivo' => $ext, 'kids' => $kids];
+}
+
+/**
+ * Asegura especialidades infantiles mínimas si el catálogo no las tiene.
+ */
+function migracion_csv_asegurar_especialidades_kids(PDO $pdo): void
+{
+    if (function_exists('catalog_ensure_schema')) {
+        catalog_ensure_schema($pdo);
+    }
+    $defs = [
+        ['ING-K', 'Inglés Infantil', 'kids'],
+        ['COMP-K', 'Computación Infantil', 'kids'],
+    ];
+    foreach ($defs as [$clave, $nombre, $mod]) {
+        if (migracion_csv_resolver_especialidad($pdo, $clave) !== null) {
+            continue;
+        }
+        try {
+            $pdo->prepare(
+                'INSERT IGNORE INTO especialidades (
+                    clave, nombre, descripcion, modalidad, duracion_fase_semanas,
+                    inscripcion_por_cuatrimestre, parciales_por_cuatrimestre,
+                    costo_inscripcion, costo_mensualidad, costo_pronto_pago, costo_semanal,
+                    duracion_meses, duracion_semanas, es_fija, visible, orden
+                 ) VALUES (?,?,?,?,4,0,0,450,1100,1000,320,12,48,1,1,5)'
+            )->execute([
+                $clave,
+                $nombre,
+                'Creada automáticamente por Migración CSV (faltaba en el catálogo).',
+                $mod,
+            ]);
+        } catch (Throwable $e) {
+            // esquema puede variar; el import fallará con mensaje claro si sigue faltando
+        }
+    }
 }
 
 /**
@@ -419,7 +594,8 @@ function migracion_csv_preview_grupos(
         $globalIdx = $offset + $i;
         $idLeg = trim((string) ($r['id_grupo_legado'] ?? ''));
         $claveLeg = trim((string) ($r['clave_legado'] ?? ''));
-        $claveEsp = strtoupper(trim((string) ($r['clave_especialidad'] ?? '')));
+        $claveEspRaw = strtoupper(trim((string) ($r['clave_especialidad'] ?? '')));
+        $claveEsp = migracion_csv_normalizar_clave_especialidad($claveEspRaw);
         $flagInfantil = migracion_csv_parse_flag01($r['infantil'] ?? null);
         $metaKids = $claveEsp !== '' ? migracion_csv_area_desde_clave_especialidad($claveEsp) : ['kids' => false];
         if ($claveEsp === '' && $flagInfantil === true) {
@@ -1289,10 +1465,11 @@ function migracion_csv_grupo_normalizar_fila(array $r, int $line, array $overrid
         $r['clave_especialidad'] = $ovEsp;
     }
     $flagInfantil = migracion_csv_parse_flag01($r['infantil'] ?? null);
-    $claveEsp = strtoupper(trim((string) ($r['clave_especialidad'] ?? '')));
+    $claveEsp = migracion_csv_normalizar_clave_especialidad((string) ($r['clave_especialidad'] ?? ''));
     if ($claveEsp === '' && $flagInfantil === true) {
         $claveEsp = 'ING-K';
     }
+    $r['clave_especialidad'] = $claveEsp;
     $metaEsp = $claveEsp !== '' ? migracion_csv_area_desde_clave_especialidad($claveEsp) : ['area' => 'I', 'extensivo' => false, 'kids' => false];
     // Por fila: el flag 0 gana sobre especialidad solo si no es *-K
     if ($flagInfantil === false && empty($metaEsp['kids'])) {
@@ -1309,7 +1486,8 @@ function migracion_csv_grupo_normalizar_fila(array $r, int $line, array $overrid
     if ($fecha === '') {
         $fecha = trim((string) ($r['fecha_inicio_legado'] ?? ''));
     }
-    if ($fecha === '') {
+    $fecha = migracion_csv_parse_fecha($fecha);
+    if ($fecha === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
         $fecha = date('Y-m-d');
     }
     $dias = migracion_csv_parse_dias((string) ($r['dias_clase'] ?? ''));
@@ -1430,6 +1608,7 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
     fase_ensure_schema($pdo);
     grupo_clave_ensure_schema($pdo);
     asistencia_ensure_schema($pdo);
+    migracion_csv_asegurar_especialidades_kids($pdo);
     if (function_exists('plantel_ensure_column')) {
         plantel_ensure_column($pdo, 'grupos', 'clave_anterior', 'VARCHAR(50) NULL', 'clave');
         plantel_ensure_column($pdo, 'grupos', 'id_aula', 'INT UNSIGNED NULL', 'aula');
@@ -1915,8 +2094,8 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
             continue;
         }
         $idEsp = (int) ($grupo['id_especialidad'] ?? 0);
-        $fecha = trim((string) ($r['fecha_inicio'] ?? ''));
-        if ($fecha === '') {
+        $fecha = migracion_csv_parse_fecha((string) ($r['fecha_inicio'] ?? ''));
+        if ($fecha === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
             $fecha = substr((string) ($grupo['fecha_inicio'] ?? date('Y-m-d')), 0, 10);
         }
         $formaPago = strtolower(trim((string) ($r['forma_pago'] ?? 'mensual')));
@@ -2671,11 +2850,11 @@ function migracion_csv_ejemplo(PDO $pdo, string $tipo, ?string $slugPreferido = 
                     'profesor_sugerido', 'profesor_username', 'aula_codigo',
                 ],
                 'rows' => [
-                    // Adulto inglés sábado mañana
-                    ['IS100', $slug, 'ING', '0', '2025-01-11', 'F1', '6', '08:00', '12:00', 'Jose Perez', '', 'A1'],
-                    // Kids: misma clave en 2 filas (inglés 08:00 + cómputo 10:00)
-                    ['IKCF100', $slug, 'ING-K', '1', '2025-01-11', 'F1', '6', '08:00', '10:00', 'Maria Lopez', '', 'A1'],
-                    ['IKCF100', $slug, 'COMP-K', '1', '2025-01-11', 'F1', '6', '10:00', '12:00', 'Maria Lopez', '', 'LAB'],
+                    // Adulto inglés sábado mañana (atajo I = ING; también vale ING)
+                    ['IS100', $slug, 'I', '0', '2025-01-11', 'F1', '6', '08:00', '12:00', 'Jose Perez', '', 'A1'],
+                    // Kids: misma clave en 2 filas (IK/CK = ING-K/COMP-K)
+                    ['IKCF100', $slug, 'IK', '1', '2025-01-11', 'F1', '6', '08:00', '10:00', 'Maria Lopez', '', 'A1'],
+                    ['IKCF100', $slug, 'CK', '1', '2025-01-11', 'F1', '6', '10:00', '12:00', 'Maria Lopez', '', 'LAB'],
                 ],
             ];
 
