@@ -74,14 +74,16 @@ class PreRegistrosController extends Controller
         return view('alumnos.pre_registro.show',compact('alumno'));
     }
 
-    public function create(FacturacionService $facturacionService)
+    public function create()
     {
+        // No inyectar FacturacionService aquí: su constructor exige
+        // FACTURACOM_ENVIRONMENT y tumba el alta con HTTP 500 aunque el
+        // formulario de nuevo pre-registro no consulte CFDI (cfdis vacío).
         return view('alumnos.pre_registro.create',[
             'alumno'            => new Alumno,
             'especialidades'    => Especialidad::query()->pluck('nombre','id')->sort()->prepend('Selecciona una especialidad',''),
-            'cfdis'             => []
+            'cfdis'             => collect(['' => 'Selecciona un cfdi']),
         ]);
-
     }
 
     public function store(Request $request)
@@ -168,13 +170,19 @@ class PreRegistrosController extends Controller
         ]);
     }
 
-    public function edit(Alumno $alumno,FacturacionService $facturacionService)
+    public function edit(Alumno $alumno, FacturacionService $facturacionService)
     {
+        $cfdis = collect(['' => 'Selecciona un cfdi']);
+        try {
+            $cfdis = $facturacionService->usosCfdi()->prepend('Selecciona un cfdi', '');
+        } catch (\Throwable $e) {
+            Log::warning('PreRegistros edit: catálogo CFDI no disponible: '.$e->getMessage());
+        }
+
         return view('alumnos.pre_registro.edit', [
             'alumno'            => $alumno,
             'especialidades'    => Especialidad::query()->pluck('nombre','id')->sort()->prepend('Selecciona una especialidad',''),
-            'cfdis'             => $facturacionService->usosCfdi()->prepend('Selecciona un cfdi',''),
-
+            'cfdis'             => $cfdis,
         ]);
     }
 
@@ -264,7 +272,7 @@ class PreRegistrosController extends Controller
         ]);
     }
 
-    public function formulario_inscripcion(Alumno $alumno,FacturacionService $facturacionService)
+    public function formulario_inscripcion(Alumno $alumno)
     {
         if($alumno->status == config('alumnos.status.Alumno')) {
             return redirect()
@@ -276,12 +284,10 @@ class PreRegistrosController extends Controller
             return $q->where('name','=','autorizar_apoyos_especiales_en_inscripcion');
         })->get();
 
-        // dd($usuarios_autorizados);
-
         return view('alumnos.pre_registro.inscribir', [
             'alumno'            => $alumno,
             'especialidades'    => Especialidad::query()->pluck('nombre','id')->sort()->prepend('Selecciona una especialidad',''),
-            'cfdis'             => [],
+            'cfdis'             => collect(['' => 'Selecciona un cfdi']),
             'asesores'          => User::query()->get()->pluck('fullname','id')->sort()->prepend('CNCM',''),
             'usuarios_autorizados' => $usuarios_autorizados->pluck('fullname','id')->sort()->prepend('Selecciona un usuario',''),
         ]);
