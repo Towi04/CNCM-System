@@ -575,6 +575,7 @@ function migracion_csv_preview_grupos(
         'clave_nueva_sugerida',
         'plantel_slug',
         'infantil',
+        'fecha_inicio',
         'dias_clase',
         'hora_inicio',
         'profesor_csv',
@@ -588,6 +589,7 @@ function migracion_csv_preview_grupos(
     $muestra = [];
     $faltanEsp = 0;
     $faltanProf = 0;
+    $faltanFecha = 0;
 
     foreach ($slice as $i => $r) {
         $line = $offset + $i + 2;
@@ -674,7 +676,24 @@ function migracion_csv_preview_grupos(
             $errores[] = "Línea {$line}: especialidad {$claveEsp} no existe en HAY";
         }
 
-        if ($idPlantel && !$ya && ($espEstado === 'ok' || $esKids)) {
+        $fechaRawPrev = trim((string) ($r['fecha_inicio_estimada'] ?? ''));
+        if ($fechaRawPrev === '') {
+            $fechaRawPrev = trim((string) ($r['fecha_inicio_legado'] ?? ''));
+        }
+        $fechaPrev = migracion_csv_parse_fecha($fechaRawPrev);
+        if ($fechaPrev === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaPrev)) {
+            $fechaPrev = '';
+            if (!$ya) {
+                $faltanFecha++;
+                if ($accion === 'crear' || str_starts_with($accion, 'kids') || str_starts_with($accion, 'crear pareja')) {
+                    $accion = 'corregir fecha inicio';
+                }
+                $errores[] = "Línea {$line}: fecha de inicio inválida o vacía"
+                    . ($fechaRawPrev !== '' ? " («{$fechaRawPrev}»)" : '');
+            }
+        }
+
+        if ($idPlantel && !$ya && ($espEstado === 'ok' || $esKids) && $fechaPrev !== '') {
             try {
                 $dias = migracion_csv_parse_dias((string) ($r['dias_clase'] ?? ''));
                 $horaIni = trim((string) ($r['hora_inicio'] ?? '08:00')) ?: '08:00';
@@ -713,6 +732,7 @@ function migracion_csv_preview_grupos(
             'plantel_slug' => trim((string) ($r['plantel_slug'] ?? $r['sucursal'] ?? '')),
             'infantil' => $esKids ? '1' : '0',
             'infantil_csv' => $flagInfantil === null ? '' : ($flagInfantil ? '1' : '0'),
+            'fecha_inicio' => $fechaPrev !== '' ? $fechaPrev : ($fechaRawPrev !== '' ? '¿' . $fechaRawPrev : '(vacía)'),
             'dias_clase' => trim((string) ($r['dias_clase'] ?? '')),
             'hora_inicio' => trim((string) ($r['hora_inicio'] ?? '')),
             'profesor_csv' => $profCsv,
@@ -729,6 +749,9 @@ function migracion_csv_preview_grupos(
     $msg = "Vista previa grupos: {$total} fila(s)";
     if ($faltanEsp > 0) {
         $msg .= ". {$faltanEsp} en esta página sin especialidad válida — elíjala en la tabla antes de Importar.";
+    }
+    if ($faltanFecha > 0) {
+        $msg .= ". {$faltanFecha} sin fecha de inicio válida (YYYY-MM-DD o DD/MM/YYYY) — corríjala en el CSV; no se usará la fecha de hoy.";
     }
     if ($faltanProf > 0) {
         $msg .= ". {$faltanProf} sin profesor claro — elija en el desplegable (se preselecciona el nombre más parecido).";
@@ -1482,14 +1505,15 @@ function migracion_csv_grupo_normalizar_fila(array $r, int $line, array $overrid
     $r['_flag_infantil'] = $flagInfantil;
     $r['_es_kids_esp'] = !empty($metaEsp['kids']);
 
-    $fecha = trim((string) ($r['fecha_inicio_estimada'] ?? ''));
-    if ($fecha === '') {
-        $fecha = trim((string) ($r['fecha_inicio_legado'] ?? ''));
+    $fechaRaw = trim((string) ($r['fecha_inicio_estimada'] ?? ''));
+    if ($fechaRaw === '') {
+        $fechaRaw = trim((string) ($r['fecha_inicio_legado'] ?? ''));
     }
-    $fecha = migracion_csv_parse_fecha($fecha);
-    if ($fecha === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-        $fecha = date('Y-m-d');
+    $fecha = migracion_csv_parse_fecha($fechaRaw);
+    if ($fecha !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+        $fecha = '';
     }
+    // No usar "hoy" como fallback: fechas inventadas marcan pendiente_autorizacion / distorsionan fase.
     $dias = migracion_csv_parse_dias((string) ($r['dias_clase'] ?? ''));
     $horaIni = trim((string) ($r['hora_inicio'] ?? '08:00'));
     if ($horaIni === '') {
@@ -1513,6 +1537,7 @@ function migracion_csv_grupo_normalizar_fila(array $r, int $line, array $overrid
     $r['_meta_esp'] = $metaEsp;
     $r['_es_kids'] = $esKids;
     $r['_fecha'] = $fecha;
+    $r['_fecha_raw'] = $fechaRaw;
     $r['_dias'] = $dias;
     $r['_hora_ini'] = $horaIni;
     $r['_hora_fin'] = $horaFin;
@@ -1684,6 +1709,15 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
             continue;
         }
 
+        $fechaPrimera = (string) ($primera['_fecha'] ?? '');
+        if ($fechaPrimera === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaPrimera)) {
+            $rawF = trim((string) ($primera['_fecha_raw'] ?? $primera['fecha_inicio_estimada'] ?? $primera['fecha_inicio_legado'] ?? ''));
+            $errores[] = "Línea {$line}: fecha de inicio inválida o vacía"
+                . ($rawF !== '' ? " («{$rawF}»)" : '')
+                . ' — use YYYY-MM-DD o DD/MM/YYYY desde el legado (no se inventa la de hoy)';
+            continue;
+        }
+
         try {
             if ($esKids) {
                 $ing = $primera;
@@ -1716,7 +1750,7 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                 }
                 $idEspIng = grupo_id_especialidad_infantil($pdo, 'ingles');
                 $idEspComp = grupo_id_especialidad_infantil($pdo, 'computacion');
-                $fecha = (string) ($ing['_fecha'] ?? date('Y-m-d'));
+                $fecha = $fechaPrimera;
                 $claveFase = (string) ($ing['_clave_fase'] ?? '');
                 $idFaseIng = $idEspIng ? migracion_csv_resolver_fase($pdo, $idEspIng, $claveFase, $fecha) : null;
                 $idFaseComp = $idEspComp ? migracion_csv_resolver_fase($pdo, $idEspComp, $claveFase, $fecha) : null;
@@ -1789,6 +1823,7 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                         migracion_csv_map_set($pdo, 'grupo_comp', $claveAnterior, $idComp, 'kids_computacion; alias_clave; hay=' . $claveComp);
                     }
                 }
+                migracion_csv_grupo_set_estado_por_fecha($pdo, [$idIng, $idComp], $fecha);
                 $creados += 2;
             } else {
                 $r = $primera;
@@ -1864,6 +1899,7 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                         );
                     }
                 }
+                migracion_csv_grupo_set_estado_por_fecha($pdo, [$idGrupo], (string) $r['_fecha']);
                 $creados++;
             }
         } catch (Throwable $e) {
@@ -2439,6 +2475,8 @@ function migracion_csv_tablas_hijas_grupo(): array
         'grupo_suplencia',
         'grupo_preinicio_contacto',
         'grupo_fusion_log',
+        'grupo_apertura_log',
+        'grupo_plan_periodo',
         'asistencias',
         'planeaciones',
         'planeacion_semanal',
@@ -2447,6 +2485,43 @@ function migracion_csv_tablas_hijas_grupo(): array
         'tutor_grupo',
         'tutor_asignaciones',
     ];
+}
+
+/**
+ * Estado de apertura al importar: pasado → iniciado; futuro → programado
+ * (evita "pendiente de autorización" por fechas inventadas = hoy).
+ *
+ * @param list<int> $idsGrupo
+ */
+function migracion_csv_grupo_set_estado_por_fecha(PDO $pdo, array $idsGrupo, string $fechaYmd): void
+{
+    $ids = [];
+    foreach ($idsGrupo as $id) {
+        $id = (int) $id;
+        if ($id > 0) {
+            $ids[$id] = true;
+        }
+    }
+    $ids = array_keys($ids);
+    if ($ids === [] || $fechaYmd === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaYmd)) {
+        return;
+    }
+    if (function_exists('grupo_apertura_ensure_schema')) {
+        try {
+            grupo_apertura_ensure_schema($pdo);
+        } catch (Throwable $e) {
+            return;
+        }
+    }
+    $hoy = date('Y-m-d');
+    $estado = ($fechaYmd <= $hoy) ? 'iniciado' : 'programado';
+    $ph = implode(',', array_fill(0, count($ids), '?'));
+    try {
+        $pdo->prepare("UPDATE grupos SET estado_apertura = ? WHERE id_grupo IN ($ph)")
+            ->execute([$estado, ...$ids]);
+    } catch (Throwable $e) {
+        // columna puede no existir aún
+    }
 }
 
 /**
@@ -2463,11 +2538,6 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
     if (!migracion_csv_puede()) {
         return ['ok' => false, 'message' => 'No autorizado'];
     }
-    migracion_csv_ensure_schema($pdo);
-    if (function_exists('grupo_clave_ensure_schema')) {
-        grupo_clave_ensure_schema($pdo);
-    }
-
     $idPlantel = $idPlantel && $idPlantel > 0
         ? $idPlantel
         : (function_exists('plantel_id_activo') ? (int) plantel_id_activo() : 0);
@@ -2475,17 +2545,49 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
         return ['ok' => false, 'message' => 'Seleccione un plantel activo'];
     }
 
+    return migracion_csv_purgar_grupos_plantel($pdo, $idPlantel, false, $borrarAlumnosMapeados);
+}
+
+/**
+ * Purga grupos de un plantel (CLI / revertir UI).
+ * - $todosLosDelPlantel=false: solo los del mapa migración CSV
+ * - $todosLosDelPlantel=true: TODOS los grupos del plantel (reintento limpio)
+ *
+ * @return array{
+ *   ok:bool, message:string, grupos_borrados?:int, mapas_borrados?:int,
+ *   alumnos_desvinculados?:int, planteles?:list<int>, errores?:list<string>
+ * }
+ */
+function migracion_csv_purgar_grupos_plantel(
+    PDO $pdo,
+    int $idPlantel,
+    bool $todosLosDelPlantel = false,
+    bool $borrarAlumnosMapeados = false
+): array {
+    if ($idPlantel <= 0) {
+        return ['ok' => false, 'message' => 'id_plantel inválido'];
+    }
+    migracion_csv_ensure_schema($pdo);
+    if (function_exists('grupo_clave_ensure_schema')) {
+        grupo_clave_ensure_schema($pdo);
+    }
+
     $errores = [];
     $ids = [];
     try {
-        $st = $pdo->prepare(
-            "SELECT DISTINCT m.id_hay
-             FROM hay_migracion_csv_map m
-             INNER JOIN grupos g ON g.id_grupo = m.id_hay
-             WHERE m.entidad IN ('grupo', 'grupo_comp')
-               AND g.id_plantel = ?"
-        );
-        $st->execute([$idPlantel]);
+        if ($todosLosDelPlantel) {
+            $st = $pdo->prepare('SELECT id_grupo FROM grupos WHERE id_plantel = ?');
+            $st->execute([$idPlantel]);
+        } else {
+            $st = $pdo->prepare(
+                "SELECT DISTINCT m.id_hay
+                 FROM hay_migracion_csv_map m
+                 INNER JOIN grupos g ON g.id_grupo = m.id_hay
+                 WHERE m.entidad IN ('grupo', 'grupo_comp')
+                   AND g.id_plantel = ?"
+            );
+            $st->execute([$idPlantel]);
+        }
         foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $id) {
             $id = (int) $id;
             if ($id > 0) {
@@ -2493,14 +2595,13 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
             }
         }
     } catch (Throwable $e) {
-        return ['ok' => false, 'message' => 'No se pudo leer el mapa de grupos: ' . $e->getMessage()];
+        return ['ok' => false, 'message' => 'No se pudo listar grupos: ' . $e->getMessage()];
     }
 
     $idList = array_keys($ids);
     if ($idList === []) {
         $mapasHuerfanos = 0;
         try {
-            // Mapas que apuntan a grupos ya inexistentes
             $mapasHuerfanos = (int) $pdo->exec(
                 "DELETE m FROM hay_migracion_csv_map m
                  LEFT JOIN grupos g ON g.id_grupo = m.id_hay
@@ -2512,12 +2613,20 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
         if (function_exists('grupo_clave_reconstruir_secuencias')) {
             grupo_clave_reconstruir_secuencias($pdo, $idPlantel);
         }
-        migracion_csv_log($pdo, 'grupos', 'info', 'Revertir grupos: nada que borrar; secuencias reconstruidas plantel #' . $idPlantel);
+        $ambito = $todosLosDelPlantel ? 'todos los del plantel' : 'migrados';
+        migracion_csv_log(
+            $pdo,
+            'grupos',
+            'info',
+            "Purga grupos ({$ambito}): nada que borrar; secuencias reconstruidas plantel #{$idPlantel}"
+        );
 
         return [
             'ok' => true,
-            'message' => 'No había grupos migrados en este plantel. Contador de claves reiniciado/reconstruido'
-                . ($mapasHuerfanos > 0 ? " ({$mapasHuerfanos} mapa(s) huérfano(s) limpiados)" : '') . '.',
+            'message' => 'No había grupos'
+                . ($todosLosDelPlantel ? ' en este plantel' : ' migrados en este plantel')
+                . '. Contador de claves reiniciado/reconstruido'
+                . ($mapasHuerfanos > 0 ? " ({$mapasHuerfanos} mapa(s) limpiados)" : '') . '.',
             'grupos_borrados' => 0,
             'mapas_borrados' => $mapasHuerfanos,
             'alumnos_desvinculados' => 0,
@@ -2536,7 +2645,6 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
         $pdo->beginTransaction();
     }
     try {
-        // Desvincular alumnos de esos grupos
         if (function_exists('plantel_table_exists') ? plantel_table_exists($pdo, 'alumno_grupos') : true) {
             try {
                 $stAg = $pdo->prepare("DELETE FROM alumno_grupos WHERE id_grupo IN ($ph)");
@@ -2547,9 +2655,7 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
             }
         }
         try {
-            $stA = $pdo->prepare(
-                "UPDATE alumnos SET id_grupo = NULL WHERE id_grupo IN ($ph)"
-            );
+            $stA = $pdo->prepare('UPDATE alumnos SET id_grupo = NULL WHERE id_grupo IN (' . $ph . ')');
             $stA->execute($idList);
         } catch (Throwable $e) {
             // columna puede no existir / NOT NULL
@@ -2569,7 +2675,6 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
             }
         }
 
-        // Borrar alumnos creados por migración en este plantel (opcional, para reintentar limpio)
         if ($borrarAlumnosMapeados) {
             try {
                 $stAl = $pdo->prepare(
@@ -2625,7 +2730,6 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
         $stDel->execute([...$idList, $idPlantel]);
         $gruposBorrados = $stDel->rowCount();
 
-        // Mapas: borrar entradas cuyo id_hay era de esos grupos
         $stMap = $pdo->prepare(
             "DELETE FROM hay_migracion_csv_map
              WHERE entidad IN ('grupo','grupo_comp') AND id_hay IN ($ph)"
@@ -2633,11 +2737,20 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
         $stMap->execute($idList);
         $mapasBorrados = $stMap->rowCount();
 
-        if (function_exists('grupo_clave_reconstruir_secuencias')) {
-            grupo_clave_reconstruir_secuencias($pdo, $idPlantel);
+        if ($todosLosDelPlantel) {
+            try {
+                // Mapas huérfanos de este plantel (ids ya borrados)
+                $mapasBorrados += (int) $pdo->exec(
+                    "DELETE m FROM hay_migracion_csv_map m
+                     LEFT JOIN grupos g ON g.id_grupo = m.id_hay
+                     WHERE m.entidad IN ('grupo','grupo_comp') AND g.id_grupo IS NULL"
+                );
+            } catch (Throwable $e) {
+                // ignore
+            }
         }
 
-        if ($ownTx) {
+        if ($ownTx && $pdo->inTransaction()) {
             $pdo->commit();
         }
     } catch (Throwable $e) {
@@ -2647,17 +2760,27 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
 
         return [
             'ok' => false,
-            'message' => 'Error al revertir grupos: ' . $e->getMessage(),
+            'message' => 'Error al purgar grupos: ' . $e->getMessage(),
             'errores' => $errores,
         ];
     }
 
-    $msg = "{$gruposBorrados} grupo(s) borrado(s), {$mapasBorrados} mapa(s) limpiado(s)";
+    // Fuera de la TX: DDL/rebuild no debe tumbar el commit de los DELETE
+    if (function_exists('grupo_clave_reconstruir_secuencias')) {
+        try {
+            grupo_clave_reconstruir_secuencias($pdo, $idPlantel);
+        } catch (Throwable $e) {
+            $errores[] = 'reconstruir claves: ' . $e->getMessage();
+        }
+    }
+
+    $ambito = $todosLosDelPlantel ? ' (todos del plantel)' : ' (mapa migración)';
+    $msg = "{$gruposBorrados} grupo(s) borrado(s){$ambito}, {$mapasBorrados} mapa(s) limpiado(s)";
     if ($alumnosDesvinculados > 0) {
         $msg .= ", {$alumnosDesvinculados} vínculo(s) alumno-grupo quitado(s)";
     }
     $msg .= '; contador de claves reconstruido para el plantel.';
-    migracion_csv_log($pdo, 'grupos', 'info', 'Revertir migración: ' . $msg);
+    migracion_csv_log($pdo, 'grupos', 'info', 'Purga grupos: ' . $msg);
 
     return [
         'ok' => true,
