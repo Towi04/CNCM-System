@@ -55,6 +55,7 @@ function plantel_ensure_schema(PDO $pdo): void
     plantel_ensure_column($pdo, 'grupos', 'id_plantel', 'INT UNSIGNED NULL', 'id_grupo');
     plantel_ensure_column($pdo, 'alumnos', 'id_plantel', 'INT UNSIGNED NULL', 'id_alumno');
     plantel_ensure_column($pdo, 'usuarios', 'id_plantel', 'INT UNSIGNED NULL', 'id_usuario');
+    plantel_ensure_column($pdo, 'usuarios', 'ultimo_id_plantel', 'INT UNSIGNED NULL', 'id_plantel');
     plantel_ensure_column($pdo, 'asesoria_disp', 'id_plantel', 'INT UNSIGNED NULL', 'id');
 
     $defaultId = plantel_default_id($pdo);
@@ -360,9 +361,33 @@ function plantel_roles_con_apoyo_temporal(): array
     return ['asesor', 'admin', 'coordinador'];
 }
 
+/**
+ * La cuenta real (p. ej. supervisor) ve todas las sedes aunque esté simulando otro rol.
+ * Evita que al cambiar la vista de rol se pierda el plantel de trabajo.
+ */
+function plantel_cuenta_real_ve_todos(PDO $pdo): bool
+{
+    if (function_exists('rbac_es_supervisor_cuenta') && rbac_es_supervisor_cuenta()) {
+        return true;
+    }
+    $idUsuario = (int) ($_SESSION['user_id'] ?? 0);
+    if ($idUsuario > 0 && function_exists('rbac_cuenta_tiene_acceso_total_bd')) {
+        try {
+            return rbac_cuenta_tiene_acceso_total_bd($pdo, $idUsuario);
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    return false;
+}
+
 /** IDs de sedes que el rol efectivo puede usar; null = todas las activas. */
 function plantel_ids_permitidos(PDO $pdo): ?array
 {
+    if (plantel_cuenta_real_ve_todos($pdo)) {
+        return null;
+    }
     if (function_exists('rbac_tiene_acceso_total') && rbac_tiene_acceso_total()) {
         return null;
     }
@@ -473,9 +498,32 @@ function plantel_restringir_sesion_usuario(PDO $pdo): void
     if ($activo > 0 && plantel_puede_cambiar_a($pdo, $activo)) {
         return;
     }
+
+    // Preferir el último plantel recordado si sigue siendo accesible
+    $ultimo = plantel_leer_ultimo_recordado($pdo);
+    if ($ultimo > 0 && $ultimo !== $activo && plantel_puede_cambiar_a($pdo, $ultimo)) {
+        $p = plantel_find($pdo, $ultimo);
+        if ($p && (int) $p['activo'] === 1) {
+            plantel_set_sesion($p);
+
+            return;
+        }
+    }
+
     $permitidos = plantel_list_accesibles($pdo, true);
     if ($permitidos !== []) {
-        $p = plantel_find($pdo, (int) $permitidos[0]['id_plantel']);
+        // Si el activo ya no vale, preferir home del usuario dentro de la lista
+        $home = plantel_usuario_home_id($pdo);
+        $elegido = (int) $permitidos[0]['id_plantel'];
+        if ($home > 0) {
+            foreach ($permitidos as $row) {
+                if ((int) $row['id_plantel'] === $home) {
+                    $elegido = $home;
+                    break;
+                }
+            }
+        }
+        $p = plantel_find($pdo, $elegido);
         if ($p) {
             plantel_set_sesion($p);
             return;
@@ -490,11 +538,147 @@ function plantel_restringir_sesion_usuario(PDO $pdo): void
     }
 }
 
-function plantel_set_sesion(array $plantel): void
+function plantel_cookie_ultimo_nombre(): string
 {
-    $_SESSION['plantel_id'] = (int) $plantel['id_plantel'];
+    return 'hay_ultimo_plantel';
+}
+
+/** Asegura columna usuarios.ultimo_id_plantel (idempotente). */
+function plantel_ensure_ultimo_column(PDO $pdo): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    try {
+        if (function_exists('plantel_ensure_column')) {
+            plantel_ensure_column($pdo, 'usuarios', 'ultimo_id_plantel', 'INT UNSIGNED NULL', 'id_plantel');
+        }
+    } catch (Throwable $e) {
+        // ignore
+    }
+    $done = true;
+}
+
+/**
+ * Lee el último plantel de trabajo (BD → cookie), validado para el usuario actual.
+ */
+function plantel_leer_ultimo_recordado(PDO $pdo, ?int $idUsuario = null): int
+{
+    $idUsuario = $idUsuario ?? (int) ($_SESSION['user_id'] ?? 0);
+    if ($idUsuario <= 0) {
+        return 0;
+    }
+    plantel_ensure_ultimo_column($pdo);
+
+    try {
+        $st = $pdo->prepare('SELECT ultimo_id_plantel FROM usuarios WHERE id_usuario = ? LIMIT 1');
+        $st->execute([$idUsuario]);
+        $id = (int) ($st->fetchColumn() ?: 0);
+        if ($id > 0) {
+            return $id;
+        }
+    } catch (Throwable $e) {
+        // columna aún no existe / BD
+    }
+
+    $raw = (string) ($_COOKIE[plantel_cookie_ultimo_nombre()] ?? '');
+    if ($raw !== '' && preg_match('/^(\d+):(\d+)$/', $raw, $m)) {
+        if ((int) $m[1] === $idUsuario) {
+            return (int) $m[2];
+        }
+    }
+
+    return 0;
+}
+
+/** Persiste el plantel de trabajo en sesión + BD + cookie (sobrevive al logout). */
+function plantel_recordar_ultimo(PDO $pdo, int $idPlantel, ?int $idUsuario = null): void
+{
+    $idUsuario = $idUsuario ?? (int) ($_SESSION['user_id'] ?? 0);
+    if ($idUsuario <= 0 || $idPlantel <= 0) {
+        return;
+    }
+    plantel_ensure_ultimo_column($pdo);
+    try {
+        $pdo->prepare('UPDATE usuarios SET ultimo_id_plantel = ? WHERE id_usuario = ?')
+            ->execute([$idPlantel, $idUsuario]);
+    } catch (Throwable $e) {
+        // ignore
+    }
+
+    if (headers_sent()) {
+        return;
+    }
+    $secure = function_exists('hay_request_is_https') ? hay_request_is_https() : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $path = '/';
+    if (function_exists('hay_app_path')) {
+        // cookie en raíz del host para que sobreviva a subpaths
+        $path = '/';
+    }
+    $value = $idUsuario . ':' . $idPlantel;
+    $opts = [
+        'expires' => time() + 86400 * 400,
+        'path' => $path,
+        'secure' => $secure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ];
+    if (PHP_VERSION_ID >= 70300) {
+        setcookie(plantel_cookie_ultimo_nombre(), $value, $opts);
+    } else {
+        setcookie(plantel_cookie_ultimo_nombre(), $value, $opts['expires'], $path, '', $secure, true);
+    }
+    $_COOKIE[plantel_cookie_ultimo_nombre()] = $value;
+}
+
+/**
+ * Plantel preferido al iniciar sesión: último recordado si es accesible; si no, home.
+ */
+function plantel_resolver_preferido_login(PDO $pdo, ?int $homeId = null, ?int $idUsuario = null): ?int
+{
+    $idUsuario = $idUsuario ?? (int) ($_SESSION['user_id'] ?? 0);
+    $homeId = $homeId ?? plantel_usuario_home_id($pdo, $idUsuario);
+    $ultimo = plantel_leer_ultimo_recordado($pdo, $idUsuario);
+    if ($ultimo > 0) {
+        $p = plantel_find($pdo, $ultimo);
+        if ($p && (int) $p['activo'] === 1 && plantel_puede_cambiar_a($pdo, $ultimo)) {
+            return $ultimo;
+        }
+        // Supervisor / acceso total: confiar en el recordado aunque aún no cargue el alcance
+        if ($p && (int) $p['activo'] === 1 && plantel_cuenta_real_ve_todos($pdo)) {
+            return $ultimo;
+        }
+    }
+    if ($homeId > 0) {
+        return $homeId;
+    }
+
+    return null;
+}
+
+function plantel_set_sesion(array $plantel, ?PDO $pdoForRemember = null): void
+{
+    $prev = (int) ($_SESSION['plantel_id'] ?? 0);
+    $id = (int) $plantel['id_plantel'];
+    $_SESSION['plantel_id'] = $id;
     $_SESSION['plantel_slug'] = $plantel['slug'];
     $_SESSION['plantel_nombre'] = $plantel['nombre'];
+
+    if ($id <= 0 || $id === $prev) {
+        return;
+    }
+
+    $db = $pdoForRemember;
+    if (!($db instanceof PDO)) {
+        global $pdo;
+        if (isset($pdo) && $pdo instanceof PDO) {
+            $db = $pdo;
+        }
+    }
+    if ($db instanceof PDO) {
+        plantel_recordar_ultimo($db, $id);
+    }
 }
 
 function plantel_inicializar_sesion(PDO $pdo, ?int $preferido = null): void
@@ -507,7 +691,8 @@ function plantel_inicializar_sesion(PDO $pdo, ?int $preferido = null): void
     if ($preferido > 0) {
         $p = plantel_find($pdo, $preferido);
         if ($p && (int) $p['activo'] === 1) {
-            plantel_set_sesion($p);
+            plantel_set_sesion($p, $pdo);
+            plantel_restringir_sesion_usuario($pdo);
             return;
         }
     }
@@ -515,7 +700,8 @@ function plantel_inicializar_sesion(PDO $pdo, ?int $preferido = null): void
     if (!empty($_SESSION['plantel_id'])) {
         $p = plantel_find($pdo, $_SESSION['plantel_id']);
         if ($p && (int) $p['activo'] === 1) {
-            plantel_set_sesion($p);
+            plantel_set_sesion($p, $pdo);
+            plantel_restringir_sesion_usuario($pdo);
             return;
         }
     }
@@ -524,14 +710,25 @@ function plantel_inicializar_sesion(PDO $pdo, ?int $preferido = null): void
     if (is_string($slug) && !is_numeric($slug)) {
         $p = plantel_find($pdo, $slug);
         if ($p && (int) $p['activo'] === 1) {
-            plantel_set_sesion($p);
+            plantel_set_sesion($p, $pdo);
+            plantel_restringir_sesion_usuario($pdo);
+            return;
+        }
+    }
+
+    $ultimo = plantel_leer_ultimo_recordado($pdo);
+    if ($ultimo > 0) {
+        $p = plantel_find($pdo, $ultimo);
+        if ($p && (int) $p['activo'] === 1) {
+            plantel_set_sesion($p, $pdo);
+            plantel_restringir_sesion_usuario($pdo);
             return;
         }
     }
 
     $p = plantel_find($pdo, plantel_default_id($pdo));
     if ($p) {
-        plantel_set_sesion($p);
+        plantel_set_sesion($p, $pdo);
     }
 
     plantel_restringir_sesion_usuario($pdo);

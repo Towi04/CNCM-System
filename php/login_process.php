@@ -85,7 +85,10 @@ if ($usuario && password_verify($pass_input, $usuario['password'])) {
         usuario_suspension_aplicar_sesion($usuario);
     }
 
-    $preferido = !empty($usuario['id_plantel']) ? (int) $usuario['id_plantel'] : null;
+    $homePlantel = !empty($usuario['id_plantel']) ? (int) $usuario['id_plantel'] : null;
+    $preferido = function_exists('plantel_resolver_preferido_login')
+        ? plantel_resolver_preferido_login($pdo, $homePlantel, $idUsuario)
+        : $homePlantel;
     plantel_inicializar_sesion($pdo, $preferido);
     usuario_actualizar_acceso($pdo, $idUsuario);
     $_SESSION['debe_cambiar_password'] = (int) ($usuario['debe_cambiar_password'] ?? 0);
