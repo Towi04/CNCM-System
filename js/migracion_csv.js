@@ -702,14 +702,18 @@
 
   $('migcsv-revertir-grupos')?.addEventListener('click', async () => {
     const aviso =
-      'Esto BORRA del plantel actual los grupos creados por Migración CSV,\n' +
-      'quita sus vínculos con alumnos y REINICIA el contador de claves (IS1, IK1…).\n\n' +
-      'Luego podrá volver a importar 03_grupos limpio.\n\n' +
+      'Esto borra grupos del plantel actual y reinicia el contador de claves (IS1, IK1…).\n\n' +
+      'Si un import falló a medias, muchos grupos NO están en el mapa: use TODOS.\n\n' +
       '¿Continuar?';
     if (!confirm(aviso)) return;
-    const typed = window.prompt('Escriba REVERTIR para confirmar (mayúsculas):', '');
-    if (String(typed || '').trim().toUpperCase() !== 'REVERTIR') {
-      showMsg('Cancelado: debe escribir REVERTIR', false);
+    const typed = window.prompt(
+      'Escriba TODOS = vaciar TODOS los grupos del plantel (recomendado tras un import malo)\n' +
+        'Escriba REVERTIR = solo mapa / clave_anterior de migración\n',
+      'TODOS'
+    );
+    const conf = String(typed || '').trim().toUpperCase();
+    if (conf !== 'REVERTIR' && conf !== 'TODOS') {
+      showMsg('Cancelado: escriba REVERTIR o TODOS', false);
       return;
     }
     const borrarAl = confirm(
@@ -720,18 +724,25 @@
     const fd = new FormData();
     fd.append('action', 'revertir_grupos');
     fd.append('id_plantel', String(idPlantel));
-    fd.append('confirm', 'REVERTIR');
+    fd.append('confirm', conf);
+    fd.append('todos', conf === 'TODOS' ? '1' : '0');
     fd.append('borrar_alumnos', borrarAl ? '1' : '0');
-    setBusy(true, 'Revirtiendo grupos migrados…');
+    setBusy(true, conf === 'TODOS' ? 'Vaciando todos los grupos del plantel…' : 'Revirtiendo grupos migrados…');
     try {
       const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
       const data = await r.json();
       let text = data.message || '';
+      if (data.grupos_borrados != null) {
+        text += (text ? ' — ' : '') + 'Borrados: ' + data.grupos_borrados;
+      }
       if (data.errores && data.errores.length) {
         text += ' — ' + data.errores.slice(0, 3).join('; ');
       }
       showMsg(text, data.status === 'ok');
       refreshEstado();
+      if (typeof cargarSeccion === 'function' && data.status === 'ok' && (data.grupos_borrados > 0 || conf === 'TODOS')) {
+        // No navegar solo; el usuario puede ir a Grupos a verificar
+      }
     } catch (e) {
       showMsg('Error de red al revertir grupos', false);
     } finally {

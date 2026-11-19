@@ -116,8 +116,9 @@ El import **ya no inventa la fecha de hoy** si falta o no parsea: la fila falla 
 Grupos con fecha ≤ hoy quedan en `iniciado`; futuros en `programado` (la vista de apertura
 solo marca *pendiente de autorización* cuando el inicio está cerca).
 
-Kids: 1 grupo legado con `IK`/`ING-K` → **2** grupos HAY (`IK{n}` + `CK{n}`). Cuente eso al
-comparar totales.
+Kids: 2 filas con la **misma** `clave_legado` (una `IK`/`ING-K`, otra `CK`/`COMP-K`) → **1** pareja
+HAY (`IK{n}` + `CK{n}` = 2 grupos). Si solo sube la fila CK sin su IK, se omite (no se duplica).
+Una sola fila `ING-K` aún parte 2h+2h. Al comparar totales: adultos 1:1; cada pareja kids = 2 grupos HAY.
 
 ## Reintentar grupos mal importados
 

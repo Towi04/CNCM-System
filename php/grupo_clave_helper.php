@@ -234,7 +234,7 @@ function grupo_clave_siguiente_numero(PDO $pdo, int $idPlantel, string $prefijo)
         );
         $st->execute([$idPlantel, $prefijo]);
         $n = (int) $st->fetchColumn();
-        if ($ownTx) {
+        if ($ownTx && $pdo->inTransaction()) {
             $pdo->commit();
         }
 
@@ -417,6 +417,8 @@ function grupo_infantil_crear_pareja(
         $idFaseComputacion = grupo_primera_fase($pdo, $idEspComp);
     }
 
+    // Claves/secuencia fuera de la TX de INSERT (pueden tocar schema).
+    // Un ALTER dentro de la TX hace commit implícito en MySQL → "There is no active transaction".
     $claves = grupo_infantil_generar_claves($pdo, $idPlantel);
     $num = (int) $claves['numero_secuencial'];
 
@@ -445,39 +447,43 @@ function grupo_infantil_crear_pareja(
         ]);
         $idGrupoComp = (int) $pdo->lastInsertId();
 
-        if (function_exists('tutor_asignar_grupo')) {
-            tutor_asignar_grupo($pdo, $idGrupoIng);
-            tutor_asignar_grupo($pdo, $idGrupoComp);
-        }
-
         $pdo->prepare('UPDATE grupos SET id_grupo_pareja_infantil = ? WHERE id_grupo = ?')
             ->execute([$idGrupoComp, $idGrupoIng]);
         $pdo->prepare('UPDATE grupos SET id_grupo_pareja_infantil = ? WHERE id_grupo = ?')
             ->execute([$idGrupoIng, $idGrupoComp]);
 
-        if ($diasSemana !== []) {
-            grupo_guardar_horarios($pdo, $idGrupoIng, $diasSemana, $horaInicio, $horaFin);
-            grupo_guardar_horarios($pdo, $idGrupoComp, $diasSemana, $horaInicio, $horaFin);
-        }
-
-        if ($ownTx) {
+        if ($ownTx && $pdo->inTransaction()) {
             $pdo->commit();
         }
-
-        return [
-            'ok' => true,
-            'id_grupo_ingles' => $idGrupoIng,
-            'id_grupo_computacion' => $idGrupoComp,
-            'clave_ingles' => $claves['clave_ingles'],
-            'clave_computacion' => $claves['clave_computacion'],
-            'numero_secuencial' => $num,
-        ];
     } catch (Throwable $e) {
         if ($ownTx && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
         throw $e;
     }
+
+    // Fuera de la TX (pueden tocar schema / no deben tumbar el commit de los INSERT)
+    if (function_exists('tutor_asignar_grupo')) {
+        try {
+            tutor_asignar_grupo($pdo, $idGrupoIng);
+            tutor_asignar_grupo($pdo, $idGrupoComp);
+        } catch (Throwable $e) {
+            // no bloquear creación
+        }
+    }
+    if ($diasSemana !== []) {
+        grupo_guardar_horarios($pdo, $idGrupoIng, $diasSemana, $horaInicio, $horaFin);
+        grupo_guardar_horarios($pdo, $idGrupoComp, $diasSemana, $horaInicio, $horaFin);
+    }
+
+    return [
+        'ok' => true,
+        'id_grupo_ingles' => $idGrupoIng,
+        'id_grupo_computacion' => $idGrupoComp,
+        'clave_ingles' => $claves['clave_ingles'],
+        'clave_computacion' => $claves['clave_computacion'],
+        'numero_secuencial' => $num,
+    ];
 }
 
 /** id_especialidad principal según código de área del grupo. */

@@ -54,8 +54,8 @@ if (function_exists('plantel_list')) {
     <button type="button" class="secondary" id="migcsv-provision" title="Google Workspace + Moodle para registros mapeados">
       <i class="fas fa-user-plus"></i> Re-provisionar mapeados
     </button>
-    <button type="button" class="secondary" id="migcsv-revertir-grupos" title="Borra grupos creados por esta migración y reinicia el contador de claves del plantel" style="border-color:#c47b00; color:#8a5a00;">
-      <i class="fas fa-undo"></i> Revertir grupos migrados
+    <button type="button" class="secondary" id="migcsv-revertir-grupos" title="Borra grupos del plantel (mapa o TODOS) y reinicia el contador de claves" style="border-color:#c47b00; color:#8a5a00;">
+      <i class="fas fa-undo"></i> Revertir / vaciar grupos
     </button>
   </div>
 
