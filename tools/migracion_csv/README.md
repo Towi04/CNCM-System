@@ -104,6 +104,17 @@ reglas del sistema (número de control / correo institucional).
 Para descargar pagos del legado basta pegar (o subir el CSV de alumnos) la columna
 `id_alumno_legado`; no es obligatorio el filtro de grupos.
 
+## Reintentar grupos mal importados
+
+En el Portal → Migración CSV → **Revertir grupos migrados** (plantel activo):
+
+1. Confirme con la palabra `REVERTIR`.
+2. Opcional: también borrar alumnos/pagos creados por la migración.
+3. Se eliminan los grupos del mapa, se desvinculan alumnos y se **reconstruye**
+   el contador de claves (`grupo_clave_secuencia`) según lo que quede en el plantel
+   (si no queda ninguno, las nuevas claves vuelven a empezar en 1).
+4. Vuelva a descargar/importar `03_grupos` con las claves legado.
+
 ## Checklist operativo por plantel
 
 1. [ ] Alta/import de personal → provisión staff
