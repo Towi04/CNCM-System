@@ -65,19 +65,18 @@ if ($action === 'export_legado') {
         if ($line === '' || str_starts_with($line, '#')) {
             continue;
         }
-        // Si pegan CSV con encabezado, ignorar la fila de títulos
-        if (strcasecmp($line, 'id_alumno_legado') === 0 || str_contains(strtolower($line), 'id_alumno_legado,')) {
-            if (str_contains($line, ',')) {
-                // Extraer columna id_alumno_legado de una fila CSV completa más abajo
-                continue;
-            }
+        // Encabezados CSV: ignorar
+        $low = strtolower($line);
+        if ($low === 'numero_control' || $low === 'id_alumno_legado'
+            || str_starts_with($low, 'numero_control,') || str_starts_with($low, 'id_alumno_legado,')) {
             continue;
         }
-        // Valor suelto o primera columna de una fila CSV
+        // Valor suelto o fila CSV: preferir columna numero_control si hay encabezado implícito
         if (str_contains($line, ',')) {
             $parts = str_getcsv($line);
             $first = trim((string) ($parts[0] ?? ''));
-            if ($first !== '' && strcasecmp($first, 'id_alumno_legado') !== 0) {
+            if ($first !== '' && strcasecmp($first, 'id_alumno_legado') !== 0
+                && strcasecmp($first, 'numero_control') !== 0) {
                 $filtroAlumnos[] = $first;
             }
             continue;
@@ -85,7 +84,7 @@ if ($action === 'export_legado') {
         $filtroAlumnos[] = $line;
     }
     $idsGrupos = migcsv_resolver_ids_grupos($pdoLeg, $filtro);
-    $idsAlumnosFiltro = migcsv_resolver_ids_alumnos($pdoLeg, $filtroAlumnos);
+    $idsAlumnosFiltro = migcsv_resolver_ids_alumnos($pdoLeg, $filtroAlumnos, true);
     if (in_array($tipoExp, ['grupos', 'alumnos'], true) && $idsGrupos === []) {
         header('Content-Type: text/plain; charset=utf-8');
         http_response_code(400);
@@ -95,8 +94,8 @@ if ($action === 'export_legado') {
     if ($tipoExp === 'pagos' && $idsAlumnosFiltro === [] && $idsGrupos === []) {
         header('Content-Type: text/plain; charset=utf-8');
         http_response_code(400);
-        echo 'Para pagos indique id_alumno_legado (uno por línea, o pegue la columna del CSV de alumnos) '
-            . 'o, en su defecto, ids/claves de grupos.';
+        echo 'Para pagos indique numero_control (uno por línea, o suba el CSV de alumnos) '
+            . 'o, en su defecto, claves de grupos. Prefijo id:123 solo si necesita el id interno legado.';
         exit;
     }
     if ($idSucursal > 0 && $idsGrupos !== []) {
@@ -449,6 +448,20 @@ try {
                 $parsed['rows'],
                 $idPlantel > 0 ? $idPlantel : null,
                 $overrides
+            );
+        } elseif ($tipo === 'alumnos') {
+            // Por defecto NO provisiona Google/Moodle: confirmar datos y luego «Re-provisionar mapeados»
+            $provAl = !empty($_POST['provisionar']) && (string) $_POST['provisionar'] !== '0';
+            $parsedAl = migracion_csv_leer_archivo($_FILES['csv']['tmp_name']);
+            if (!empty($parsedAl['error'])) {
+                echo json_encode(['status' => 'error', 'message' => $parsedAl['error']], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $res = migracion_csv_importar_alumnos(
+                $pdo,
+                $parsedAl['rows'],
+                $idPlantel > 0 ? $idPlantel : null,
+                $provAl
             );
         } else {
             $res = migracion_csv_importar_tipo($pdo, $tipo, $_FILES['csv']['tmp_name'], $idPlantel > 0 ? $idPlantel : null);

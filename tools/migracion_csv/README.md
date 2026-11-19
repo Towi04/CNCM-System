@@ -99,15 +99,21 @@ El id interno de BD (`id_grupo_legado`) es opcional; el enlace operativo es la *
 (`grupo_estado`) e Importe. Si una `clave_legado` “no está en el mapa”, esa clave no formó
 parte de los grupos importados: vuelva a exportar/importar `03_grupos` incluyendo esa clave.
 Kids: un alumno del grupo legado → IK y CK (dual).
-Al importar se provisiona cuenta HAY + Google Workspace + Moodle (si faltan), con las mismas
-reglas del sistema (número de control / correo institucional).
+
+El `numero_control` del legado se **respeta tal cual** en HAY (no se regenera).
+
+**Importación en dos pasos:** por defecto Importar solo crea la ficha HAY + vínculo a grupo
+(sin Google Workspace ni Moodle). Cuando confirme que los alumnos están correctos, use
+«Re-provisionar mapeados» para crear usuario HAY + Google + Moodle (NC como usuario /
+correo institucional).
 
 ### 05_pagos
 
 `numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`, `folio`. Colegiatura congelada se define después en HAY.
 
-Para descargar pagos del legado basta pegar (o subir el CSV de alumnos) la columna
-`id_alumno_legado`; no es obligatorio el filtro de grupos.
+Para descargar pagos del legado pegue (o suba el CSV de alumnos) la columna
+`numero_control`; no hace falta `id_alumno_legado` ni el filtro de grupos.
+Si necesita el id interno legado, use el prefijo `id:123`.
 
 ## Fecha de inicio
 

@@ -2101,14 +2101,25 @@ function migracion_csv_resolver_grupos_para_alumno(
 /**
  * @return array{ok:bool, message:string, creados?:int, vinculados?:int, errores?:list<string>}
  */
-function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlantel = null): array
-{
+/**
+ * Importa alumnos HAY (ficha + vínculo a grupo). Por defecto NO crea Google/Moodle/HAY login;
+ * use Migración CSV → Re-provisionar mapeados cuando confirme que los datos están bien.
+ *
+ * @param list<array<string,mixed>> $rows
+ * @return array{ok:bool,message:string,creados?:int,vinculados?:int,cuentas_ok?:int,cuentas_fail?:int,errores?:list<string>}
+ */
+function migracion_csv_importar_alumnos(
+    PDO $pdo,
+    array $rows,
+    ?int $forzarPlantel = null,
+    bool $provisionarCuentas = false
+): array {
     if (!migracion_csv_puede()) {
         return ['ok' => false, 'message' => 'No autorizado'];
     }
     migracion_csv_ensure_schema($pdo);
     alumno_ensure_schema($pdo);
-    if (function_exists('usuario_ensure_schema')) {
+    if ($provisionarCuentas && function_exists('usuario_ensure_schema')) {
         usuario_ensure_schema($pdo);
     }
     $creados = 0;
@@ -2237,10 +2248,13 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
                 ]);
                 $vinculados++;
             }
-            if ($idAlLeg !== '') {
-                migracion_csv_map_set($pdo, 'alumno', $idAlLeg, $idAlumno, $nc);
-            } elseif ($nc !== '') {
+            // Mapa por número de control (clave operativa) y, si viene, por id legado
+            if ($nc !== '') {
                 migracion_csv_map_set($pdo, 'alumno', 'nc:' . $nc, $idAlumno, $nc);
+                migracion_csv_map_set($pdo, 'alumno', $nc, $idAlumno, 'nc_plain');
+            }
+            if ($idAlLeg !== '') {
+                migracion_csv_map_set($pdo, 'alumno', $idAlLeg, $idAlumno, $nc !== '' ? $nc : null);
             }
             if ($idAsesor) {
                 try {
@@ -2322,8 +2336,8 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
                 }
             }
 
-            // Misma ruta que inscripción/ubicación: Google + usuario HAY + Moodle
-            if (function_exists('usuario_crear_cuenta_alumno')) {
+            // Google / usuario HAY / Moodle: solo si se pidió explícitamente
+            if ($provisionarCuentas && function_exists('usuario_crear_cuenta_alumno')) {
                 try {
                     $cuenta = usuario_crear_cuenta_alumno($pdo, $idAlumno, $idPlantel);
                     if (!empty($cuenta['ok']) || !empty($cuenta['vinculado'])) {
@@ -2348,7 +2362,9 @@ function migracion_csv_importar_alumnos(PDO $pdo, array $rows, ?int $forzarPlant
     }
 
     $msg = "{$creados} creado(s), {$vinculados} vinculado(s)";
-    if ($cuentasOk + $cuentasFail > 0) {
+    if (!$provisionarCuentas) {
+        $msg .= '; sin cuentas Google/Moodle (use «Re-provisionar mapeados» cuando confirme los datos)';
+    } elseif ($cuentasOk + $cuentasFail > 0) {
         $msg .= "; cuentas OK {$cuentasOk}" . ($cuentasFail > 0 ? " / fallos {$cuentasFail}" : '');
     }
     if ($gruposFaltantes !== []) {
@@ -2403,27 +2419,35 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
         $nc = trim((string) ($r['numero_control'] ?? ''));
         $idAlLeg = trim((string) ($r['id_alumno_legado'] ?? ''));
         $idAlumno = null;
-        if ($idAlLeg !== '') {
+        // Preferir número de control (clave operativa legado↔HAY)
+        if ($nc !== '') {
+            $mappedNc = migracion_csv_map_get($pdo, 'alumno', 'nc:' . $nc)
+                ?? migracion_csv_map_get($pdo, 'alumno', $nc);
+            if ($mappedNc !== null && $mappedNc > 0) {
+                $idAlumno = $mappedNc;
+            } else {
+                $st = $pdo->prepare(
+                    'SELECT id_alumno FROM alumnos WHERE numero_control = ?'
+                    . ($idPlantelSesion > 0 ? ' AND id_plantel = ?' : '')
+                    . ' LIMIT 1'
+                );
+                $params = [$nc];
+                if ($idPlantelSesion > 0) {
+                    $params[] = $idPlantelSesion;
+                }
+                $st->execute($params);
+                $ex = $st->fetchColumn();
+                if ($ex !== false) {
+                    $idAlumno = (int) $ex;
+                }
+            }
+        }
+        if (($idAlumno === null || $idAlumno <= 0) && $idAlLeg !== '') {
             $idAlumno = migracion_csv_map_get($pdo, 'alumno', $idAlLeg);
         }
-        if (($idAlumno === null || $idAlumno <= 0) && $nc !== '') {
-            $st = $pdo->prepare(
-                'SELECT id_alumno FROM alumnos WHERE numero_control = ?'
-                . ($idPlantelSesion > 0 ? ' AND id_plantel = ?' : '')
-                . ' LIMIT 1'
-            );
-            $params = [$nc];
-            if ($idPlantelSesion > 0) {
-                $params[] = $idPlantelSesion;
-            }
-            $st->execute($params);
-            $ex = $st->fetchColumn();
-            if ($ex !== false) {
-                $idAlumno = (int) $ex;
-            }
-        }
         if ($idAlumno === null || $idAlumno <= 0) {
-            $errores[] = "Línea {$line}: alumno no encontrado ({$nc})";
+            $errores[] = "Línea {$line}: alumno no encontrado"
+                . ($nc !== '' ? " (NC {$nc})" : ($idAlLeg !== '' ? " (id legado {$idAlLeg})" : ''));
             continue;
         }
         $monto = (float) str_replace([',', ' '], ['', ''], (string) ($r['monto'] ?? '0'));
@@ -3654,9 +3678,16 @@ function migracion_csv_preview_alumnos(
     ];
 }
 
-/** @return array{ok:bool, message:string, ...} */
-function migracion_csv_importar_tipo(PDO $pdo, string $tipo, string $tmpPath, ?int $idPlantel = null): array
-{
+/**
+ * @return array{ok:bool, message:string, ...}
+ */
+function migracion_csv_importar_tipo(
+    PDO $pdo,
+    string $tipo,
+    string $tmpPath,
+    ?int $idPlantel = null,
+    bool $provisionarAlumnos = false
+): array {
     $parsed = migracion_csv_leer_archivo($tmpPath);
     if (!empty($parsed['error'])) {
         return ['ok' => false, 'message' => $parsed['error']];
@@ -3671,7 +3702,7 @@ function migracion_csv_importar_tipo(PDO $pdo, string $tipo, string $tmpPath, ?i
         'staff_emails' => migracion_csv_importar_staff_emails($pdo, $tmpPath, $idPlantel, true),
         'aulas' => migracion_csv_importar_aulas($pdo, $rows, $idPlantel),
         'grupos' => migracion_csv_importar_grupos($pdo, $rows, $idPlantel),
-        'alumnos' => migracion_csv_importar_alumnos($pdo, $rows, $idPlantel),
+        'alumnos' => migracion_csv_importar_alumnos($pdo, $rows, $idPlantel, $provisionarAlumnos),
         'pagos' => migracion_csv_importar_pagos($pdo, $rows, $idPlantel),
         default => ['ok' => false, 'message' => 'Tipo de CSV no reconocido'],
     };
