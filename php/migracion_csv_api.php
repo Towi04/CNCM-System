@@ -484,10 +484,14 @@ try {
 
     if ($action === 'revertir_grupos') {
         $confirm = strtoupper(trim((string) ($_POST['confirm'] ?? '')));
-        if ($confirm !== 'REVERTIR') {
+        $todos = !empty($_POST['todos']) && (string) $_POST['todos'] !== '0';
+        if ($confirm === 'TODOS') {
+            $todos = true;
+        }
+        if ($confirm !== 'REVERTIR' && $confirm !== 'TODOS') {
             echo json_encode([
                 'status' => 'error',
-                'message' => 'Para confirmar escriba REVERTIR',
+                'message' => 'Para confirmar escriba REVERTIR (mapa) o TODOS (vaciar plantel)',
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -495,7 +499,8 @@ try {
         $res = migracion_csv_revertir_grupos(
             $pdo,
             $idPlantel > 0 ? $idPlantel : null,
-            $borrarAlumnos
+            $borrarAlumnos,
+            $todos
         );
         echo json_encode([
             'status' => !empty($res['ok']) ? 'ok' : 'error',
@@ -503,6 +508,7 @@ try {
             'grupos_borrados' => $res['grupos_borrados'] ?? 0,
             'mapas_borrados' => $res['mapas_borrados'] ?? 0,
             'alumnos_desvinculados' => $res['alumnos_desvinculados'] ?? 0,
+            'grupos_restantes_plantel' => $res['grupos_restantes_plantel'] ?? null,
             'errores' => $res['errores'] ?? [],
         ], JSON_UNESCAPED_UNICODE);
         exit;

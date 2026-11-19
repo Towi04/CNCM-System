@@ -2555,8 +2555,12 @@ function migracion_csv_grupo_set_estado_por_fecha(PDO $pdo, array $idsGrupo, str
  *   alumnos_desvinculados?:int, planteles?:list<int>, errores?:list<string>
  * }
  */
-function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $borrarAlumnosMapeados = false): array
-{
+function migracion_csv_revertir_grupos(
+    PDO $pdo,
+    ?int $idPlantel = null,
+    bool $borrarAlumnosMapeados = false,
+    bool $todosLosDelPlantel = false
+): array {
     if (!migracion_csv_puede()) {
         return ['ok' => false, 'message' => 'No autorizado'];
     }
@@ -2567,7 +2571,7 @@ function migracion_csv_revertir_grupos(PDO $pdo, ?int $idPlantel = null, bool $b
         return ['ok' => false, 'message' => 'Seleccione un plantel activo'];
     }
 
-    return migracion_csv_purgar_grupos_plantel($pdo, $idPlantel, false, $borrarAlumnosMapeados);
+    return migracion_csv_purgar_grupos_plantel($pdo, $idPlantel, $todosLosDelPlantel, $borrarAlumnosMapeados);
 }
 
 /**
@@ -2601,13 +2605,33 @@ function migracion_csv_purgar_grupos_plantel(
             $st = $pdo->prepare('SELECT id_grupo FROM grupos WHERE id_plantel = ?');
             $st->execute([$idPlantel]);
         } else {
-            $st = $pdo->prepare(
-                "SELECT DISTINCT m.id_hay
-                 FROM hay_migracion_csv_map m
-                 INNER JOIN grupos g ON g.id_grupo = m.id_hay
-                 WHERE m.entidad IN ('grupo', 'grupo_comp')
-                   AND g.id_plantel = ?"
-            );
+            // Mapa + grupos con clave_anterior (sello del import CSV). Un import con
+            // error de TX puede dejar grupos sin fila en el mapa.
+            $tieneClaveAnt = function_exists('plantel_column_exists')
+                ? plantel_column_exists($pdo, 'grupos', 'clave_anterior')
+                : true;
+            if ($tieneClaveAnt) {
+                $st = $pdo->prepare(
+                    "SELECT g.id_grupo
+                     FROM grupos g
+                     WHERE g.id_plantel = ?
+                       AND (
+                         EXISTS (
+                           SELECT 1 FROM hay_migracion_csv_map m
+                           WHERE m.id_hay = g.id_grupo AND m.entidad IN ('grupo','grupo_comp')
+                         )
+                         OR (g.clave_anterior IS NOT NULL AND TRIM(g.clave_anterior) <> '')
+                       )"
+                );
+            } else {
+                $st = $pdo->prepare(
+                    "SELECT DISTINCT m.id_hay
+                     FROM hay_migracion_csv_map m
+                     INNER JOIN grupos g ON g.id_grupo = m.id_hay
+                     WHERE m.entidad IN ('grupo', 'grupo_comp')
+                       AND g.id_plantel = ?"
+                );
+            }
             $st->execute([$idPlantel]);
         }
         foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $id) {
@@ -2632,6 +2656,14 @@ function migracion_csv_purgar_grupos_plantel(
         } catch (Throwable $e) {
             // ignore
         }
+        $nPlantel = 0;
+        try {
+            $stN = $pdo->prepare('SELECT COUNT(*) FROM grupos WHERE id_plantel = ?');
+            $stN->execute([$idPlantel]);
+            $nPlantel = (int) $stN->fetchColumn();
+        } catch (Throwable $e) {
+            $nPlantel = 0;
+        }
         if (function_exists('grupo_clave_reconstruir_secuencias')) {
             grupo_clave_reconstruir_secuencias($pdo, $idPlantel);
         }
@@ -2643,15 +2675,22 @@ function migracion_csv_purgar_grupos_plantel(
             "Purga grupos ({$ambito}): nada que borrar; secuencias reconstruidas plantel #{$idPlantel}"
         );
 
+        $msg = 'No había grupos'
+            . ($todosLosDelPlantel ? ' en este plantel' : ' en el mapa/clave_anterior de este plantel')
+            . '. Contador de claves reiniciado/reconstruido'
+            . ($mapasHuerfanos > 0 ? " ({$mapasHuerfanos} mapa(s) limpiados)" : '') . '.';
+        if (!$todosLosDelPlantel && $nPlantel > 0) {
+            $msg .= " Quedan {$nPlantel} grupo(s) en el plantel sin mapa (p. ej. import a medias)."
+                . ' Use «Revertir» otra vez y escriba TODOS para vaciar el plantel.';
+        }
+
         return [
             'ok' => true,
-            'message' => 'No había grupos'
-                . ($todosLosDelPlantel ? ' en este plantel' : ' migrados en este plantel')
-                . '. Contador de claves reiniciado/reconstruido'
-                . ($mapasHuerfanos > 0 ? " ({$mapasHuerfanos} mapa(s) limpiados)" : '') . '.',
+            'message' => $msg,
             'grupos_borrados' => 0,
             'mapas_borrados' => $mapasHuerfanos,
             'alumnos_desvinculados' => 0,
+            'grupos_restantes_plantel' => $nPlantel,
             'planteles' => [$idPlantel],
             'errores' => [],
         ];
