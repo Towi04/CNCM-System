@@ -589,7 +589,113 @@ function moodle_list_courses(): array
             'visible' => (int) ($c['visible'] ?? 1),
         ];
     }
+
+    // Si el token no lista cursos, ofrecer los mapeados en config.local.php.
+    if ($out === []) {
+        $bySn = function_exists('moodle_course_map_by_shortname') ? moodle_course_map_by_shortname() : [];
+        $seen = [];
+        foreach ($bySn as $sn => $id) {
+            $id = (int) $id;
+            if ($id <= 1 || isset($seen[$id])) {
+                continue;
+            }
+            $seen[$id] = true;
+            $out[] = [
+                'id' => $id,
+                'shortname' => (string) $sn,
+                'fullname' => (string) $sn,
+                'idnumber' => '',
+                'visible' => 1,
+                'fuente' => 'config',
+            ];
+        }
+        $byNum = function_exists('moodle_course_map_by_idnumber') ? moodle_course_map_by_idnumber() : [];
+        foreach ($byNum as $inum => $id) {
+            $id = (int) $id;
+            if ($id <= 1 || isset($seen[$id])) {
+                continue;
+            }
+            $seen[$id] = true;
+            $out[] = [
+                'id' => $id,
+                'shortname' => 'idnumber:' . $inum,
+                'fullname' => 'Curso (idnumber ' . $inum . ')',
+                'idnumber' => (string) $inum,
+                'visible' => 1,
+                'fuente' => 'config',
+            ];
+        }
+    }
+
     usort($out, static fn($a, $b) => strcmp($a['shortname'], $b['shortname']));
+
+    return $out;
+}
+
+/**
+ * Desinscribe (manual) a un usuario Moodle de un curso.
+ *
+ * @return array{ok:bool,message:string}
+ */
+function moodle_unenrol_user_from_course(int $moodleUserId, int $courseId): array
+{
+    if (!moodle_enabled()) {
+        return ['ok' => false, 'message' => 'Moodle no configurado'];
+    }
+    if ($moodleUserId <= 0 || $courseId <= 1) {
+        return ['ok' => false, 'message' => 'Usuario o curso Moodle inválido'];
+    }
+
+    $res = moodle_api_call('enrol_manual_unenrol_users', [
+        'enrolments[0][userid]' => $moodleUserId,
+        'enrolments[0][courseid]' => $courseId,
+    ]);
+    if (!empty($res['ok'])) {
+        return ['ok' => true, 'message' => 'Desinscrito del curso Moodle'];
+    }
+
+    return [
+        'ok' => false,
+        'message' => (string) ($res['message'] ?? 'No se pudo desinscribir en Moodle'),
+    ];
+}
+
+/**
+ * Cursos activos del usuario Moodle con progreso (si Moodle lo reporta).
+ *
+ * @return list<array{id:int,nombre:string,corto:string,progreso:?float,completado:bool,ultimo_acceso:?int,url:string}>
+ */
+function moodle_user_courses_with_progress(int $moodleUserId): array
+{
+    if ($moodleUserId <= 0 || !moodle_enabled()) {
+        return [];
+    }
+    $res = moodle_api_call('core_enrol_get_users_courses', ['userid' => $moodleUserId]);
+    if (empty($res['ok'])) {
+        return [];
+    }
+    $base = rtrim((string) (defined('MOODLE_URL') ? MOODLE_URL : ''), '/');
+    $out = [];
+    foreach ((array) ($res['data'] ?? []) as $c) {
+        if (!is_array($c)) {
+            continue;
+        }
+        $id = (int) ($c['id'] ?? 0);
+        if ($id <= 1) {
+            continue;
+        }
+        $prog = $c['progress'] ?? null;
+        $progreso = is_numeric($prog) ? round((float) $prog, 1) : null;
+        $out[] = [
+            'id' => $id,
+            'nombre' => (string) ($c['fullname'] ?? $c['shortname'] ?? ('Curso #' . $id)),
+            'corto' => (string) ($c['shortname'] ?? ''),
+            'progreso' => $progreso,
+            'completado' => !empty($c['completed']) || ($progreso !== null && $progreso >= 100),
+            'ultimo_acceso' => isset($c['lastaccess']) ? (int) $c['lastaccess'] : null,
+            'url' => $base !== '' ? $base . '/course/view.php?id=' . $id : '',
+        ];
+    }
 
     return $out;
 }
