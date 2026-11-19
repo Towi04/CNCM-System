@@ -38,13 +38,19 @@ window.hayChecadaBoot = function hayChecadaBoot() {
 
   let lastScanAt = 0;
 
-  const SCAN_COOLDOWN_MS = 1200;
+  const SCAN_COOLDOWN_MS = 2500;
 
 
 
   if (!window.__checadaSesionLog) {
 
     window.__checadaSesionLog = [];
+
+  }
+
+  if (!window.__checadaSeenEventos) {
+
+    window.__checadaSeenEventos = Object.create(null);
 
   }
 
@@ -396,6 +402,22 @@ window.hayChecadaBoot = function hayChecadaBoot() {
 
   function agregarASesion(data) {
 
+    const idEv = data.id_evento != null ? Number(data.id_evento) : 0;
+
+    if (idEv > 0) {
+
+      if (window.__checadaSeenEventos[idEv]) {
+
+        return false;
+
+      }
+
+      window.__checadaSeenEventos[idEv] = 1;
+
+      if (idEv > pollSince) pollSince = idEv;
+
+    }
+
     const p = data.persona || {};
 
     const adeudo = data.adeudo || {};
@@ -410,7 +432,11 @@ window.hayChecadaBoot = function hayChecadaBoot() {
 
     if (data.tipo === 'personal') {
 
-      estado = asist.tipo_checada === 'salida' ? 'Salida' : 'Entrada';
+      if (data.ok === false) estado = 'Error';
+
+      else if (data.duplicado) estado = 'Duplicado';
+
+      else estado = asist.tipo_checada === 'salida' ? 'Salida' : 'Entrada';
 
     } else if (data.tipo === 'alumno') {
 
@@ -434,7 +460,7 @@ window.hayChecadaBoot = function hayChecadaBoot() {
 
     window.__checadaSesionLog.unshift({
 
-      hora: fmtHora(asist.hora || asist.hora_entrada || new Date().toTimeString().slice(0, 5)),
+      hora: fmtHora(asist.hora || asist.hora_entrada || new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })),
 
       nombre: p.nombre || '—',
 
@@ -446,6 +472,8 @@ window.hayChecadaBoot = function hayChecadaBoot() {
 
       detalle,
 
+      id_evento: idEv || null,
+
     });
 
     if (window.__checadaSesionLog.length > 200) {
@@ -455,6 +483,8 @@ window.hayChecadaBoot = function hayChecadaBoot() {
     }
 
     renderSesionTabla();
+
+    return true;
 
   }
 
@@ -1036,9 +1066,17 @@ window.hayChecadaBoot = function hayChecadaBoot() {
 
 
 
-  function mostrarResultado(data) {
+  function mostrarResultado(data, opts) {
 
-    agregarASesion(data);
+    opts = opts || {};
+
+    const esNuevo = agregarASesion(data);
+
+    if (!esNuevo && opts.fromPoll) {
+
+      return;
+
+    }
 
     setScanStatus('', null);
 
@@ -1156,7 +1194,7 @@ window.hayChecadaBoot = function hayChecadaBoot() {
 
           if (ev && (ev.tipo === 'alumno' || ev.tipo === 'personal' || ev.ok === false || !ev.ok)) {
 
-            mostrarResultado(normalizarRespuesta(ev));
+            mostrarResultado(normalizarRespuesta(ev), { fromPoll: true });
 
           }
 

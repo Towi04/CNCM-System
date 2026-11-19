@@ -330,17 +330,17 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
 
   <div class="alumno-tabs">
     <nav class="alumno-tabs__nav" id="alumno-tabs-nav">
-      <button type="button" class="is-active" data-tab="documentos">Documentos</button>
-      <button type="button" data-tab="pagos">Historial de pagos</button>
-      <button type="button" data-tab="info">Información del alumno</button>
-      <button type="button" data-tab="cuentas">Cuentas digitales</button>
-      <button type="button" data-tab="asistencias">Asistencias</button>
-      <button type="button" data-tab="productos">Productos</button>
-      <button type="button" data-tab="notas">Notas</button>
-      <button type="button" data-tab="calificaciones">Calificaciones por fase</button>
-      <button type="button" data-tab="historial">Historial de grupos</button>
+      <button type="button" class="alumno-tab is-active" data-tab="documentos">Documentos</button>
+      <button type="button" class="alumno-tab" data-tab="pagos">Historial de pagos</button>
+      <button type="button" class="alumno-tab" data-tab="info">Información del alumno</button>
+      <button type="button" class="alumno-tab" data-tab="cuentas">Cuentas digitales</button>
+      <button type="button" class="alumno-tab" data-tab="asistencias">Asistencias</button>
+      <button type="button" class="alumno-tab" data-tab="productos">Productos</button>
+      <button type="button" class="alumno-tab" data-tab="notas">Notas</button>
+      <button type="button" class="alumno-tab" data-tab="calificaciones">Calificaciones por fase</button>
+      <button type="button" class="alumno-tab" data-tab="historial">Historial de grupos</button>
       <?php if ($puedeTarifaSupervisor): ?>
-      <button type="button" data-tab="colegiatura-supervisor">Colegiatura (supervisor)</button>
+      <button type="button" class="alumno-tab" data-tab="colegiatura-supervisor">Colegiatura (supervisor)</button>
       <?php endif; ?>
     </nav>
 
@@ -1328,9 +1328,9 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
   });
 
   const nav = document.getElementById('alumno-tabs-nav');
-  nav?.querySelectorAll('button[data-tab]').forEach((btn) => {
+  nav?.querySelectorAll('button.alumno-tab[data-tab]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      nav.querySelectorAll('button').forEach((b) => b.classList.remove('is-active'));
+      nav.querySelectorAll('button.alumno-tab').forEach((b) => b.classList.remove('is-active'));
       document.querySelectorAll('.alumno-tabs__panel').forEach((p) => p.classList.remove('is-active'));
       btn.classList.add('is-active');
       document.getElementById('tab-' + btn.dataset.tab)?.classList.add('is-active');

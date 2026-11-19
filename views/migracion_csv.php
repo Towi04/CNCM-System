@@ -51,8 +51,11 @@ if (function_exists('plantel_list')) {
     <button type="button" class="secondary" id="migcsv-template" title="Descargar CSV de ejemplo del tipo seleccionado">
       <i class="fas fa-download"></i> <span id="migcsv-template-label">CSV de ejemplo</span>
     </button>
-    <button type="button" class="secondary" id="migcsv-provision" title="Google Workspace + Moodle para registros mapeados">
+    <button type="button" class="secondary" id="migcsv-provision" title="Tras confirmar alumnos: crea HAY + Google + Moodle de lo mapeado">
       <i class="fas fa-user-plus"></i> Re-provisionar mapeados
+    </button>
+    <button type="button" class="secondary" id="migcsv-revertir-grupos" title="Borra grupos del plantel (mapa o TODOS) y reinicia el contador de claves" style="border-color:#c47b00; color:#8a5a00;">
+      <i class="fas fa-undo"></i> Revertir / vaciar grupos
     </button>
   </div>
 
@@ -61,30 +64,39 @@ if (function_exists('plantel_list')) {
     <p id="migcsv-legado-status" style="margin:0 0 10px; color:#666; font-size:0.9rem;">Comprobando LEGACY_DB_*…</p>
     <div class="catalog-toolbar" style="flex-wrap:wrap; gap:12px; align-items:flex-end; margin:0;">
       <div class="field" style="flex:1; min-width:220px;">
-        <label for="migcsv-filtro">Grupos (id o clave, uno por línea)</label>
-        <textarea id="migcsv-filtro" rows="4" placeholder="IKCF0085&#10;IKCF0098&#10;502" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
+        <label for="migcsv-filtro">Claves de grupo (una por línea)</label>
+        <textarea id="migcsv-filtro" rows="4" placeholder="IKCF0085&#10;IKCF0098&#10;IS100" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
       </div>
       <div class="field" style="flex:1; min-width:220px;">
-        <label for="migcsv-filtro-alumnos">Alumnos para pagos (<code>id_alumno_legado</code>)</label>
-        <textarea id="migcsv-filtro-alumnos" rows="4" placeholder="9001&#10;9002&#10;9003" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
+        <label for="migcsv-filtro-alumnos">Alumnos para pagos (<code>numero_control</code>)</label>
+        <textarea id="migcsv-filtro-alumnos" rows="4" placeholder="2501001&#10;2501002&#10;2501003" style="width:100%; min-width:220px; font-family:ui-monospace,monospace; font-size:0.85rem;"></textarea>
         <label style="margin-top:6px; font-size:0.8rem; color:#666;">
-          O cargar CSV de alumnos:
+          O cargar CSV de alumnos (columna <code>numero_control</code>):
           <input type="file" id="migcsv-filtro-alumnos-file" accept=".csv,text/csv" style="display:block; margin-top:4px; font-size:0.8rem;">
         </label>
       </div>
       <div class="field">
-        <label for="migcsv-sucursal">Sucursal legado (opcional)</label>
+        <label for="migcsv-sucursal">Sucursal legado <span style="color:#c62828;">(obligatoria para pagos)</span></label>
         <select id="migcsv-sucursal">
-          <option value="0">Todas</option>
+          <option value="0">— Elija sucursal —</option>
         </select>
       </div>
       <button type="button" class="primary" id="migcsv-export-legado" title="Genera el CSV del tipo seleccionado desde la BD legado del servidor">
         <i class="fas fa-cloud-download-alt"></i> Descargar del legado
       </button>
+      <button type="button" class="primary" id="migcsv-import-pagos-legado" title="Lee pagos del legado e importa a HAY por numero_control, sin CSV de pagos" style="background:#0a7a32; border-color:#0a7a32;">
+        <i class="fas fa-file-invoice-dollar"></i> Migrar pagos del legado
+      </button>
     </div>
+    <label for="migcsv-pagos-usar-mapa" style="display:inline-flex; align-items:center; gap:6px; margin-top:10px; color:#555; font-size:0.85rem;">
+      <input type="checkbox" id="migcsv-pagos-usar-mapa" value="1">
+      Si la lista de NC está vacía, usar alumnos ya mapeados del plantel
+    </label>
     <p style="margin:10px 0 0; color:#777; font-size:0.85rem;">
-      Requiere <code>LEGACY_DB_*</code>. Grupos/alumnos: filtro de grupos. Pagos: basta pegar
-      <code>id_alumno_legado</code> (o subir el CSV de alumnos ya descargado).
+      Requiere <code>LEGACY_DB_*</code>. Grupos/alumnos: pegue las <strong>claves</strong> de grupo.
+      <strong>Pagos:</strong> elija la <em>sucursal legado</em> (aunque el nombre no coincida con HAY),
+      pegue/suba los <code>numero_control</code> y pulse <em>Migrar pagos del legado</em>.
+      Destino = plantel HAY activo; origen = sucursal del desplegable.
     </p>
   </div>
 
@@ -95,6 +107,10 @@ if (function_exists('plantel_list')) {
       <option value="50" selected>50</option>
       <option value="100">100</option>
     </select>
+    <label for="migcsv-solo-alertas" style="margin:0; display:inline-flex; align-items:center; gap:6px; color:#555; font-size:0.9rem;">
+      <input type="checkbox" id="migcsv-solo-alertas" value="1">
+      Solo alertas (alumnos)
+    </label>
     <button type="button" class="secondary" id="migcsv-prev" disabled>← Anterior</button>
     <span id="migcsv-pager-info" style="color:#555; font-size:0.9rem;"></span>
     <button type="button" class="secondary" id="migcsv-next" disabled>Siguiente →</button>
@@ -117,20 +133,29 @@ if (function_exists('plantel_list')) {
       según el tipo seleccionado. Planteles válidos: <?php echo $slugsTxt; ?>.
     </p>
     <p style="margin:0 0 8px; color:#777;">
-      En grupos, la vista previa permite elegir especialidad y profesor; kids = repetir la misma
-      clave legado en 2 filas (inglés + cómputo) o una fila <code>ING-K</code>.
+      En grupos, <code>clave_especialidad</code> es el catálogo (<code>ING</code>/<code>COMP</code>/<code>ING-K</code>
+      o atajos <code>I</code>/<code>C</code>/<code>IK</code>/<code>CK</code>/<code>PA</code>).
+      La clave de grupo (<code>IS1</code>, <code>CK3</code>…) la genera HAY.
+      <code>infantil</code>: <code>0</code> adulto, <code>1</code> kids. Fechas: <code>YYYY-MM-DD</code> o <code>DD/MM/YYYY</code>.
     </p>
     <p style="margin:0 0 8px; color:#777;">
       <strong>Alumnos:</strong> no se migran solos con los grupos. Use el <em>mismo</em> filtro
-      de ids/claves con el que importó <code>03_grupos</code>, descargue <code>04_alumnos</code>
-      → Vista previa (columna <code>grupo_estado</code>) → Importar. Enlazan por
-      <code>id_grupo_legado</code> o <code>clave_legado</code>. Si marca “grupo legado N no está
-      en el mapa”, ese N no está entre los grupos ya importados (aunque haya otros 21): vuelva a
-      descargar/importar <code>03_grupos</code> incluyendo ese id.
+      de <code>clave_legado</code> con el que importó <code>03_grupos</code>, descargue
+      <code>04_alumnos</code> → Vista previa (columna <code>alerta</code>; filas con problema primero)
+      → Importar. El enlace es por <strong>clave de grupo</strong>. El <code>numero_control</code>
+      del legado se respeta. Kids: <em>un</em> alumno en HAY vinculado a IK+CK (no se duplica la ficha).
+      El contador «alumnos» del mapa cuenta fichas únicas; las «claves mapa» pueden ser ~3 por alumno
+      (NC / nc:NC / id legado). Teléfono máx. 30 caracteres (si viene más largo, se trunca).
+    </p>
+    <p style="margin:0 0 8px; color:#777;">
+      La importación de alumnos <strong>no</strong> crea Google Workspace ni Moodle:
+      solo ficha HAY + vínculo a grupo. Cuando confirme que todo está bien, use
+      <em>Re-provisionar mapeados</em> (usuario HAY + Google + Moodle con el NC).
     </p>
     <p style="margin:0; color:#777;">
-      Al importar alumnos se crea (si falta) usuario HAY + Google + Moodle
-      (mismas reglas: NC / correo institucional).
+      <strong>Pagos:</strong> plantel HAY activo + sucursal legado en el desplegable + NCs
+      (CSV o mapeados) → <em>Migrar pagos del legado</em>.
+      Si hay que rehacer: <code>php scripts/purge_pagos_migracion.php --plantel=slug --confirm="BORRAR PAGOS"</code>.
     </p>
   </div>
 </div>
@@ -153,4 +178,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261118k'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261119d'), ENT_QUOTES, 'UTF-8'); ?>"></script>

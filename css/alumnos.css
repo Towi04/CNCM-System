@@ -236,21 +236,46 @@ table.dataTable.alumnos-dt tbody td {
     background: #fafafa;
 }
 
+/* Pestañas (no botones HAY): anular hay_buttons.css */
+#main-content .alumno-tabs__nav button.alumno-tab,
+#main-content .alumno-tabs__nav button,
+.alumno-tabs__nav button.alumno-tab,
 .alumno-tabs__nav button {
-    border: none;
-    background: none;
-    padding: 12px 14px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: #666;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 12px 14px !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #666 !important;
     cursor: pointer;
-    border-bottom: 3px solid transparent;
+    border-bottom: 3px solid transparent !important;
     margin-bottom: -2px;
+    display: inline-flex;
+    align-items: center;
+    transform: none !important;
+    white-space: nowrap;
 }
 
+#main-content .alumno-tabs__nav button.alumno-tab:hover,
+#main-content .alumno-tabs__nav button:hover,
+.alumno-tabs__nav button.alumno-tab:hover,
+.alumno-tabs__nav button:hover {
+    background: transparent !important;
+    color: #1a237e !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+#main-content .alumno-tabs__nav button.alumno-tab.is-active,
+#main-content .alumno-tabs__nav button.is-active,
+.alumno-tabs__nav button.alumno-tab.is-active,
 .alumno-tabs__nav button.is-active {
-    color: #1a237e;
-    border-bottom-color: #c62828;
+    color: #1a237e !important;
+    background: transparent !important;
+    border-bottom-color: #c62828 !important;
+    box-shadow: none !important;
 }
 
 .alumno-tabs__panel {

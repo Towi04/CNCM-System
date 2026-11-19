@@ -51,8 +51,8 @@ if ($action === 'export_legado') {
     $idSucursal = (int) ($_GET['id_sucursal'] ?? $_POST['id_sucursal'] ?? 0);
     $filtroRaw = (string) ($_GET['filtro'] ?? $_POST['filtro'] ?? '');
     $filtro = [];
-    foreach (preg_split('/\R/', $filtroRaw) ?: [] as $line) {
-        $line = trim($line);
+    foreach (preg_split('/[\r\n,;]+/', $filtroRaw) ?: [] as $line) {
+        $line = trim((string) $line);
         if ($line === '' || str_starts_with($line, '#')) {
             continue;
         }
@@ -65,19 +65,18 @@ if ($action === 'export_legado') {
         if ($line === '' || str_starts_with($line, '#')) {
             continue;
         }
-        // Si pegan CSV con encabezado, ignorar la fila de títulos
-        if (strcasecmp($line, 'id_alumno_legado') === 0 || str_contains(strtolower($line), 'id_alumno_legado,')) {
-            if (str_contains($line, ',')) {
-                // Extraer columna id_alumno_legado de una fila CSV completa más abajo
-                continue;
-            }
+        // Encabezados CSV: ignorar
+        $low = strtolower($line);
+        if ($low === 'numero_control' || $low === 'id_alumno_legado'
+            || str_starts_with($low, 'numero_control,') || str_starts_with($low, 'id_alumno_legado,')) {
             continue;
         }
-        // Valor suelto o primera columna de una fila CSV
+        // Valor suelto o fila CSV: preferir columna numero_control si hay encabezado implícito
         if (str_contains($line, ',')) {
             $parts = str_getcsv($line);
             $first = trim((string) ($parts[0] ?? ''));
-            if ($first !== '' && strcasecmp($first, 'id_alumno_legado') !== 0) {
+            if ($first !== '' && strcasecmp($first, 'id_alumno_legado') !== 0
+                && strcasecmp($first, 'numero_control') !== 0) {
                 $filtroAlumnos[] = $first;
             }
             continue;
@@ -85,7 +84,17 @@ if ($action === 'export_legado') {
         $filtroAlumnos[] = $line;
     }
     $idsGrupos = migcsv_resolver_ids_grupos($pdoLeg, $filtro);
-    $idsAlumnosFiltro = migcsv_resolver_ids_alumnos($pdoLeg, $filtroAlumnos);
+    // Pagos por NC: acotar a sucursal del plantel HAY (el NC se repite entre planteles)
+    $idSucursalPagos = $idSucursal > 0 ? $idSucursal : null;
+    if ($tipoExp === 'pagos' && ($idSucursalPagos === null || $idSucursalPagos <= 0) && $idPlantel > 0) {
+        $idSucursalPagos = migracion_csv_resolver_sucursal_legado($pdo, $pdoLeg, $idPlantel);
+    }
+    $idsAlumnosFiltro = migcsv_resolver_ids_alumnos(
+        $pdoLeg,
+        $filtroAlumnos,
+        true,
+        $tipoExp === 'pagos' ? $idSucursalPagos : null
+    );
     if (in_array($tipoExp, ['grupos', 'alumnos'], true) && $idsGrupos === []) {
         header('Content-Type: text/plain; charset=utf-8');
         http_response_code(400);
@@ -95,8 +104,8 @@ if ($action === 'export_legado') {
     if ($tipoExp === 'pagos' && $idsAlumnosFiltro === [] && $idsGrupos === []) {
         header('Content-Type: text/plain; charset=utf-8');
         http_response_code(400);
-        echo 'Para pagos indique id_alumno_legado (uno por línea, o pegue la columna del CSV de alumnos) '
-            . 'o, en su defecto, ids/claves de grupos.';
+        echo 'Para pagos indique numero_control (uno por línea, o suba el CSV de alumnos) '
+            . 'con el plantel/sucursal correcto. Prefijo id:123 solo si necesita el id interno legado.';
         exit;
     }
     if ($idSucursal > 0 && $idsGrupos !== []) {
@@ -131,27 +140,30 @@ if ($action === 'export_legado') {
             case 'grupos':
                 $rows = migcsv_export_grupos($pdoLeg, $idsGrupos);
                 migcsv_csv_enviar('03_grupos_activos.csv', [
-                    'id_grupo_legado', 'clave_legado', 'id_sucursal_legado', 'sucursal', 'plantel_slug',
+                    'clave_legado', 'plantel_slug', 'sucursal', 'id_sucursal_legado',
                     'especialidad_legado', 'clave_especialidad', 'infantil',
                     'fecha_inicio_legado', 'fecha_inicio_estimada', 'clave_fase_estimada',
                     'horario_legado', 'dias_clase', 'hora_inicio', 'hora_fin',
-                    'id_profesor_legado', 'profesor_sugerido', 'profesores_grupo', 'profesor_username',
+                    'profesor_sugerido', 'profesores_grupo', 'profesor_username', 'id_profesor_legado',
                     'aula_codigo', 'status_legado', 'max_alumnos', 'alumnos_activos_count',
+                    'id_grupo_legado',
                 ], $rows);
             case 'alumnos':
                 $rows = migcsv_export_alumnos($pdoLeg, $idsGrupos);
                 migcsv_csv_enviar('04_alumnos.csv', [
                     'id_alumno_legado', 'numero_control', 'nombres', 'apellido_paterno', 'apellido_materno',
-                    'email', 'telefono', 'id_sucursal_legado', 'plantel_slug', 'id_grupo_legado', 'clave_legado',
-                    'fecha_inicio', 'forma_pago', 'id_asesor_legado', 'asesor_nombre', 'status_legado',
+                    'email', 'telefono', 'plantel_slug', 'id_sucursal_legado',
+                    'clave_legado', 'fecha_inicio', 'forma_pago',
+                    'id_asesor_legado', 'asesor_nombre', 'status_legado',
+                    'id_grupo_legado',
                 ], $rows);
             case 'pagos':
                 $rows = $idsAlumnosFiltro !== []
                     ? migcsv_export_pagos_por_alumnos($pdoLeg, $idsAlumnosFiltro)
                     : migcsv_export_pagos($pdoLeg, $idsGrupos);
                 migcsv_csv_enviar('05_pagos.csv', [
-                    'id_pago_legado', 'numero_control', 'id_alumno_legado', 'fecha', 'monto',
-                    'forma_pago', 'tipo', 'concepto', 'folio',
+                    'id_pago_legado', 'numero_control', 'id_alumno_legado', 'id_recibio_legado',
+                    'fecha', 'monto', 'forma_pago', 'tipo', 'concepto', 'folio',
                 ], $rows);
             default:
                 header('Content-Type: text/plain; charset=utf-8');
@@ -214,6 +226,12 @@ try {
             $st->execute([$ent]);
             $maps[$ent] = (int) $st->fetchColumn();
         }
+        // Varias claves de mapa por alumno (nc:, NC plano, id legado) ≠ fichas duplicadas
+        $st = $pdo->prepare(
+            'SELECT COUNT(DISTINCT id_hay) FROM hay_migracion_csv_map WHERE entidad = ?'
+        );
+        $st->execute(['alumno']);
+        $maps['alumno_unicos'] = (int) $st->fetchColumn();
         $logs = $pdo->query(
             'SELECT tipo, nivel, mensaje, creado_en FROM hay_migracion_csv_log
              ORDER BY id DESC LIMIT 15'
@@ -303,23 +321,29 @@ try {
         if ($tipoPreview === 'alumnos') {
             $offset = (int) ($_POST['offset'] ?? 0);
             $limit = (int) ($_POST['limit'] ?? 50);
+            $soloAlertas = !empty($_POST['solo_alertas']) && (string) $_POST['solo_alertas'] !== '0';
             $res = migracion_csv_preview_alumnos(
                 $pdo,
                 $_FILES['csv']['tmp_name'],
                 $idPlantel > 0 ? $idPlantel : null,
                 $offset,
-                $limit
+                $limit,
+                $soloAlertas
             );
             echo json_encode([
                 'status' => !empty($res['ok']) ? 'ok' : 'error',
                 'message' => $res['message'] ?? '',
                 'headers' => $res['headers'] ?? [],
                 'total_filas' => $res['total_filas'] ?? 0,
+                'total_csv' => $res['total_csv'] ?? 0,
+                'con_alerta' => $res['con_alerta'] ?? 0,
                 'offset' => $res['offset'] ?? $offset,
                 'limit' => $res['limit'] ?? $limit,
+                'solo_alertas' => !empty($res['solo_alertas']),
                 'muestra' => $res['muestra'] ?? [],
                 'errores' => $res['errores'] ?? [],
                 'grupos_faltantes' => $res['grupos_faltantes'] ?? [],
+                'alertas_resumen' => $res['alertas_resumen'] ?? [],
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -447,6 +471,20 @@ try {
                 $idPlantel > 0 ? $idPlantel : null,
                 $overrides
             );
+        } elseif ($tipo === 'alumnos') {
+            // Por defecto NO provisiona Google/Moodle: confirmar datos y luego «Re-provisionar mapeados»
+            $provAl = !empty($_POST['provisionar']) && (string) $_POST['provisionar'] !== '0';
+            $parsedAl = migracion_csv_leer_archivo($_FILES['csv']['tmp_name']);
+            if (!empty($parsedAl['error'])) {
+                echo json_encode(['status' => 'error', 'message' => $parsedAl['error']], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $res = migracion_csv_importar_alumnos(
+                $pdo,
+                $parsedAl['rows'],
+                $idPlantel > 0 ? $idPlantel : null,
+                $provAl
+            );
         } else {
             $res = migracion_csv_importar_tipo($pdo, $tipo, $_FILES['csv']['tmp_name'], $idPlantel > 0 ? $idPlantel : null);
         }
@@ -474,6 +512,100 @@ try {
             'alumnos_fail' => $res['alumnos_fail'] ?? 0,
             'staff_ok' => $res['staff_ok'] ?? 0,
             'staff_fail' => $res['staff_fail'] ?? 0,
+            'errores' => $res['errores'] ?? [],
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($action === 'import_pagos_legado') {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(180);
+        }
+        if ($idPlantel <= 0) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Seleccione el plantel activo. El número de control se repite entre planteles '
+                    . '(p. ej. 100 en Guerrero ≠ 100 en Celaya).',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $filtroAlRaw = (string) ($_POST['filtro_alumnos'] ?? '');
+        $usarMapa = !empty($_POST['usar_mapa']) && (string) $_POST['usar_mapa'] !== '0';
+        $ncs = migracion_csv_parse_filtro_numeros_control($filtroAlRaw);
+        if ($ncs === [] && $usarMapa) {
+            $ncs = migracion_csv_ncs_desde_mapa_alumnos($pdo, $idPlantel);
+        }
+        if ($ncs === []) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Pegue numero_control (o suba el CSV de alumnos) o marque «Usar alumnos ya mapeados».',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $idSucursalLegado = (int) ($_POST['id_sucursal'] ?? 0);
+        if ($idSucursalLegado <= 0) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Elija la sucursal legado en el desplegable (de dónde leer los pagos). '
+                    . 'No hace falta que el nombre coincida con el plantel HAY.',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $offset = max(0, (int) ($_POST['offset'] ?? 0));
+        $lote = (int) ($_POST['lote'] ?? 40);
+        $res = migracion_csv_importar_pagos_desde_legado(
+            $pdo,
+            $ncs,
+            $idPlantel > 0 ? $idPlantel : null,
+            $offset,
+            $lote,
+            $idSucursalLegado
+        );
+        echo json_encode([
+            'status' => !empty($res['ok']) ? 'ok' : 'error',
+            'message' => $res['message'] ?? '',
+            'done' => !empty($res['done']),
+            'offset' => $res['offset'] ?? $offset,
+            'next_offset' => $res['next_offset'] ?? $offset,
+            'total_nc' => $res['total_nc'] ?? count($ncs),
+            'lote_nc' => $res['lote_nc'] ?? 0,
+            'pagos_leidos' => $res['pagos_leidos'] ?? 0,
+            'creados' => $res['creados'] ?? 0,
+            'omitidos' => $res['omitidos'] ?? 0,
+            'actualizados' => $res['actualizados'] ?? 0,
+            'nc_sin_legado' => $res['nc_sin_legado'] ?? [],
+            'errores' => $res['errores'] ?? [],
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($action === 'revertir_grupos') {
+        $confirm = strtoupper(trim((string) ($_POST['confirm'] ?? '')));
+        $todos = !empty($_POST['todos']) && (string) $_POST['todos'] !== '0';
+        if ($confirm === 'TODOS') {
+            $todos = true;
+        }
+        if ($confirm !== 'REVERTIR' && $confirm !== 'TODOS') {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Para confirmar escriba REVERTIR (mapa) o TODOS (vaciar plantel)',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $borrarAlumnos = !empty($_POST['borrar_alumnos']) && (string) $_POST['borrar_alumnos'] !== '0';
+        $res = migracion_csv_revertir_grupos(
+            $pdo,
+            $idPlantel > 0 ? $idPlantel : null,
+            $borrarAlumnos,
+            $todos
+        );
+        echo json_encode([
+            'status' => !empty($res['ok']) ? 'ok' : 'error',
+            'message' => $res['message'] ?? '',
+            'grupos_borrados' => $res['grupos_borrados'] ?? 0,
+            'mapas_borrados' => $res['mapas_borrados'] ?? 0,
+            'alumnos_desvinculados' => $res['alumnos_desvinculados'] ?? 0,
+            'grupos_restantes_plantel' => $res['grupos_restantes_plantel'] ?? null,
             'errores' => $res['errores'] ?? [],
         ], JSON_UNESCAPED_UNICODE);
         exit;

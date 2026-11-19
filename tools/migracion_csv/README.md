@@ -4,7 +4,7 @@ Exporta grupos activos (y sus alumnos/pagos) desde la BD legado.
 
 **En el servidor (recomendado):** si el dump legado ya está en MariaDB y
 `LEGACY_DB_*` está en `config.local.php`, use el Portal → **Migración CSV** →
-bloque *Descargar desde BD legado*: pegue ids/claves de grupos y descargue
+bloque *Descargar desde BD legado*: pegue las **claves** de grupo (como en el legado) y descargue
 `03_grupos` / `04_alumnos` / `05_pagos` (también personal/aulas).
 
 **Opcional local (XAMPP):** esta carpeta `tools/migracion_csv/` sigue sirviendo
@@ -16,7 +16,7 @@ si prefiere extraer en su PC. En el Portal también hay **CSV de ejemplo**
 1. MySQL/MariaDB local con el dump legado restaurado.
 2. PHP con extensión `pdo_mysql`.
 3. Copiar `config.example.php` → `config.php` y ajustar credenciales.
-4. Copiar `grupos_filtro.example.txt` → `grupos_filtro.txt` y listar ids/claves de grupos activos.
+4. Copiar `grupos_filtro.example.txt` → `grupos_filtro.txt` y listar **claves** de grupos activos.
 
 ## Uso
 
@@ -32,22 +32,25 @@ si prefiere extraer en su PC. En el Portal también hay **CSV de ejemplo**
 
 ## Claves de especialidad HAY (`clave_especialidad`)
 
-| Clave | Uso |
-|-------|-----|
-| `ING` | Inglés adulto regular |
-| `ING-EXT` | Inglés extensivo |
-| `ING-K` | Inglés infantil → crea pareja IK+CK automáticamente |
-| `ING-K-EXT` | Extensivo inglés kids |
-| `COMP` / `COMP24` / `COMP25` | Informática (plan vigente del plantel) |
-| `COMP-EXT` | Extensivo informática |
-| `COMP-K` | Solo computación infantil |
-| `PREP-AB` | Preparatoria abierta |
-| `PREP-ESC` | Preparatoria escolarizada |
+Esto es el **catálogo de especialidad**, no la clave del grupo (IS1, CK3…).
+HAY genera la clave de grupo al importar. Puede usar la clave larga o el atajo:
 
-Kids: bastan `ING-K` o `infantil=1` (una fila → pareja IK+CK con bloque 2h+2h el mismo día).
-También puede **repetir** el mismo `id_grupo_legado` / `clave_legado` en 2 filas (1ª inglés, 2ª cómputo)
-con distinta `hora_inicio` / `dias_clase` / `aula_codigo`; HAY asigna el mismo número a la pareja.
-Alumnos de ese grupo se inscriben en **ambas** materias (dual); después puede dar de baja individual.
+| Atajo | Clave catálogo | Uso |
+|-------|----------------|-----|
+| `I` | `ING` | Inglés adulto |
+| `C` | `COMP` (o COMP25/24) | Informática adulto |
+| `IK` | `ING-K` | Inglés infantil |
+| `CK` | `COMP-K` | Computación infantil |
+| `PA` | `PREP-AB` | Preparatoria abierta |
+| `PE` | `PREP-ESC` | Preparatoria escolarizada |
+| `EI` | `ING-EXT` | Extensivo inglés |
+| `EC` | `COMP-EXT` | Extensivo informática |
+
+También valen `ING`, `ING-K`, `COMP`, `COMP-K`, etc. Fechas: `YYYY-MM-DD` o Excel MX `DD/MM/YYYY`.
+
+Kids: `infantil=1` + `IK`/`CK` (o `ING-K`), o la misma `clave_legado` en 2 filas
+(1ª inglés, 2ª cómputo) con distinto horario/aula. HAY crea la pareja `IK{n}+CK{n}`.
+Alumnos de ese grupo se inscriben en **ambas** materias (dual).
 
 ## Convención de días y hora
 
@@ -80,28 +83,86 @@ De BD + edición: `clave_especialidad` (obligatoria en adultos; en kids basta `I
 En HAY (Vista previa) el profesor se elige en un **desplegable**; por defecto queda el nombre más
 parecido al CSV (sin importar acentos/mayúsculas). Corrija ahí si el match es solo aproximado.
 
-Pareja kids con horarios distintos: duplicar la fila del mismo `id_grupo_legado`/`clave_legado`
-(1ª = inglés, 2ª = cómputo) cambiando `hora_inicio`, `dias_clase` y/o `aula_codigo`.
+Columna `infantil`: `0` = adulto, `1` = kids (se respeta en vista previa e import).
+Pareja kids con horarios distintos: `infantil=1` (o especialidad `ING-K`/`COMP-K`) y, si aplica,
+duplicar la misma `clave_legado` (1ª = inglés, 2ª = cómputo) cambiando `hora_inicio` /
+`dias_clase` / `aula_codigo`. Con `infantil=0` **no** se crea pareja kids aunque la clave se repita.
+El id interno de BD (`id_grupo_legado`) es opcional; el enlace operativo es la **clave**.
 
 ### 04_alumnos
 
-`numero_control`, nombres, `id_grupo_legado` (o `clave_legado` del grupo ya importado),
+`numero_control`, nombres, `clave_legado` del grupo ya importado,
 `fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
 
-**No se crean al importar grupos.** Use el **mismo** filtro de ids/claves con el que importó
+**No se crean al importar grupos.** Pegue las **mismas claves** con las que importó
 `03_grupos`, descargue `04_alumnos.csv` (Portal → Descargar del legado), revise Vista previa
-(`grupo_estado`) e Importe. Si un `id_grupo_legado` (p. ej. 959) “no está en el mapa”, ese id
-no formó parte de los grupos importados aunque haya otros mapeados: vuelva a exportar/importar
-`03_grupos` incluyendo ese id. Kids: un alumno del grupo legado → IK y CK (dual).
-Al importar se provisiona cuenta HAY + Google Workspace + Moodle (si faltan), con las mismas
-reglas del sistema (número de control / correo institucional).
+(`grupo_estado`) e Importe. Si una `clave_legado` “no está en el mapa”, esa clave no formó
+parte de los grupos importados: vuelva a exportar/importar `03_grupos` incluyendo esa clave.
+Kids: un alumno del grupo legado → IK y CK (dual).
+
+El `numero_control` del legado se **respeta tal cual** en HAY (no se regenera).
+Kids dual = **una** ficha HAY con vínculo a IK y CK (no dos alumnos). El contador de mapa
+puede listar ~3 claves por alumno (`nc:…`, NC plano, `id_alumno_legado`).
+
+Vista previa marca alertas (grupo faltante, teléfono >30 chars, sin NC, NC duplicado, etc.)
+y las pone primero; use «Solo alertas» para filtrar. Teléfonos largos se truncan al importar.
+
+**Importación en dos pasos:** por defecto Importar solo crea la ficha HAY + vínculo a grupo
+(sin Google Workspace ni Moodle). Cuando confirme que los alumnos están correctos, use
+«Re-provisionar mapeados» para crear usuario HAY + Google + Moodle (NC como usuario /
+correo institucional).
 
 ### 05_pagos
 
 `numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`, `folio`. Colegiatura congelada se define después en HAY.
 
-Para descargar pagos del legado basta pegar (o subir el CSV de alumnos) la columna
-`id_alumno_legado`; no es obligatorio el filtro de grupos.
+**Recomendado:** plantel HAY activo + **sucursal legado en el desplegable** (aunque el
+nombre no coincida) + `numero_control` (CSV / mapeados) → **Migrar pagos del legado**.
+El NC no es único entre planteles: solo se leen alumnos de la sucursal elegida.
+Los ya migrados se omiten por `id_pago_legado`. El cobrador viene de `id_recibio`.
+
+Para borrar pagos migrados de un plantel y reimportar:
+
+```bash
+php scripts/purge_pagos_migracion.php --plantel=guerrero --confirm="BORRAR PAGOS"
+# opcional: --dry-run
+```
+
+Alternativa: descargar CSV de pagos e Importar. Prefijo `id:123` solo si necesita
+el id interno legado.
+
+## Fecha de inicio
+
+`fecha_inicio_estimada` / `fecha_inicio_legado` deben venir del legado (`YYYY-MM-DD` o `DD/MM/YYYY`).
+El import **ya no inventa la fecha de hoy** si falta o no parsea: la fila falla con error.
+Grupos con fecha ≤ hoy quedan en `iniciado`; futuros en `programado` (la vista de apertura
+solo marca *pendiente de autorización* cuando el inicio está cerca).
+
+Kids: 2 filas con la **misma** `clave_legado` (una `IK`/`ING-K`, otra `CK`/`COMP-K`) → **1** pareja
+HAY (`IK{n}` + `CK{n}` = 2 grupos). Si solo sube la fila CK sin su IK, se omite (no se duplica).
+Una sola fila `ING-K` aún parte 2h+2h. Al comparar totales: adultos 1:1; cada pareja kids = 2 grupos HAY.
+
+## Reintentar grupos mal importados
+
+En el Portal → Migración CSV → **Revertir grupos migrados** (plantel activo):
+
+1. Confirme con la palabra `REVERTIR`.
+2. Opcional: también borrar alumnos/pagos creados por la migración.
+3. Se eliminan los grupos del mapa, se desvinculan alumnos y se **reconstruye**
+   el contador de claves (`grupo_clave_secuencia`) según lo que quede en el plantel
+   (si no queda ninguno, las nuevas claves vuelven a empezar en 1).
+4. Vuelva a descargar/importar `03_grupos` con las claves legado.
+
+### Purga total desde terminal (todos los grupos del plantel)
+
+Si la tabla no estaba vacía o quedaron grupos fuera del mapa:
+
+```bash
+php scripts/purge_grupos_plantel.php --plantel=guerrero --confirm="BORRAR GRUPOS" --todos
+# opcional: --borrar-alumnos
+```
+
+Luego reimporte `03_grupos` y revise la vista **Grupos** (paginada: buscar / estado / 25–100 por página).
 
 ## Checklist operativo por plantel
 

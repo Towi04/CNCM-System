@@ -110,12 +110,12 @@ function grupo_clave_armar_prefijo(string $area, string $horario, bool $extensiv
 }
 
 /** Sincroniza consecutivos desde grupos del plantel (por prefijo IS, CD, CM, etc.). */
-function grupo_clave_sincronizar_secuencias(PDO $pdo, int $idPlantel = 0): void
+function grupo_clave_sincronizar_secuencias(PDO $pdo, int $idPlantel = 0, bool $force = false): void
 {
     static $sincronizado = [];
     $idPlantel = $idPlantel > 0 ? grupo_clave_normalizar_plantel($pdo, $idPlantel) : 0;
     $cacheKey = $idPlantel > 0 ? (string) $idPlantel : '_todos';
-    if (!empty($sincronizado[$cacheKey])) {
+    if (!$force && !empty($sincronizado[$cacheKey])) {
         return;
     }
     $sincronizado[$cacheKey] = true;
@@ -184,6 +184,19 @@ function grupo_clave_sincronizar_secuencias(PDO $pdo, int $idPlantel = 0): void
     }
 }
 
+/**
+ * Borra y recalcula consecutivos del plantel desde los grupos que queden.
+ * Usar tras eliminar grupos migrados para que las nuevas claves empiecen otra vez en 1
+ * (o en el máximo de los grupos restantes).
+ */
+function grupo_clave_reconstruir_secuencias(PDO $pdo, int $idPlantel): void
+{
+    $idPlantel = grupo_clave_normalizar_plantel($pdo, $idPlantel);
+    grupo_clave_ensure_schema($pdo);
+    $pdo->prepare('DELETE FROM grupo_clave_secuencia WHERE id_plantel = ?')->execute([$idPlantel]);
+    grupo_clave_sincronizar_secuencias($pdo, $idPlantel, true);
+}
+
 /** Siguiente número sin consumir la secuencia (solo vista previa). */
 function grupo_clave_peek_siguiente_numero(PDO $pdo, int $idPlantel, string $prefijo): int
 {
@@ -221,7 +234,7 @@ function grupo_clave_siguiente_numero(PDO $pdo, int $idPlantel, string $prefijo)
         );
         $st->execute([$idPlantel, $prefijo]);
         $n = (int) $st->fetchColumn();
-        if ($ownTx) {
+        if ($ownTx && $pdo->inTransaction()) {
             $pdo->commit();
         }
 
@@ -286,19 +299,41 @@ function grupo_es_area_infantil(string $area): bool
     return strtoupper(trim($area)) === 'K';
 }
 
-/** id_especialidad infantil: ingles → ING-K, computacion → COMP-K. */
+/** id_especialidad infantil: ingles → ING-K/IK, computacion → COMP-K/CK. */
 function grupo_id_especialidad_infantil(PDO $pdo, string $materia): ?int
 {
-    $clave = match (strtolower(trim($materia))) {
-        'computacion', 'comp', 'informatica' => 'COMP-K',
-        default => 'ING-K',
+    $claves = match (strtolower(trim($materia))) {
+        'computacion', 'comp', 'informatica', 'ck' => ['COMP-K', 'CK', 'COMPUTACION-K'],
+        default => ['ING-K', 'IK', 'INGLES-K', 'INGLES_K'],
     };
     $st = $pdo->prepare('SELECT id_especialidad FROM especialidades WHERE activo = 1 AND UPPER(clave) = ? LIMIT 1');
-    $st->execute([$clave]);
+    foreach ($claves as $clave) {
+        $st->execute([strtoupper($clave)]);
+        $id = (int) $st->fetchColumn();
+        if ($id > 0) {
+            return $id;
+        }
+    }
+    // Fallback por nombre
+    $like = match (strtolower(trim($materia))) {
+        'computacion', 'comp', 'informatica', 'ck' => '%comput%infantil%',
+        default => '%ingl%infantil%',
+    };
+    try {
+        $stN = $pdo->prepare(
+            'SELECT id_especialidad FROM especialidades
+             WHERE activo = 1 AND LOWER(nombre) LIKE ? ORDER BY id_especialidad ASC LIMIT 1'
+        );
+        $stN->execute([$like]);
+        $id = (int) $stN->fetchColumn();
+        if ($id > 0) {
+            return $id;
+        }
+    } catch (Throwable $e) {
+        // ignore
+    }
 
-    $id = (int) $st->fetchColumn();
-
-    return $id > 0 ? $id : null;
+    return null;
 }
 
 /**
@@ -382,6 +417,8 @@ function grupo_infantil_crear_pareja(
         $idFaseComputacion = grupo_primera_fase($pdo, $idEspComp);
     }
 
+    // Claves/secuencia fuera de la TX de INSERT (pueden tocar schema).
+    // Un ALTER dentro de la TX hace commit implícito en MySQL → "There is no active transaction".
     $claves = grupo_infantil_generar_claves($pdo, $idPlantel);
     $num = (int) $claves['numero_secuencial'];
 
@@ -410,39 +447,43 @@ function grupo_infantil_crear_pareja(
         ]);
         $idGrupoComp = (int) $pdo->lastInsertId();
 
-        if (function_exists('tutor_asignar_grupo')) {
-            tutor_asignar_grupo($pdo, $idGrupoIng);
-            tutor_asignar_grupo($pdo, $idGrupoComp);
-        }
-
         $pdo->prepare('UPDATE grupos SET id_grupo_pareja_infantil = ? WHERE id_grupo = ?')
             ->execute([$idGrupoComp, $idGrupoIng]);
         $pdo->prepare('UPDATE grupos SET id_grupo_pareja_infantil = ? WHERE id_grupo = ?')
             ->execute([$idGrupoIng, $idGrupoComp]);
 
-        if ($diasSemana !== []) {
-            grupo_guardar_horarios($pdo, $idGrupoIng, $diasSemana, $horaInicio, $horaFin);
-            grupo_guardar_horarios($pdo, $idGrupoComp, $diasSemana, $horaInicio, $horaFin);
-        }
-
-        if ($ownTx) {
+        if ($ownTx && $pdo->inTransaction()) {
             $pdo->commit();
         }
-
-        return [
-            'ok' => true,
-            'id_grupo_ingles' => $idGrupoIng,
-            'id_grupo_computacion' => $idGrupoComp,
-            'clave_ingles' => $claves['clave_ingles'],
-            'clave_computacion' => $claves['clave_computacion'],
-            'numero_secuencial' => $num,
-        ];
     } catch (Throwable $e) {
         if ($ownTx && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
         throw $e;
     }
+
+    // Fuera de la TX (pueden tocar schema / no deben tumbar el commit de los INSERT)
+    if (function_exists('tutor_asignar_grupo')) {
+        try {
+            tutor_asignar_grupo($pdo, $idGrupoIng);
+            tutor_asignar_grupo($pdo, $idGrupoComp);
+        } catch (Throwable $e) {
+            // no bloquear creación
+        }
+    }
+    if ($diasSemana !== []) {
+        grupo_guardar_horarios($pdo, $idGrupoIng, $diasSemana, $horaInicio, $horaFin);
+        grupo_guardar_horarios($pdo, $idGrupoComp, $diasSemana, $horaInicio, $horaFin);
+    }
+
+    return [
+        'ok' => true,
+        'id_grupo_ingles' => $idGrupoIng,
+        'id_grupo_computacion' => $idGrupoComp,
+        'clave_ingles' => $claves['clave_ingles'],
+        'clave_computacion' => $claves['clave_computacion'],
+        'numero_secuencial' => $num,
+    ];
 }
 
 /** id_especialidad principal según código de área del grupo. */

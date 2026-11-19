@@ -23,7 +23,7 @@
     window.__hayMigCsvOverrides = Object.create(null);
   }
   const overrides = window.__hayMigCsvOverrides;
-  /** Overrides por id_grupo_legado (grupos) */
+  /** Overrides por clave_legado o id_grupo_legado (grupos) */
   if (!window.__hayMigCsvGrupoOverrides) {
     window.__hayMigCsvGrupoOverrides = Object.create(null);
   }
@@ -42,7 +42,7 @@
   }
 
   function setBusy(busy, label) {
-    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-template', 'migcsv-export-legado'].forEach((id) => {
+    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-revertir-grupos', 'migcsv-template', 'migcsv-export-legado', 'migcsv-import-pagos-legado'].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = !!busy;
     });
@@ -51,12 +51,18 @@
     }
   }
 
+  function grupoBaseKey(row) {
+    const clave = String(row.clave_legado || '').trim();
+    if (clave) return clave;
+    return String(row.id_grupo_legado || '').trim();
+  }
+
   function profOverrideKey(row) {
-    const idLeg = String(row.id_grupo_legado || '').trim();
-    const line = row._line != null ? String(row._line) : '';
-    if (idLeg && line) return idLeg + '@L' + line;
+    const base = grupoBaseKey(row);
+    const line = row._line != null ? String(row._line) : (row.fila != null ? String(row.fila) : '');
+    if (base && line) return base + '@L' + line;
     if (line) return 'L' + line;
-    return idLeg;
+    return base;
   }
 
   function applyOverrideToRow(row) {
@@ -70,7 +76,7 @@
         apellido: ov.apellido != null && ov.apellido !== '' ? ov.apellido : out.apellido,
       });
     }
-    const idLeg = String(out.id_grupo_legado || '').trim();
+    const idLeg = grupoBaseKey(out);
     const gov = idLeg ? grupoOverrides[idLeg] : null;
     if (gov && gov.clave_especialidad) {
       out = Object.assign({}, out, { clave_especialidad: gov.clave_especialidad });
@@ -132,16 +138,21 @@
         return;
       }
       const m = data.mapas || {};
+      const alUnicos = m.alumno_unicos != null ? m.alumno_unicos : m.alumno;
+      const alClaves = m.alumno || 0;
+      const alTxt = alUnicos != null && alClaves > alUnicos
+        ? ('<strong>' + alUnicos + '</strong> <span style="color:#666;font-weight:400">(mapa ' + alClaves + ' claves)</span>')
+        : ('<strong>' + (alUnicos || 0) + '</strong>');
       el.innerHTML =
         'Mapas: usuarios <strong>' + (m.usuario || 0) + '</strong> · ' +
         'grupos <strong>' + (m.grupo || 0) + '</strong> · ' +
         'kids CK <strong>' + (m.grupo_comp || 0) + '</strong> · ' +
-        'alumnos <strong>' + (m.alumno || 0) + '</strong> · ' +
+        'alumnos ' + alTxt + ' · ' +
         'pagos <strong>' + (m.pago || 0) + '</strong>';
       const leg = data.legado || {};
       if (legEl) {
         if (leg.ok) {
-          legEl.innerHTML = 'Legado conectado: <code>' + (leg.db || 'ok') + '</code>. Elija tipo, pegue claves e ids de grupos y descargue.';
+          legEl.innerHTML = 'Legado conectado: <code>' + (leg.db || 'ok') + '</code>. Elija tipo, pegue las <strong>claves</strong> de grupo y descargue.';
           legEl.style.color = '#0a7a32';
         } else {
           legEl.innerHTML = 'Sin legado: ' + (leg.error || 'configure LEGACY_DB_* en config.local.php') +
@@ -151,14 +162,14 @@
       }
       if (selSuc && Array.isArray(leg.sucursales)) {
         const cur = selSuc.value || '0';
-        selSuc.innerHTML = '<option value="0">Todas</option>';
+        selSuc.innerHTML = '<option value="0">— Elija sucursal legado —</option>';
         leg.sucursales.forEach((s) => {
           const opt = document.createElement('option');
           opt.value = String(s.id || '');
           opt.textContent = (s.id || '') + ' — ' + (s.nombre || '');
           selSuc.appendChild(opt);
         });
-        selSuc.value = cur;
+        if (cur && cur !== '0') selSuc.value = cur;
       }
     } catch (e) {
       el.textContent = 'Error de red al cargar estado';
@@ -220,7 +231,7 @@
         td.style.verticalAlign = 'middle';
 
         if (h === 'clave_especialidad' && (previewState.tipo === 'grupos' || headers.indexOf('esp_estado') >= 0)) {
-          const idLeg = String(row.id_grupo_legado || '').trim();
+          const idLeg = grupoBaseKey(row);
           const especialidades = (previewState && previewState.especialidades) || [];
           const sel = document.createElement('select');
           sel.className = 'migcsv-esp';
@@ -256,7 +267,7 @@
           }
           sel.addEventListener('change', () => {
             if (!idLeg) {
-              showMsg('Esta fila no tiene id_grupo_legado; no se puede guardar el override.', false);
+              showMsg('Esta fila no tiene clave_legado; no se puede guardar el override.', false);
               return;
             }
             setGrupoOverride(idLeg, 'clave_especialidad', sel.value);
@@ -386,11 +397,17 @@
               td.style.color = '#b00020';
               td.style.fontWeight = '600';
               td.title = v === 'faltante'
-                ? 'Ese id/clave de grupo no está en el mapa: reimporte 03_grupos incluyendo ese id.'
+                ? 'Esa clave de grupo no está en el mapa: reimporte 03_grupos incluyendo esa clave_legado.'
                 : 'Plantel del alumno no resuelto.';
             } else if (v === 'ok') {
               td.style.color = '#0a7a32';
             }
+          }
+          if (h === 'alerta' && v) {
+            td.style.color = '#b00020';
+            td.style.fontWeight = '600';
+            td.title = v;
+            tr.style.background = '#fff5f5';
           }
           if (h === 'profesor_csv' && v) {
             td.title = 'Texto original del CSV';
@@ -421,6 +438,9 @@
     fd.append('offset', String(Math.max(0, offset || 0)));
     fd.append('limit', String(limit));
     fd.append('csv', file);
+    if (tipo === 'alumnos' && $('migcsv-solo-alertas')?.checked) {
+      fd.append('solo_alertas', '1');
+    }
     showMsg('Cargando vista previa…', true);
     try {
       const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
@@ -440,6 +460,7 @@
         especialidades: data.especialidades || [],
         profesores: data.profesores || [],
         tipo: tipo,
+        conAlerta: data.con_alerta || 0,
       };
       // Preselección: si hay match fuzzy y el usuario no ha tocado la fila, guardar
       // override para que Importar use exactamente lo mostrado en el desplegable.
@@ -460,9 +481,11 @@
         text += ' — faltan grupos: ' + data.grupos_faltantes.slice(0, 10).join(', ')
           + (data.grupos_faltantes.length > 10 ? '…' : '');
       } else if (data.errores && data.errores.length) {
-        text += ' — ' + data.errores.slice(0, 2).join('; ');
+        text += ' — ' + data.errores.slice(0, 5).join('; ');
       }
-      showMsg(text, !(data.grupos_faltantes && data.grupos_faltantes.length));
+      const hayAlerta = (data.con_alerta || 0) > 0
+        || (data.grupos_faltantes && data.grupos_faltantes.length);
+      showMsg(text, !hayAlerta);
       renderPreview();
     } catch (e) {
       showMsg('Error de red', false);
@@ -470,6 +493,11 @@
   }
 
   $('migcsv-preview')?.addEventListener('click', () => loadPreview(0));
+  $('migcsv-solo-alertas')?.addEventListener('change', () => {
+    if ($('migcsv-tipo')?.value === 'alumnos' && $('migcsv-file')?.files?.[0]) {
+      loadPreview(0);
+    }
+  });
   $('migcsv-prev')?.addEventListener('click', () => {
     if (!previewState) return;
     loadPreview(Math.max(0, previewState.offset - previewState.limit));
@@ -491,9 +519,13 @@
     if (tipo === 'staff_emails') {
       aviso = '¿Importar personal y provisionar Google/Moodle?\nSe creará el correo en Google Workspace si no existe.\nSe usarán los roles/nombres que editó en la vista previa.\nCon ~100 filas puede tardar varios minutos.';
     } else if (tipo === 'grupos') {
-      aviso = '¿Importar grupos?\nSe crearán con clave HAY nueva según la especialidad (CSV o la que eligió en la tabla).\nEl profesor será el del desplegable (por defecto el más parecido al CSV).\nLa clave/id legado se guarda en clave_anterior y en el mapa de migración.';
+      aviso = '¿Importar grupos?\nSe crearán con clave HAY nueva según la especialidad (CSV o la que eligió en la tabla).\nEl profesor será el del desplegable (por defecto el más parecido al CSV).\nLa clave_legado se guarda en clave_anterior y en el mapa de migración (el id interno es opcional).';
     } else if (tipo === 'alumnos') {
-      aviso = '¿Importar alumnos?\nSe vincularán a los grupos ya migrados y se creará (si falta) usuario HAY, correo Google Workspace y Moodle con las mismas reglas del sistema (NC como usuario / correo institucional).';
+      aviso =
+        '¿Importar alumnos (solo ficha HAY + vínculo a grupo)?\n\n' +
+        'NO se crearán aún usuarios en Google Workspace ni Moodle.\n' +
+        'Cuando revise que todo esté correcto, use «Re-provisionar mapeados».\n' +
+        'El número de control del CSV se respeta tal cual.';
     }
     if (!confirm(aviso)) return;
     const fd = new FormData();
@@ -501,20 +533,32 @@
     fd.append('tipo', tipo);
     fd.append('id_plantel', String(idPlantel));
     fd.append('csv', file);
+    if (tipo === 'alumnos') {
+      fd.append('provisionar', '0');
+    }
     if (tipo === 'staff_emails') {
       fd.append('overrides', JSON.stringify(overrides));
     } else if (tipo === 'grupos') {
       fd.append('overrides', JSON.stringify(grupoOverrides));
     }
-    setBusy(true, 'Importando… (Google/Moodle por fila). Espere; en Network debe aparecer migracion_csv_api.php');
+    setBusy(
+      true,
+      tipo === 'alumnos'
+        ? 'Importando alumnos (sin Google/Moodle)…'
+        : 'Importando… Espere; en Network debe aparecer migracion_csv_api.php'
+    );
     try {
       const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
       const data = await r.json();
       let text = data.message || '';
       if (data.errores && data.errores.length) {
-        text += ' — ' + data.errores.slice(0, 3).join('; ');
+        text += ' — ' + data.errores.slice(0, 5).join('; ');
+        if (data.errores.length > 5) text += '…';
       }
-      showMsg(text || (data.status === 'ok' ? 'Importación terminada' : 'Error al importar'), data.status === 'ok');
+      showMsg(
+        text || (data.status === 'ok' ? 'Importación terminada' : 'Error al importar'),
+        data.status === 'ok' && !(data.errores && data.errores.length)
+      );
       refreshEstado();
     } catch (e) {
       showMsg('Error de red al importar (timeout o conexión). Revise Network → migracion_csv_api.php', false);
@@ -571,8 +615,8 @@
     } catch (e) { /* ignore */ }
   });
 
-  /** Extrae id_alumno_legado de un CSV (columna o única columna). */
-  function extractIdsAlumnoFromCsvText(text) {
+  /** Extrae numero_control (o id_alumno_legado) de un CSV. */
+  function extractNumerosControlFromCsvText(text) {
     const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim() !== '');
     if (!lines.length) return [];
     const parseRow = (line) => {
@@ -595,12 +639,13 @@
       out.push(cur.trim());
       return out;
     };
-    const header = parseRow(lines[0]).map((h) => h.toLowerCase());
-    let col = header.indexOf('id_alumno_legado');
+    const header = parseRow(lines[0]).map((h) => h.toLowerCase().replace(/^\ufeff/, ''));
+    let col = header.indexOf('numero_control');
+    if (col < 0) col = header.indexOf('id_alumno_legado');
     let start = 1;
     if (col < 0) {
-      // Sin encabezado: una columna de ids
-      if (header.length === 1 && /^\d+$/.test(header[0])) {
+      // Sin encabezado: una columna de NC
+      if (header.length === 1 && header[0] !== '') {
         col = 0;
         start = 0;
       } else {
@@ -612,7 +657,7 @@
     for (let i = start; i < lines.length; i++) {
       const cols = parseRow(lines[i]);
       const v = String(cols[col] || '').trim();
-      if (!v || !/^\d+$/.test(v) || seen[v]) continue;
+      if (!v || seen[v]) continue;
       seen[v] = true;
       ids.push(v);
     }
@@ -624,9 +669,9 @@
     if (!file) return;
     try {
       const text = await file.text();
-      const ids = extractIdsAlumnoFromCsvText(text);
+      const ids = extractNumerosControlFromCsvText(text);
       if (!ids.length) {
-        showMsg('No se encontró columna id_alumno_legado en el CSV.', false);
+        showMsg('No se encontró columna numero_control (ni id_alumno_legado) en el CSV.', false);
         return;
       }
       const ta = $('migcsv-filtro-alumnos');
@@ -636,7 +681,7 @@
           localStorage.setItem(FILTRO_AL_KEY, ta.value);
         } catch (e) { /* ignore */ }
       }
-      showMsg('Cargados ' + ids.length + ' id_alumno_legado desde ' + file.name, true);
+      showMsg('Cargados ' + ids.length + ' número(s) de control desde ' + file.name, true);
     } catch (e) {
       showMsg('No se pudo leer el CSV de alumnos.', false);
     }
@@ -652,7 +697,7 @@
       return;
     }
     if (tipo === 'pagos' && !filtroAl && !filtro) {
-      showMsg('Para pagos pegue id_alumno_legado (o suba el CSV de alumnos), o use el filtro de grupos.', false);
+      showMsg('Para pagos use «Migrar pagos del legado» (recomendado), o pegue numero_control para descargar CSV.', false);
       return;
     }
     try {
@@ -671,8 +716,109 @@
     window.location.href = api + '?' + qs.toString();
   });
 
+  async function importPagosLegadoLotes() {
+    const filtroAl = ($('migcsv-filtro-alumnos')?.value || '').trim();
+    const usarMapa = !!$('migcsv-pagos-usar-mapa')?.checked;
+    const idSuc = parseInt($('migcsv-sucursal')?.value || '0', 10) || 0;
+    const sucLabel = ($('migcsv-sucursal')?.selectedOptions?.[0]?.textContent || '').trim();
+    if (!idPlantel) {
+      showMsg('Seleccione el plantel HAY de destino (arriba / sesión).', false);
+      return;
+    }
+    if (idSuc <= 0) {
+      showMsg('Elija la sucursal legado en el desplegable (de dónde leer los pagos).', false);
+      return;
+    }
+    if (!filtroAl && !usarMapa) {
+      showMsg('Pegue numero_control, suba el CSV de alumnos, o marque «usar alumnos ya mapeados».', false);
+      return;
+    }
+    if (!confirm(
+      '¿Migrar pagos?\n\n' +
+      'Destino HAY: plantel activo #' + idPlantel + '\n' +
+      'Origen legado: ' + sucLabel + '\n\n' +
+      'Solo se leen alumnos de esa sucursal legado (por NC). Los ya migrados se omiten.\n' +
+      'Si mezcló planteles antes:\n' +
+      'php scripts/purge_pagos_migracion.php --plantel=SLUG --confirm="BORRAR PAGOS"'
+    )) return;
+    try {
+      localStorage.setItem(FILTRO_AL_KEY, filtroAl);
+    } catch (e) { /* ignore */ }
+
+    let offset = 0;
+    let totalCreados = 0;
+    let totalOmitidos = 0;
+    let totalActualizados = 0;
+    let totalLeidos = 0;
+    let rounds = 0;
+    const maxRounds = 200;
+    setBusy(true, 'Migrando pagos del legado…');
+    try {
+      while (rounds < maxRounds) {
+        rounds++;
+        const fd = new FormData();
+        fd.append('action', 'import_pagos_legado');
+        fd.append('id_plantel', String(idPlantel));
+        fd.append('id_sucursal', String(idSuc));
+        fd.append('filtro_alumnos', filtroAl);
+        if (usarMapa) fd.append('usar_mapa', '1');
+        fd.append('offset', String(offset));
+        fd.append('lote', '40');
+        setBusy(
+          true,
+          'Migrando pagos… lote desde NC #' + (offset + 1) +
+            (totalLeidos ? (' · ' + totalCreados + ' creados / ' + totalLeidos + ' leídos') : '')
+        );
+        const r = await fetch(api, {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-Requested-With': 'fetch' },
+          credentials: 'same-origin',
+        });
+        const data = await r.json();
+        if (data.status !== 'ok') {
+          showMsg(data.message || 'Error al migrar pagos', false);
+          return;
+        }
+        totalCreados += data.creados || 0;
+        totalOmitidos += data.omitidos || 0;
+        totalActualizados += data.actualizados || 0;
+        totalLeidos += data.pagos_leidos || 0;
+        offset = data.next_offset || (offset + (data.lote_nc || 40));
+        if (data.done) {
+          let text = 'Pagos legado terminado: ' + totalCreados + ' creado(s), '
+            + totalOmitidos + ' omitido(s), ' + totalLeidos + ' leído(s) del legado';
+          if (totalActualizados) {
+            text += ', ' + totalActualizados + ' cobrador(es) corregido(s)';
+          }
+          text += '.';
+          if (data.errores && data.errores.length) {
+            text += ' — ' + data.errores.slice(0, 3).join('; ');
+          }
+          showMsg(text, !(data.errores && data.errores.length));
+          refreshEstado();
+          return;
+        }
+      }
+      showMsg('Se alcanzó el límite de lotes. Pulse de nuevo para continuar (ya migrados se omiten).', false);
+      refreshEstado();
+    } catch (e) {
+      showMsg('Error de red / timeout al migrar pagos. Puede reintentar; los ya importados se omiten.', false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  $('migcsv-import-pagos-legado')?.addEventListener('click', () => {
+    importPagosLegadoLotes();
+  });
+
   $('migcsv-provision')?.addEventListener('click', async () => {
-    if (!confirm('¿Crear correos institucionales (si faltan) y usuarios Moodle para lo ya importado (plantel actual)?')) return;
+    if (!confirm(
+      '¿Crear/actualizar cuentas externas de lo ya mapeado (alumnos y staff)?\n\n' +
+      'Alumnos: usuario HAY + Google Workspace + Moodle (NC como usuario).\n' +
+      'Hágalo solo cuando haya revisado que los alumnos importados están correctos.'
+    )) return;
     const fd = new FormData();
     fd.append('action', 'provision');
     fd.append('id_plantel', String(idPlantel));
@@ -689,6 +835,56 @@
       refreshEstado();
     } catch (e) {
       showMsg('Error de red en provisión', false);
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  $('migcsv-revertir-grupos')?.addEventListener('click', async () => {
+    const aviso =
+      'Esto borra grupos del plantel actual y reinicia el contador de claves (IS1, IK1…).\n\n' +
+      'Si un import falló a medias, muchos grupos NO están en el mapa: use TODOS.\n\n' +
+      '¿Continuar?';
+    if (!confirm(aviso)) return;
+    const typed = window.prompt(
+      'Escriba TODOS = vaciar TODOS los grupos del plantel (recomendado tras un import malo)\n' +
+        'Escriba REVERTIR = solo mapa / clave_anterior de migración\n',
+      'TODOS'
+    );
+    const conf = String(typed || '').trim().toUpperCase();
+    if (conf !== 'REVERTIR' && conf !== 'TODOS') {
+      showMsg('Cancelado: escriba REVERTIR o TODOS', false);
+      return;
+    }
+    const borrarAl = confirm(
+      '¿También borrar alumnos (y pagos) creados por esta migración en el plantel?\n\n' +
+      'Aceptar = sí, dejar limpio para reintentar alumnos.\n' +
+      'Cancelar = solo grupos (los alumnos quedan desvinculados).'
+    );
+    const fd = new FormData();
+    fd.append('action', 'revertir_grupos');
+    fd.append('id_plantel', String(idPlantel));
+    fd.append('confirm', conf);
+    fd.append('todos', conf === 'TODOS' ? '1' : '0');
+    fd.append('borrar_alumnos', borrarAl ? '1' : '0');
+    setBusy(true, conf === 'TODOS' ? 'Vaciando todos los grupos del plantel…' : 'Revirtiendo grupos migrados…');
+    try {
+      const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
+      const data = await r.json();
+      let text = data.message || '';
+      if (data.grupos_borrados != null) {
+        text += (text ? ' — ' : '') + 'Borrados: ' + data.grupos_borrados;
+      }
+      if (data.errores && data.errores.length) {
+        text += ' — ' + data.errores.slice(0, 3).join('; ');
+      }
+      showMsg(text, data.status === 'ok');
+      refreshEstado();
+      if (typeof cargarSeccion === 'function' && data.status === 'ok' && (data.grupos_borrados > 0 || conf === 'TODOS')) {
+        // No navegar solo; el usuario puede ir a Grupos a verificar
+      }
+    } catch (e) {
+      showMsg('Error de red al revertir grupos', false);
     } finally {
       setBusy(false);
     }

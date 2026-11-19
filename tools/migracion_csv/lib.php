@@ -76,7 +76,8 @@ function migcsv_leer_filtro_grupos(string $path): array
 }
 
 /**
- * Resuelve ids de grupos a partir de ids numéricos o claves.
+ * Resuelve ids de grupos priorizando clave legado (como se identifica operativamente).
+ * Tokens numéricos solo se usan como id si no coinciden con ninguna clave.
  *
  * @param list<int|string> $filtro
  * @return list<int>
@@ -86,26 +87,49 @@ function migcsv_resolver_ids_grupos(PDO $pdo, array $filtro): array
     if ($filtro === []) {
         return [];
     }
-    $ids = [];
-    $claves = [];
+    $tokens = [];
     foreach ($filtro as $item) {
         $s = trim((string) $item);
-        if ($s === '') {
+        if ($s === '' || str_starts_with($s, '#')) {
             continue;
         }
-        if (ctype_digit($s)) {
-            $ids[] = (int) $s;
-        } else {
-            $claves[] = $s;
+        $tokens[] = $s;
+    }
+    if ($tokens === []) {
+        return [];
+    }
+
+    $out = [];
+    $matched = [];
+    if (migcsv_column_exists($pdo, 'grupos', 'clave')) {
+        $uppers = [];
+        foreach ($tokens as $t) {
+            $uppers[strtoupper($t)] = $t;
+        }
+        $keys = array_keys($uppers);
+        $ph = implode(',', array_fill(0, count($keys), '?'));
+        $st = $pdo->prepare("SELECT id, clave FROM grupos WHERE UPPER(clave) IN ($ph)");
+        $st->execute($keys);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0) {
+                $out[] = $id;
+            }
+            $matched[strtoupper((string) ($row['clave'] ?? ''))] = true;
         }
     }
-    $out = $ids;
-    if ($claves !== [] && migcsv_column_exists($pdo, 'grupos', 'clave')) {
-        $ph = implode(',', array_fill(0, count($claves), '?'));
-        $st = $pdo->prepare("SELECT id FROM grupos WHERE clave IN ($ph)");
-        $st->execute($claves);
-        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $id) {
-            $out[] = (int) $id;
+
+    // Solo ids numéricos que no se hayan resuelto ya como clave
+    foreach ($tokens as $t) {
+        if (!ctype_digit($t)) {
+            continue;
+        }
+        if (isset($matched[strtoupper($t)])) {
+            continue;
+        }
+        $id = (int) $t;
+        if ($id > 0) {
+            $out[] = $id;
         }
     }
 
@@ -753,14 +777,24 @@ function migcsv_export_alumnos(PDO $pdo, array $idsGrupos): array
 }
 
 /**
- * Resuelve ids de alumnos legado. Por defecto cada línea numérica = id_alumno_legado.
- * Use prefijo nc:2501001 para buscar por número de control.
+ * Resuelve ids de alumnos legado.
+ * Por defecto cada línea = número de control (también si es numérico).
+ * Prefijo id:123 = id interno legado; nc:2501001 = NC explícito.
  *
  * @param list<int|string> $filtro
  * @return list<int>
  */
-function migcsv_resolver_ids_alumnos(PDO $pdo, array $filtro): array
-{
+/**
+ * @param list<int|string> $filtro
+ * @param int|null $idSucursal si se indica, solo alumnos de esa sucursal legado
+ * @return list<int>
+ */
+function migcsv_resolver_ids_alumnos(
+    PDO $pdo,
+    array $filtro,
+    bool $preferirNumeroControl = true,
+    ?int $idSucursal = null
+): array {
     if ($filtro === [] || !migcsv_table_exists($pdo, 'alumnos')) {
         return [];
     }
@@ -771,34 +805,59 @@ function migcsv_resolver_ids_alumnos(PDO $pdo, array $filtro): array
         if ($s === '' || str_starts_with($s, '#')) {
             continue;
         }
-        if (str_starts_with(strtolower($s), 'nc:')) {
+        $low = strtolower($s);
+        if (str_starts_with($low, 'id:')) {
+            $id = (int) trim(substr($s, 3));
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+            continue;
+        }
+        if (str_starts_with($low, 'nc:')) {
             $nc = trim(substr($s, 3));
             if ($nc !== '') {
                 $ncs[] = $nc;
             }
             continue;
         }
-        if (ctype_digit($s)) {
+        if (!$preferirNumeroControl && ctype_digit($s)) {
             $ids[] = (int) $s;
             continue;
         }
+        // Número de control (aunque sea solo dígitos)
         $ncs[] = $s;
     }
     $out = $ids;
+    $hasSucursal = $idSucursal !== null && $idSucursal > 0
+        && migcsv_column_exists($pdo, 'alumnos', 'id_sucursal');
     if ($ncs !== []) {
         $ph = implode(',', array_fill(0, count($ncs), '?'));
         $hasNuevo = migcsv_column_exists($pdo, 'alumnos', 'nuevo_numero_control');
         $sql = $hasNuevo
-            ? "SELECT id FROM alumnos WHERE CAST(numero_control AS CHAR) IN ($ph)
-                OR CAST(COALESCE(nuevo_numero_control, 0) AS CHAR) IN ($ph)"
+            ? "SELECT id FROM alumnos WHERE (CAST(numero_control AS CHAR) IN ($ph)
+                OR CAST(COALESCE(nuevo_numero_control, 0) AS CHAR) IN ($ph))"
             : "SELECT id FROM alumnos WHERE CAST(numero_control AS CHAR) IN ($ph)";
         $params = $hasNuevo ? array_merge($ncs, $ncs) : $ncs;
+        if ($hasSucursal) {
+            $sql .= ' AND id_sucursal = ?';
+            $params[] = $idSucursal;
+        }
         try {
             $st = $pdo->prepare($sql);
             $st->execute($params);
             foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $id) {
                 $out[] = (int) $id;
             }
+        } catch (Throwable $e) {
+            // ignore
+        }
+    } elseif ($hasSucursal && $ids !== []) {
+        // Filtrar ids explícitos por sucursal
+        $ph = implode(',', array_fill(0, count($ids), '?'));
+        try {
+            $st = $pdo->prepare("SELECT id FROM alumnos WHERE id IN ($ph) AND id_sucursal = ?");
+            $st->execute(array_merge($ids, [$idSucursal]));
+            $out = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN) ?: []);
         } catch (Throwable $e) {
             // ignore
         }
@@ -831,9 +890,9 @@ function migcsv_export_pagos(PDO $pdo, array $idsGrupos): array
 }
 
 /**
- * Pagos filtrados solo por id_alumno_legado (sin pasar por grupos).
+ * Pagos filtrados por alumnos ya resueltos (típicamente vía numero_control).
  *
- * @param list<int> $idsAlumnos
+ * @param list<int> $idsAlumnos ids internos legado
  * @return list<array<string, mixed>>
  */
 function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
@@ -844,8 +903,11 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     }
     $ncMap = [];
     $phA = implode(',', array_fill(0, count($idsAlumnos), '?'));
+    $hasNuevoNc = migcsv_column_exists($pdo, 'alumnos', 'nuevo_numero_control');
     $stNc = $pdo->prepare(
-        "SELECT id, COALESCE(NULLIF(nuevo_numero_control, 0), numero_control) AS nc FROM alumnos WHERE id IN ($phA)"
+        $hasNuevoNc
+            ? "SELECT id, COALESCE(NULLIF(nuevo_numero_control, 0), numero_control) AS nc FROM alumnos WHERE id IN ($phA)"
+            : "SELECT id, numero_control AS nc FROM alumnos WHERE id IN ($phA)"
     );
     $stNc->execute($idsAlumnos);
     foreach ($stNc->fetchAll() as $r) {
@@ -855,12 +917,16 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     $out = [];
     $pgDel = migcsv_column_exists($pdo, 'pagos', 'deleted_at') ? ' AND p.deleted_at IS NULL' : '';
 
+    $hasRecibio = migcsv_column_exists($pdo, 'pagos', 'id_recibio');
+    $colRecibio = $hasRecibio ? ', p.id_recibio' : '';
+
     if (migcsv_table_exists($pdo, 'abonos')) {
         $abDel = migcsv_column_exists($pdo, 'abonos', 'deleted_at') ? ' AND a.deleted_at IS NULL' : '';
         $st = $pdo->prepare(
             "SELECT a.id AS id_abono, a.monto AS monto_abono, a.created_at AS abono_en,
                     p.id AS id_pago, p.folio, p.fecha, p.forma_pago, p.id_alumno, p.monto AS monto_pago,
                     ap.concepto, ap.tipo AS tipo_cargo
+                    $colRecibio
              FROM abonos a
              INNER JOIN pagos p ON p.id = a.id_pago
              LEFT JOIN alumnos_pagos ap ON ap.id = a.id_alumno_pago
@@ -876,6 +942,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
                 'id_pago_legado' => 'abono-' . (int) $r['id_abono'],
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
+                'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
                 'fecha' => !empty($r['fecha']) ? substr((string) $r['fecha'], 0, 19) : (string) ($r['abono_en'] ?? ''),
                 'monto' => $r['monto_abono'] ?? $r['monto_pago'] ?? '',
                 'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
@@ -890,6 +957,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     if (migcsv_table_exists($pdo, 'abonos')) {
         $st = $pdo->prepare(
             "SELECT p.id, p.folio, p.fecha, p.monto, p.forma_pago, p.id_alumno
+                    $colRecibio
              FROM pagos p
              WHERE p.id_alumno IN ($phA) $pgDel
                AND NOT EXISTS (
@@ -905,6 +973,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
                 'id_pago_legado' => 'pago-' . (int) $r['id'],
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
+                'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
                 'fecha' => !empty($r['fecha']) ? substr((string) $r['fecha'], 0, 19) : '',
                 'monto' => $r['monto'] ?? '',
                 'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
@@ -916,6 +985,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     } else {
         $st = $pdo->prepare(
             "SELECT p.id, p.folio, p.fecha, p.monto, p.forma_pago, p.id_alumno
+                    $colRecibio
              FROM pagos p
              WHERE p.id_alumno IN ($phA) $pgDel
              ORDER BY p.id"
@@ -927,6 +997,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
                 'id_pago_legado' => 'pago-' . (int) $r['id'],
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
+                'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
                 'fecha' => !empty($r['fecha']) ? substr((string) $r['fecha'], 0, 19) : '',
                 'monto' => $r['monto'] ?? '',
                 'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
