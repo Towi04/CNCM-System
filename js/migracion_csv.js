@@ -23,7 +23,7 @@
     window.__hayMigCsvOverrides = Object.create(null);
   }
   const overrides = window.__hayMigCsvOverrides;
-  /** Overrides por id_grupo_legado (grupos) */
+  /** Overrides por clave_legado o id_grupo_legado (grupos) */
   if (!window.__hayMigCsvGrupoOverrides) {
     window.__hayMigCsvGrupoOverrides = Object.create(null);
   }
@@ -51,12 +51,18 @@
     }
   }
 
+  function grupoBaseKey(row) {
+    const clave = String(row.clave_legado || '').trim();
+    if (clave) return clave;
+    return String(row.id_grupo_legado || '').trim();
+  }
+
   function profOverrideKey(row) {
-    const idLeg = String(row.id_grupo_legado || '').trim();
-    const line = row._line != null ? String(row._line) : '';
-    if (idLeg && line) return idLeg + '@L' + line;
+    const base = grupoBaseKey(row);
+    const line = row._line != null ? String(row._line) : (row.fila != null ? String(row.fila) : '');
+    if (base && line) return base + '@L' + line;
     if (line) return 'L' + line;
-    return idLeg;
+    return base;
   }
 
   function applyOverrideToRow(row) {
@@ -70,7 +76,7 @@
         apellido: ov.apellido != null && ov.apellido !== '' ? ov.apellido : out.apellido,
       });
     }
-    const idLeg = String(out.id_grupo_legado || '').trim();
+    const idLeg = grupoBaseKey(out);
     const gov = idLeg ? grupoOverrides[idLeg] : null;
     if (gov && gov.clave_especialidad) {
       out = Object.assign({}, out, { clave_especialidad: gov.clave_especialidad });
@@ -141,7 +147,7 @@
       const leg = data.legado || {};
       if (legEl) {
         if (leg.ok) {
-          legEl.innerHTML = 'Legado conectado: <code>' + (leg.db || 'ok') + '</code>. Elija tipo, pegue claves e ids de grupos y descargue.';
+          legEl.innerHTML = 'Legado conectado: <code>' + (leg.db || 'ok') + '</code>. Elija tipo, pegue las <strong>claves</strong> de grupo y descargue.';
           legEl.style.color = '#0a7a32';
         } else {
           legEl.innerHTML = 'Sin legado: ' + (leg.error || 'configure LEGACY_DB_* en config.local.php') +
@@ -220,7 +226,7 @@
         td.style.verticalAlign = 'middle';
 
         if (h === 'clave_especialidad' && (previewState.tipo === 'grupos' || headers.indexOf('esp_estado') >= 0)) {
-          const idLeg = String(row.id_grupo_legado || '').trim();
+          const idLeg = grupoBaseKey(row);
           const especialidades = (previewState && previewState.especialidades) || [];
           const sel = document.createElement('select');
           sel.className = 'migcsv-esp';
@@ -256,7 +262,7 @@
           }
           sel.addEventListener('change', () => {
             if (!idLeg) {
-              showMsg('Esta fila no tiene id_grupo_legado; no se puede guardar el override.', false);
+              showMsg('Esta fila no tiene clave_legado; no se puede guardar el override.', false);
               return;
             }
             setGrupoOverride(idLeg, 'clave_especialidad', sel.value);
@@ -386,7 +392,7 @@
               td.style.color = '#b00020';
               td.style.fontWeight = '600';
               td.title = v === 'faltante'
-                ? 'Ese id/clave de grupo no está en el mapa: reimporte 03_grupos incluyendo ese id.'
+                ? 'Esa clave de grupo no está en el mapa: reimporte 03_grupos incluyendo esa clave_legado.'
                 : 'Plantel del alumno no resuelto.';
             } else if (v === 'ok') {
               td.style.color = '#0a7a32';
@@ -491,9 +497,9 @@
     if (tipo === 'staff_emails') {
       aviso = '¿Importar personal y provisionar Google/Moodle?\nSe creará el correo en Google Workspace si no existe.\nSe usarán los roles/nombres que editó en la vista previa.\nCon ~100 filas puede tardar varios minutos.';
     } else if (tipo === 'grupos') {
-      aviso = '¿Importar grupos?\nSe crearán con clave HAY nueva según la especialidad (CSV o la que eligió en la tabla).\nEl profesor será el del desplegable (por defecto el más parecido al CSV).\nLa clave/id legado se guarda en clave_anterior y en el mapa de migración.';
+      aviso = '¿Importar grupos?\nSe crearán con clave HAY nueva según la especialidad (CSV o la que eligió en la tabla).\nEl profesor será el del desplegable (por defecto el más parecido al CSV).\nLa clave_legado se guarda en clave_anterior y en el mapa de migración (el id interno es opcional).';
     } else if (tipo === 'alumnos') {
-      aviso = '¿Importar alumnos?\nSe vincularán a los grupos ya migrados y se creará (si falta) usuario HAY, correo Google Workspace y Moodle con las mismas reglas del sistema (NC como usuario / correo institucional).';
+      aviso = '¿Importar alumnos?\nSe vincularán a los grupos ya migrados por clave_legado y se creará (si falta) usuario HAY, correo Google Workspace y Moodle con las mismas reglas del sistema (NC como usuario / correo institucional).';
     }
     if (!confirm(aviso)) return;
     const fd = new FormData();

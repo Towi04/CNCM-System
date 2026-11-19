@@ -61,20 +61,23 @@ switch ($tipo) {
     case 'grupos':
         $rows = migcsv_export_grupos($pdo, $idsGrupos);
         migcsv_csv_enviar('03_grupos_activos.csv', [
-            'id_grupo_legado', 'clave_legado', 'id_sucursal_legado', 'sucursal', 'plantel_slug',
+            'clave_legado', 'plantel_slug', 'sucursal', 'id_sucursal_legado',
             'especialidad_legado', 'clave_especialidad', 'infantil',
             'fecha_inicio_legado', 'fecha_inicio_estimada', 'clave_fase_estimada',
             'horario_legado', 'dias_clase', 'hora_inicio', 'hora_fin',
-            'id_profesor_legado', 'profesor_sugerido', 'profesores_grupo', 'profesor_username',
+            'profesor_sugerido', 'profesores_grupo', 'profesor_username', 'id_profesor_legado',
             'aula_codigo', 'status_legado', 'max_alumnos', 'alumnos_activos_count',
+            'id_grupo_legado',
         ], $rows);
 
     case 'alumnos':
         $rows = migcsv_export_alumnos($pdo, $idsGrupos);
         migcsv_csv_enviar('04_alumnos.csv', [
             'id_alumno_legado', 'numero_control', 'nombres', 'apellido_paterno', 'apellido_materno',
-            'email', 'telefono', 'id_sucursal_legado', 'plantel_slug', 'id_grupo_legado', 'clave_legado',
-            'fecha_inicio', 'forma_pago', 'id_asesor_legado', 'asesor_nombre', 'status_legado',
+            'email', 'telefono', 'plantel_slug', 'id_sucursal_legado',
+            'clave_legado', 'fecha_inicio', 'forma_pago',
+            'id_asesor_legado', 'asesor_nombre', 'status_legado',
+            'id_grupo_legado',
         ], $rows);
 
     case 'pagos':

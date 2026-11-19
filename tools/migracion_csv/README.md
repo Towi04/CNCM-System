@@ -4,7 +4,7 @@ Exporta grupos activos (y sus alumnos/pagos) desde la BD legado.
 
 **En el servidor (recomendado):** si el dump legado ya está en MariaDB y
 `LEGACY_DB_*` está en `config.local.php`, use el Portal → **Migración CSV** →
-bloque *Descargar desde BD legado*: pegue ids/claves de grupos y descargue
+bloque *Descargar desde BD legado*: pegue las **claves** de grupo (como en el legado) y descargue
 `03_grupos` / `04_alumnos` / `05_pagos` (también personal/aulas).
 
 **Opcional local (XAMPP):** esta carpeta `tools/migracion_csv/` sigue sirviendo
@@ -16,7 +16,7 @@ si prefiere extraer en su PC. En el Portal también hay **CSV de ejemplo**
 1. MySQL/MariaDB local con el dump legado restaurado.
 2. PHP con extensión `pdo_mysql`.
 3. Copiar `config.example.php` → `config.php` y ajustar credenciales.
-4. Copiar `grupos_filtro.example.txt` → `grupos_filtro.txt` y listar ids/claves de grupos activos.
+4. Copiar `grupos_filtro.example.txt` → `grupos_filtro.txt` y listar **claves** de grupos activos.
 
 ## Uso
 
@@ -45,7 +45,7 @@ si prefiere extraer en su PC. En el Portal también hay **CSV de ejemplo**
 | `PREP-ESC` | Preparatoria escolarizada |
 
 Kids: bastan `ING-K` o `infantil=1` (una fila → pareja IK+CK con bloque 2h+2h el mismo día).
-También puede **repetir** el mismo `id_grupo_legado` / `clave_legado` en 2 filas (1ª inglés, 2ª cómputo)
+También puede **repetir** la misma `clave_legado` en 2 filas (1ª inglés, 2ª cómputo)
 con distinta `hora_inicio` / `dias_clase` / `aula_codigo`; HAY asigna el mismo número a la pareja.
 Alumnos de ese grupo se inscriben en **ambas** materias (dual); después puede dar de baja individual.
 
@@ -80,19 +80,20 @@ De BD + edición: `clave_especialidad` (obligatoria en adultos; en kids basta `I
 En HAY (Vista previa) el profesor se elige en un **desplegable**; por defecto queda el nombre más
 parecido al CSV (sin importar acentos/mayúsculas). Corrija ahí si el match es solo aproximado.
 
-Pareja kids con horarios distintos: duplicar la fila del mismo `id_grupo_legado`/`clave_legado`
+Pareja kids con horarios distintos: duplicar la fila de la misma `clave_legado`
 (1ª = inglés, 2ª = cómputo) cambiando `hora_inicio`, `dias_clase` y/o `aula_codigo`.
+El id interno de BD (`id_grupo_legado`) es opcional; el enlace operativo es la **clave**.
 
 ### 04_alumnos
 
-`numero_control`, nombres, `id_grupo_legado` (o `clave_legado` del grupo ya importado),
+`numero_control`, nombres, `clave_legado` del grupo ya importado,
 `fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
 
-**No se crean al importar grupos.** Use el **mismo** filtro de ids/claves con el que importó
+**No se crean al importar grupos.** Pegue las **mismas claves** con las que importó
 `03_grupos`, descargue `04_alumnos.csv` (Portal → Descargar del legado), revise Vista previa
-(`grupo_estado`) e Importe. Si un `id_grupo_legado` (p. ej. 959) “no está en el mapa”, ese id
-no formó parte de los grupos importados aunque haya otros mapeados: vuelva a exportar/importar
-`03_grupos` incluyendo ese id. Kids: un alumno del grupo legado → IK y CK (dual).
+(`grupo_estado`) e Importe. Si una `clave_legado` “no está en el mapa”, esa clave no formó
+parte de los grupos importados: vuelva a exportar/importar `03_grupos` incluyendo esa clave.
+Kids: un alumno del grupo legado → IK y CK (dual).
 Al importar se provisiona cuenta HAY + Google Workspace + Moodle (si faltan), con las mismas
 reglas del sistema (número de control / correo institucional).
 
