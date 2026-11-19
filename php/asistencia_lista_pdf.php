@@ -322,8 +322,11 @@ function asistencia_lista_pdf_html(
     $direccion = trim((string) ($grupo['plantel_direccion'] ?? ''));
     $cct = trim((string) ($grupo['cct_lista'] ?? ''));
     $rvoe = trim((string) ($grupo['rvoe_lista'] ?? ''));
-    // Celdas de asistencia fijas y compactas; NC/nombre/tel se ajustan al texto (1 línea)
-    $cellWidth = max(10, min(18, (int) floor(480 / max(1, $numCols))));
+    // Carta apaisada: nombre amplio; semanas compactas (colgroup + table-layout:fixed).
+    $pctAsist = max(1.4, min(2.8, round(46 / max(1, $numCols), 2)));
+    $pctFijos = 3.0 + 7.5 + ($incluirTelefonos ? 14.0 : 0.0);
+    $pctNombre = max(22.0, round(100.0 - $pctFijos - ($pctAsist * $numCols), 2));
+    $cellWidth = max(11, min(18, (int) floor(500 / max(1, $numCols))));
 
     ob_start();
     ?>
@@ -337,7 +340,7 @@ function asistencia_lista_pdf_html(
     * { box-sizing: border-box; }
     html, body { width: 100%; }
     body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; color:#111; margin:0; font-size:9px; }
-    .no-print { text-align:center; margin: 0 0 10px; }
+    .no-print { text-align:center; margin: 0 0 10px; padding:8px; background:#f3f3f3; border-bottom:1px solid #ddd; }
     .no-print button { padding:8px 14px; cursor:pointer; }
     .sheet { width:100%; }
     .brand { display:table; width:100%; margin-bottom:6px; }
@@ -351,21 +354,21 @@ function asistencia_lista_pdf_html(
     .head-left, .head-right { display:table-cell; width:50%; vertical-align:top; }
     .head strong { font-weight:700; }
     .materia { margin: 2px 0 5px; font-size:11px; }
-    table.lista { width:100%; border-collapse:collapse; table-layout:auto; }
-    table.lista th, table.lista td { border:1px solid #222; padding:2px 4px; vertical-align:middle; white-space:nowrap; }
+    table.lista { width:100%; border-collapse:collapse; table-layout:fixed; }
+    table.lista th, table.lista td { border:1px solid #222; padding:2px 3px; vertical-align:middle; }
     table.lista th { font-weight:700; text-align:center; background:#f7f7f7; }
-    table.lista td { height:17px; }
-    th.num, td.num { width:1%; text-align:center; white-space:nowrap; }
-    th.ctrl, td.ctrl { width:1%; text-align:center; white-space:nowrap; font-size:8.5px; }
-    th.tel, td.tel { width:1%; font-size:8px; white-space:nowrap; }
-    th.nombre, td.nombre { text-align:left; white-space:nowrap; font-size:8.5px; }
-    th.asist, td.asist { width: <?php echo $cellWidth; ?>px; min-width: <?php echo $cellWidth; ?>px; max-width: <?php echo $cellWidth; ?>px; text-align:center; padding:0; white-space:nowrap; }
+    table.lista td { height:17px; overflow:hidden; }
+    th.num, td.num { text-align:center; white-space:nowrap; }
+    th.ctrl, td.ctrl { text-align:center; white-space:nowrap; font-size:8.5px; }
+    th.tel, td.tel { font-size:7.5px; white-space:nowrap; overflow:hidden; }
+    th.nombre, td.nombre { text-align:left; white-space:nowrap; font-size:8.5px; overflow:hidden; text-overflow:ellipsis; }
+    th.asist, td.asist { text-align:center; padding:0; white-space:nowrap; }
     .obs { margin-top:8px; font-size:11px; }
     .obs-line { border-bottom:1px solid #111; height:16px; }
     .foot { margin-top:8px; text-align:center; font-size:10px; line-height:1.25; }
     .title { text-align:right; font-size:10px; margin-top:2px; }
     @media print {
-      .no-print { display:none !important; }
+      .no-print, .no-print * { display:none !important; visibility:hidden !important; height:0 !important; margin:0 !important; padding:0 !important; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       @page { size: Letter landscape; margin: 8mm; }
     }
@@ -373,7 +376,7 @@ function asistencia_lista_pdf_html(
 </head>
 <body>
   <?php if ($mostrarBarraImpresion): ?>
-  <div class="no-print">
+  <div class="no-print" aria-hidden="false">
     <p style="margin:0 0 8px;color:#555;">Orientación: <strong>horizontal (apaisada)</strong>. Si el diálogo de impresión muestra vertical, cámbielo a horizontal.</p>
     <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
   </div>
@@ -407,6 +410,18 @@ function asistencia_lista_pdf_html(
     </div>
     <div class="materia"><strong>Materia:</strong> ________________________</div>
     <table class="lista">
+      <colgroup>
+        <col style="width:<?php echo $incluirTelefonos ? '3%' : '3.5%'; ?>">
+        <col style="width:<?php echo $incluirTelefonos ? '7%' : '8%'; ?>">
+        <col style="width:<?php echo htmlspecialchars((string) $pctNombre, ENT_QUOTES, 'UTF-8'); ?>%">
+        <?php if ($incluirTelefonos): ?>
+          <col style="width:7%">
+          <col style="width:7%">
+        <?php endif; ?>
+        <?php for ($c = 0; $c < $numCols; $c++): ?>
+          <col style="width:<?php echo htmlspecialchars((string) $pctAsist, ENT_QUOTES, 'UTF-8'); ?>%; min-width:<?php echo (int) $cellWidth; ?>px">
+        <?php endfor; ?>
+      </colgroup>
       <thead>
         <tr>
           <th class="num" rowspan="2">N°</th>
