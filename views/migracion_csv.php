@@ -99,6 +99,10 @@ if (function_exists('plantel_list')) {
       <option value="50" selected>50</option>
       <option value="100">100</option>
     </select>
+    <label for="migcsv-solo-alertas" style="margin:0; display:inline-flex; align-items:center; gap:6px; color:#555; font-size:0.9rem;">
+      <input type="checkbox" id="migcsv-solo-alertas" value="1">
+      Solo alertas (alumnos)
+    </label>
     <button type="button" class="secondary" id="migcsv-prev" disabled>← Anterior</button>
     <span id="migcsv-pager-info" style="color:#555; font-size:0.9rem;"></span>
     <button type="button" class="secondary" id="migcsv-next" disabled>Siguiente →</button>
@@ -129,10 +133,11 @@ if (function_exists('plantel_list')) {
     <p style="margin:0 0 8px; color:#777;">
       <strong>Alumnos:</strong> no se migran solos con los grupos. Use el <em>mismo</em> filtro
       de <code>clave_legado</code> con el que importó <code>03_grupos</code>, descargue
-      <code>04_alumnos</code> → Vista previa (<code>grupo_estado</code>) → Importar.
-      El enlace es por <strong>clave de grupo</strong>. El <code>numero_control</code> del legado
-      se respeta tal cual en HAY. Si falta una clave en el mapa, vuelva a
-      descargar/importar <code>03_grupos</code> incluyendo esa clave.
+      <code>04_alumnos</code> → Vista previa (columna <code>alerta</code>; filas con problema primero)
+      → Importar. El enlace es por <strong>clave de grupo</strong>. El <code>numero_control</code>
+      del legado se respeta. Kids: <em>un</em> alumno en HAY vinculado a IK+CK (no se duplica la ficha).
+      El contador «alumnos» del mapa cuenta fichas únicas; las «claves mapa» pueden ser ~3 por alumno
+      (NC / nc:NC / id legado). Teléfono máx. 30 caracteres (si viene más largo, se trunca).
     </p>
     <p style="margin:0 0 8px; color:#777;">
       La importación de alumnos <strong>no</strong> crea Google Workspace ni Moodle:

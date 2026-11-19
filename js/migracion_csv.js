@@ -138,11 +138,16 @@
         return;
       }
       const m = data.mapas || {};
+      const alUnicos = m.alumno_unicos != null ? m.alumno_unicos : m.alumno;
+      const alClaves = m.alumno || 0;
+      const alTxt = alUnicos != null && alClaves > alUnicos
+        ? ('<strong>' + alUnicos + '</strong> <span style="color:#666;font-weight:400">(mapa ' + alClaves + ' claves)</span>')
+        : ('<strong>' + (alUnicos || 0) + '</strong>');
       el.innerHTML =
         'Mapas: usuarios <strong>' + (m.usuario || 0) + '</strong> · ' +
         'grupos <strong>' + (m.grupo || 0) + '</strong> · ' +
         'kids CK <strong>' + (m.grupo_comp || 0) + '</strong> · ' +
-        'alumnos <strong>' + (m.alumno || 0) + '</strong> · ' +
+        'alumnos ' + alTxt + ' · ' +
         'pagos <strong>' + (m.pago || 0) + '</strong>';
       const leg = data.legado || {};
       if (legEl) {
@@ -398,6 +403,12 @@
               td.style.color = '#0a7a32';
             }
           }
+          if (h === 'alerta' && v) {
+            td.style.color = '#b00020';
+            td.style.fontWeight = '600';
+            td.title = v;
+            tr.style.background = '#fff5f5';
+          }
           if (h === 'profesor_csv' && v) {
             td.title = 'Texto original del CSV';
           }
@@ -427,6 +438,9 @@
     fd.append('offset', String(Math.max(0, offset || 0)));
     fd.append('limit', String(limit));
     fd.append('csv', file);
+    if (tipo === 'alumnos' && $('migcsv-solo-alertas')?.checked) {
+      fd.append('solo_alertas', '1');
+    }
     showMsg('Cargando vista previa…', true);
     try {
       const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' } });
@@ -446,6 +460,7 @@
         especialidades: data.especialidades || [],
         profesores: data.profesores || [],
         tipo: tipo,
+        conAlerta: data.con_alerta || 0,
       };
       // Preselección: si hay match fuzzy y el usuario no ha tocado la fila, guardar
       // override para que Importar use exactamente lo mostrado en el desplegable.
@@ -466,9 +481,11 @@
         text += ' — faltan grupos: ' + data.grupos_faltantes.slice(0, 10).join(', ')
           + (data.grupos_faltantes.length > 10 ? '…' : '');
       } else if (data.errores && data.errores.length) {
-        text += ' — ' + data.errores.slice(0, 2).join('; ');
+        text += ' — ' + data.errores.slice(0, 5).join('; ');
       }
-      showMsg(text, !(data.grupos_faltantes && data.grupos_faltantes.length));
+      const hayAlerta = (data.con_alerta || 0) > 0
+        || (data.grupos_faltantes && data.grupos_faltantes.length);
+      showMsg(text, !hayAlerta);
       renderPreview();
     } catch (e) {
       showMsg('Error de red', false);
@@ -476,6 +493,11 @@
   }
 
   $('migcsv-preview')?.addEventListener('click', () => loadPreview(0));
+  $('migcsv-solo-alertas')?.addEventListener('change', () => {
+    if ($('migcsv-tipo')?.value === 'alumnos' && $('migcsv-file')?.files?.[0]) {
+      loadPreview(0);
+    }
+  });
   $('migcsv-prev')?.addEventListener('click', () => {
     if (!previewState) return;
     loadPreview(Math.max(0, previewState.offset - previewState.limit));
@@ -530,9 +552,13 @@
       const data = await r.json();
       let text = data.message || '';
       if (data.errores && data.errores.length) {
-        text += ' — ' + data.errores.slice(0, 3).join('; ');
+        text += ' — ' + data.errores.slice(0, 5).join('; ');
+        if (data.errores.length > 5) text += '…';
       }
-      showMsg(text || (data.status === 'ok' ? 'Importación terminada' : 'Error al importar'), data.status === 'ok');
+      showMsg(
+        text || (data.status === 'ok' ? 'Importación terminada' : 'Error al importar'),
+        data.status === 'ok' && !(data.errores && data.errores.length)
+      );
       refreshEstado();
     } catch (e) {
       showMsg('Error de red al importar (timeout o conexión). Revise Network → migracion_csv_api.php', false);
