@@ -2288,10 +2288,15 @@ function migracion_csv_importar_alumnos(
                 ]);
                 $vinculados++;
             }
-            // Mapa por número de control (clave operativa) y, si viene, por id legado
+            // Mapa NC acotado por plantel (el NC se repite entre planteles)
             if ($nc !== '') {
-                migracion_csv_map_set($pdo, 'alumno', 'nc:' . $nc, $idAlumno, $nc);
-                migracion_csv_map_set($pdo, 'alumno', $nc, $idAlumno, 'nc_plain');
+                migracion_csv_map_set(
+                    $pdo,
+                    'alumno',
+                    migracion_csv_map_key_nc($idPlantel, $nc),
+                    $idAlumno,
+                    $nc
+                );
             }
             if ($idAlLeg !== '') {
                 migracion_csv_map_set($pdo, 'alumno', $idAlLeg, $idAlumno, $nc !== '' ? $nc : null);
@@ -2435,6 +2440,40 @@ function migracion_csv_importar_alumnos(
 }
 
 /**
+ * Clave de mapa NC acotada por plantel (el número de control no es único global).
+ */
+function migracion_csv_map_key_nc(int $idPlantel, string $nc): string
+{
+    return 'p' . $idPlantel . ':nc:' . trim($nc);
+}
+
+/**
+ * Resuelve alumno HAY por NC dentro de un plantel (nunca cruza planteles).
+ */
+function migracion_csv_resolver_alumno_por_nc(PDO $pdo, string $nc, int $idPlantel): ?int
+{
+    $nc = trim($nc);
+    if ($nc === '' || $idPlantel <= 0) {
+        return null;
+    }
+    $mapped = migracion_csv_map_get($pdo, 'alumno', migracion_csv_map_key_nc($idPlantel, $nc));
+    if ($mapped !== null && $mapped > 0) {
+        $st = $pdo->prepare('SELECT id_alumno FROM alumnos WHERE id_alumno = ? AND id_plantel = ? LIMIT 1');
+        $st->execute([$mapped, $idPlantel]);
+        if ($st->fetchColumn() !== false) {
+            return $mapped;
+        }
+    }
+    $st = $pdo->prepare(
+        'SELECT id_alumno FROM alumnos WHERE numero_control = ? AND id_plantel = ? LIMIT 1'
+    );
+    $st->execute([$nc, $idPlantel]);
+    $ex = $st->fetchColumn();
+
+    return $ex === false ? null : (int) $ex;
+}
+
+/**
  * Resuelve el usuario HAY que recibió el pago (mapa personal/usuario legado).
  */
 function migracion_csv_resolver_recibio_pago(PDO $pdo, array $r): ?int
@@ -2446,6 +2485,60 @@ function migracion_csv_resolver_recibio_pago(PDO $pdo, array $r): ?int
     $mapped = migracion_csv_map_get($pdo, 'usuario', $idRec);
     if ($mapped !== null && $mapped > 0) {
         return $mapped;
+    }
+
+    return null;
+}
+
+/**
+ * Id de sucursal legado que corresponde al plantel HAY (slug/nombre o mapa).
+ */
+function migracion_csv_resolver_sucursal_legado(PDO $pdoHay, PDO $pdoLeg, int $idPlantel): ?int
+{
+    if ($idPlantel <= 0) {
+        return null;
+    }
+    migracion_csv_ensure_schema($pdoHay);
+    $st = $pdoHay->prepare(
+        'SELECT id_legacy FROM hay_migracion_csv_map WHERE entidad = \'plantel\' AND id_hay = ? LIMIT 1'
+    );
+    $st->execute([$idPlantel]);
+    $leg = $st->fetchColumn();
+    if ($leg !== false && ctype_digit((string) $leg) && (int) $leg > 0) {
+        return (int) $leg;
+    }
+
+    $st = $pdoHay->prepare('SELECT slug, nombre FROM planteles WHERE id_plantel = ? LIMIT 1');
+    $st->execute([$idPlantel]);
+    $p = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$p) {
+        return null;
+    }
+    $slug = strtolower(trim((string) ($p['slug'] ?? '')));
+    $nombre = trim((string) ($p['nombre'] ?? ''));
+    if (!function_exists('migcsv_table_exists') || !migcsv_table_exists($pdoLeg, 'sucursales')) {
+        return null;
+    }
+    try {
+        $rows = $pdoLeg->query('SELECT id, nombre FROM sucursales')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return null;
+    }
+    foreach ($rows as $s) {
+        $sid = (int) ($s['id'] ?? 0);
+        $sn = trim((string) ($s['nombre'] ?? ''));
+        if ($sid <= 0) {
+            continue;
+        }
+        $slugSuc = function_exists('migcsv_slug_sucursal')
+            ? migcsv_slug_sucursal($sn)
+            : strtolower(preg_replace('/[^a-z0-9]+/i', '-', $sn) ?? '');
+        if ($slug !== '' && $slugSuc === $slug) {
+            return $sid;
+        }
+        if ($nombre !== '' && strcasecmp($sn, $nombre) === 0) {
+            return $sid;
+        }
     }
 
     return null;
@@ -2466,6 +2559,16 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
     $actualizados = 0;
     $errores = [];
     $idPlantelSesion = $forzarPlantel ?: (function_exists('plantel_id_activo') ? plantel_id_activo() : 0);
+    if ($idPlantelSesion <= 0) {
+        return [
+            'ok' => false,
+            'message' => 'Seleccione el plantel activo: el número de control no es único entre planteles',
+            'creados' => 0,
+            'omitidos' => 0,
+            'actualizados' => 0,
+            'errores' => ['Falta id_plantel para importar pagos'],
+        ];
+    }
 
     foreach ($rows as $i => $r) {
         $line = $i + 2;
@@ -2477,13 +2580,19 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
                 // Reimport: corregir «Recibió» si ahora resolvemos el cobrador del legado
                 if ($idRecibioHay !== null && $idRecibioHay > 0) {
                     try {
-                        $stCur = $pdo->prepare('SELECT id_usuario FROM alumno_pagos WHERE id_pago = ? LIMIT 1');
+                        $stCur = $pdo->prepare(
+                            'SELECT id_usuario, id_plantel FROM alumno_pagos WHERE id_pago = ? LIMIT 1'
+                        );
                         $stCur->execute([$idPagoExistente]);
-                        $cur = (int) ($stCur->fetchColumn() ?: 0);
-                        if ($cur !== $idRecibioHay) {
-                            $pdo->prepare('UPDATE alumno_pagos SET id_usuario = ? WHERE id_pago = ?')
-                                ->execute([$idRecibioHay, $idPagoExistente]);
-                            $actualizados++;
+                        $curRow = $stCur->fetch(PDO::FETCH_ASSOC) ?: [];
+                        $curPlantel = (int) ($curRow['id_plantel'] ?? 0);
+                        if ($curPlantel === $idPlantelSesion) {
+                            $cur = (int) ($curRow['id_usuario'] ?? 0);
+                            if ($cur !== $idRecibioHay) {
+                                $pdo->prepare('UPDATE alumno_pagos SET id_usuario = ? WHERE id_pago = ?')
+                                    ->execute([$idRecibioHay, $idPagoExistente]);
+                                $actualizados++;
+                            }
                         }
                     } catch (Throwable $e) {
                         // ignore
@@ -2496,34 +2605,24 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
         $nc = trim((string) ($r['numero_control'] ?? ''));
         $idAlLeg = trim((string) ($r['id_alumno_legado'] ?? ''));
         $idAlumno = null;
-        // Preferir número de control (clave operativa legado↔HAY)
+        // NC solo dentro del plantel activo (no usar mapa global nc:…)
         if ($nc !== '') {
-            $mappedNc = migracion_csv_map_get($pdo, 'alumno', 'nc:' . $nc)
-                ?? migracion_csv_map_get($pdo, 'alumno', $nc);
-            if ($mappedNc !== null && $mappedNc > 0) {
-                $idAlumno = $mappedNc;
-            } else {
+            $idAlumno = migracion_csv_resolver_alumno_por_nc($pdo, $nc, $idPlantelSesion);
+        }
+        if (($idAlumno === null || $idAlumno <= 0) && $idAlLeg !== '') {
+            $mapped = migracion_csv_map_get($pdo, 'alumno', $idAlLeg);
+            if ($mapped !== null && $mapped > 0) {
                 $st = $pdo->prepare(
-                    'SELECT id_alumno FROM alumnos WHERE numero_control = ?'
-                    . ($idPlantelSesion > 0 ? ' AND id_plantel = ?' : '')
-                    . ' LIMIT 1'
+                    'SELECT id_alumno FROM alumnos WHERE id_alumno = ? AND id_plantel = ? LIMIT 1'
                 );
-                $params = [$nc];
-                if ($idPlantelSesion > 0) {
-                    $params[] = $idPlantelSesion;
-                }
-                $st->execute($params);
-                $ex = $st->fetchColumn();
-                if ($ex !== false) {
-                    $idAlumno = (int) $ex;
+                $st->execute([$mapped, $idPlantelSesion]);
+                if ($st->fetchColumn() !== false) {
+                    $idAlumno = $mapped;
                 }
             }
         }
-        if (($idAlumno === null || $idAlumno <= 0) && $idAlLeg !== '') {
-            $idAlumno = migracion_csv_map_get($pdo, 'alumno', $idAlLeg);
-        }
         if ($idAlumno === null || $idAlumno <= 0) {
-            $errores[] = "Línea {$line}: alumno no encontrado"
+            $errores[] = "Línea {$line}: alumno no encontrado en este plantel"
                 . ($nc !== '' ? " (NC {$nc})" : ($idAlLeg !== '' ? " (id legado {$idAlLeg})" : ''));
             continue;
         }
@@ -2551,7 +2650,12 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
         $stAl = $pdo->prepare('SELECT id_plantel, id_especialidad FROM alumnos WHERE id_alumno = ?');
         $stAl->execute([$idAlumno]);
         $al = $stAl->fetch(PDO::FETCH_ASSOC) ?: [];
-        $idPlantel = (int) ($al['id_plantel'] ?? $idPlantelSesion);
+        $idPlantelAl = (int) ($al['id_plantel'] ?? 0);
+        if ($idPlantelAl !== $idPlantelSesion) {
+            $errores[] = "Línea {$line}: NC {$nc} pertenece a otro plantel; omitido";
+            continue;
+        }
+        $idPlantel = $idPlantelSesion;
 
         // Cobrador del legado (id_recibio → mapa usuario). Nunca forzar al operador actual.
         $idUsuarioPago = $idRecibioHay;
@@ -2710,6 +2814,13 @@ function migracion_csv_importar_pagos_desde_legado(
     if ($ncs === []) {
         return ['ok' => false, 'message' => 'Indique numero_control (pegue la lista o use el mapa de alumnos)'];
     }
+    if ($idPlantel === null || $idPlantel <= 0) {
+        return [
+            'ok' => false,
+            'message' => 'Seleccione el plantel: el número de control se repite entre planteles '
+                . '(p. ej. 100 en Guerrero ≠ 100 en Celaya)',
+        ];
+    }
 
     $lib = dirname(__DIR__) . '/tools/migracion_csv/lib.php';
     if (!is_readable($lib)) {
@@ -2729,6 +2840,15 @@ function migracion_csv_importar_pagos_desde_legado(
     }
     /** @var PDO $pdoLeg */
     $pdoLeg = $conn['pdo'];
+
+    $idSucursal = migracion_csv_resolver_sucursal_legado($pdoHay, $pdoLeg, $idPlantel);
+    if ($idSucursal === null || $idSucursal <= 0) {
+        return [
+            'ok' => false,
+            'message' => 'No se pudo relacionar el plantel HAY con una sucursal del legado. '
+                . 'Revise que el slug/nombre del plantel coincida con la sucursal legado.',
+        ];
+    }
 
     $totalNc = count($ncs);
     $loteNc = max(5, min(100, $loteNc));
@@ -2751,7 +2871,8 @@ function migracion_csv_importar_pagos_desde_legado(
     }
 
     $lote = array_slice($ncs, $offset, $loteNc);
-    $idsLeg = migcsv_resolver_ids_alumnos($pdoLeg, $lote, true);
+    // Solo alumnos de la sucursal del plantel activo
+    $idsLeg = migcsv_resolver_ids_alumnos($pdoLeg, $lote, true, $idSucursal);
     $ncSinLegado = [];
     if (count($idsLeg) < count($lote)) {
         // Detectar cuáles no resolvieron (consulta inversa cara; estimar por diferencia)
@@ -2793,14 +2914,15 @@ function migracion_csv_importar_pagos_desde_legado(
             . (count($ncSinLegado) > 15 ? '…' : '');
     }
 
-    $msg = 'Lote NC ' . ($offset + 1) . '–' . $next . ' / ' . $totalNc
-        . ': ' . count($rows) . ' pago(s) leído(s) del legado → '
+    $msg = 'Plantel #' . $idPlantel . ' / sucursal legado #' . $idSucursal
+        . ' · lote NC ' . ($offset + 1) . '–' . $next . ' / ' . $totalNc
+        . ': ' . count($rows) . ' pago(s) leído(s) → '
         . $creados . ' creado(s), ' . $omitidos . ' omitido(s)';
     if ($actualizados > 0) {
         $msg .= ', ' . $actualizados . ' cobrador(es) corregido(s)';
     }
     if ($ncSinLegado !== []) {
-        $msg .= '; ' . count($ncSinLegado) . ' NC sin legado';
+        $msg .= '; ' . count($ncSinLegado) . ' NC sin legado en esta sucursal';
     }
     if ($done) {
         $msg .= '. Completado.';
@@ -2823,6 +2945,89 @@ function migracion_csv_importar_pagos_desde_legado(
         'omitidos' => $omitidos,
         'actualizados' => $actualizados,
         'errores' => array_slice($errores, 0, 40),
+    ];
+}
+
+/**
+ * Borra pagos de Migración CSV de un plantel (mapa + filas alumno_pagos).
+ *
+ * @return array{ok:bool, message:string, pagos?:int, mapas?:int}
+ */
+function migracion_csv_purge_pagos_plantel(PDO $pdo, int $idPlantel, bool $dryRun = false): array
+{
+    if ($idPlantel <= 0) {
+        return ['ok' => false, 'message' => 'Plantel inválido'];
+    }
+    migracion_csv_ensure_schema($pdo);
+    if (function_exists('pago_ensure_schema')) {
+        pago_ensure_schema($pdo);
+    }
+
+    $st = $pdo->prepare(
+        'SELECT m.id AS id_map, m.id_hay AS id_pago, m.id_legacy
+         FROM hay_migracion_csv_map m
+         INNER JOIN alumno_pagos p ON p.id_pago = m.id_hay
+         WHERE m.entidad = \'pago\' AND p.id_plantel = ?'
+    );
+    $st->execute([$idPlantel]);
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $idsPago = [];
+    foreach ($rows as $r) {
+        $id = (int) ($r['id_pago'] ?? 0);
+        if ($id > 0) {
+            $idsPago[$id] = true;
+        }
+    }
+    $idsPago = array_keys($idsPago);
+    $nMap = count($rows);
+    $nPagos = count($idsPago);
+
+    if ($nPagos === 0) {
+        return [
+            'ok' => true,
+            'message' => 'No hay pagos de migración CSV en este plantel',
+            'pagos' => 0,
+            'mapas' => 0,
+        ];
+    }
+
+    if ($dryRun) {
+        return [
+            'ok' => true,
+            'message' => "Se borrarían {$nPagos} pago(s) y {$nMap} clave(s) de mapa",
+            'pagos' => $nPagos,
+            'mapas' => $nMap,
+        ];
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $ph = implode(',', array_fill(0, count($idsPago), '?'));
+        $pdo->prepare("DELETE FROM alumno_pagos WHERE id_pago IN ($ph)")->execute($idsPago);
+        $pdo->prepare(
+            "DELETE FROM hay_migracion_csv_map WHERE entidad = 'pago' AND id_hay IN ($ph)"
+        )->execute($idsPago);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        return ['ok' => false, 'message' => 'Error al borrar: ' . $e->getMessage()];
+    }
+
+    migracion_csv_log(
+        $pdo,
+        'pagos',
+        'info',
+        "Purge pagos plantel #{$idPlantel}: {$nPagos} pago(s), {$nMap} mapa(s)"
+    );
+
+    return [
+        'ok' => true,
+        'message' => "Borrados {$nPagos} pago(s) migrados y {$nMap} clave(s) de mapa del plantel",
+        'pagos' => $nPagos,
+        'mapas' => $nMap,
     ];
 }
 

@@ -153,9 +153,11 @@ if (function_exists('plantel_list')) {
       <em>Re-provisionar mapeados</em> (usuario HAY + Google + Moodle con el NC).
     </p>
     <p style="margin:0; color:#777;">
-      <strong>Pagos:</strong> preferido — pegue NCs (o suba el CSV de alumnos) y
-      <em>Migrar pagos del legado</em>. Alternativa: descargar CSV de pagos e Importar.
-      Los ya migrados se omiten por <code>id_pago_legado</code>.
+      <strong>Pagos:</strong> preferido — con el <em>plantel activo</em> correcto, pegue NCs
+      (o suba el CSV / use mapeados) y <em>Migrar pagos del legado</em>.
+      El NC se repite entre planteles: solo se leen alumnos de la sucursal legado de ese plantel.
+      Si hay que rehacer: <code>php scripts/purge_pagos_migracion.php --plantel=slug --confirm="BORRAR PAGOS"</code>
+      y vuelva a migrar plantel por plantel.
     </p>
   </div>
 </div>

@@ -116,12 +116,18 @@ correo institucional).
 
 `numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`, `folio`. Colegiatura congelada se define después en HAY.
 
-**Recomendado:** pegue `numero_control` (o suba el CSV de alumnos / marque «usar
-alumnos ya mapeados») y pulse **Migrar pagos del legado**. El servidor consulta
-el legado e importa a HAY por lotes — sin descargar/subir el CSV enorme de pagos.
-Los ya migrados se omiten por `id_pago_legado`. El cobrador («Recibió») viene de
-`id_recibio` del legado vía el mapa de personal/usuarios (no del operador que importa);
-al re-ejecutar se corrige el cobrador de pagos ya mapeados.
+**Recomendado:** con el **plantel activo** correcto, pegue `numero_control` (o suba
+el CSV / marque «usar alumnos ya mapeados») y pulse **Migrar pagos del legado**.
+El NC **no es único entre planteles**: solo se resuelven alumnos de la sucursal legado
+que coincide con ese plantel. Los ya migrados se omiten por `id_pago_legado`.
+El cobrador («Recibió») viene de `id_recibio` del legado.
+
+Para borrar pagos migrados de un plantel y reimportar:
+
+```bash
+php scripts/purge_pagos_migracion.php --plantel=guerrero --confirm="BORRAR PAGOS"
+# opcional: --dry-run
+```
 
 Alternativa: descargar CSV de pagos e Importar. Prefijo `id:123` solo si necesita
 el id interno legado.

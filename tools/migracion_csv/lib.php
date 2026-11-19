@@ -784,8 +784,17 @@ function migcsv_export_alumnos(PDO $pdo, array $idsGrupos): array
  * @param list<int|string> $filtro
  * @return list<int>
  */
-function migcsv_resolver_ids_alumnos(PDO $pdo, array $filtro, bool $preferirNumeroControl = true): array
-{
+/**
+ * @param list<int|string> $filtro
+ * @param int|null $idSucursal si se indica, solo alumnos de esa sucursal legado
+ * @return list<int>
+ */
+function migcsv_resolver_ids_alumnos(
+    PDO $pdo,
+    array $filtro,
+    bool $preferirNumeroControl = true,
+    ?int $idSucursal = null
+): array {
     if ($filtro === [] || !migcsv_table_exists($pdo, 'alumnos')) {
         return [];
     }
@@ -819,20 +828,36 @@ function migcsv_resolver_ids_alumnos(PDO $pdo, array $filtro, bool $preferirNume
         $ncs[] = $s;
     }
     $out = $ids;
+    $hasSucursal = $idSucursal !== null && $idSucursal > 0
+        && migcsv_column_exists($pdo, 'alumnos', 'id_sucursal');
     if ($ncs !== []) {
         $ph = implode(',', array_fill(0, count($ncs), '?'));
         $hasNuevo = migcsv_column_exists($pdo, 'alumnos', 'nuevo_numero_control');
         $sql = $hasNuevo
-            ? "SELECT id FROM alumnos WHERE CAST(numero_control AS CHAR) IN ($ph)
-                OR CAST(COALESCE(nuevo_numero_control, 0) AS CHAR) IN ($ph)"
+            ? "SELECT id FROM alumnos WHERE (CAST(numero_control AS CHAR) IN ($ph)
+                OR CAST(COALESCE(nuevo_numero_control, 0) AS CHAR) IN ($ph))"
             : "SELECT id FROM alumnos WHERE CAST(numero_control AS CHAR) IN ($ph)";
         $params = $hasNuevo ? array_merge($ncs, $ncs) : $ncs;
+        if ($hasSucursal) {
+            $sql .= ' AND id_sucursal = ?';
+            $params[] = $idSucursal;
+        }
         try {
             $st = $pdo->prepare($sql);
             $st->execute($params);
             foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $id) {
                 $out[] = (int) $id;
             }
+        } catch (Throwable $e) {
+            // ignore
+        }
+    } elseif ($hasSucursal && $ids !== []) {
+        // Filtrar ids explícitos por sucursal
+        $ph = implode(',', array_fill(0, count($ids), '?'));
+        try {
+            $st = $pdo->prepare("SELECT id FROM alumnos WHERE id IN ($ph) AND id_sucursal = ?");
+            $st->execute(array_merge($ids, [$idSucursal]));
+            $out = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN) ?: []);
         } catch (Throwable $e) {
             // ignore
         }

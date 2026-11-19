@@ -84,7 +84,17 @@ if ($action === 'export_legado') {
         $filtroAlumnos[] = $line;
     }
     $idsGrupos = migcsv_resolver_ids_grupos($pdoLeg, $filtro);
-    $idsAlumnosFiltro = migcsv_resolver_ids_alumnos($pdoLeg, $filtroAlumnos, true);
+    // Pagos por NC: acotar a sucursal del plantel HAY (el NC se repite entre planteles)
+    $idSucursalPagos = $idSucursal > 0 ? $idSucursal : null;
+    if ($tipoExp === 'pagos' && ($idSucursalPagos === null || $idSucursalPagos <= 0) && $idPlantel > 0) {
+        $idSucursalPagos = migracion_csv_resolver_sucursal_legado($pdo, $pdoLeg, $idPlantel);
+    }
+    $idsAlumnosFiltro = migcsv_resolver_ids_alumnos(
+        $pdoLeg,
+        $filtroAlumnos,
+        true,
+        $tipoExp === 'pagos' ? $idSucursalPagos : null
+    );
     if (in_array($tipoExp, ['grupos', 'alumnos'], true) && $idsGrupos === []) {
         header('Content-Type: text/plain; charset=utf-8');
         http_response_code(400);
@@ -95,7 +105,7 @@ if ($action === 'export_legado') {
         header('Content-Type: text/plain; charset=utf-8');
         http_response_code(400);
         echo 'Para pagos indique numero_control (uno por línea, o suba el CSV de alumnos) '
-            . 'o, en su defecto, claves de grupos. Prefijo id:123 solo si necesita el id interno legado.';
+            . 'con el plantel/sucursal correcto. Prefijo id:123 solo si necesita el id interno legado.';
         exit;
     }
     if ($idSucursal > 0 && $idsGrupos !== []) {
@@ -511,11 +521,19 @@ try {
         if (function_exists('set_time_limit')) {
             @set_time_limit(180);
         }
+        if ($idPlantel <= 0) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Seleccione el plantel activo. El número de control se repite entre planteles '
+                    . '(p. ej. 100 en Guerrero ≠ 100 en Celaya).',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         $filtroAlRaw = (string) ($_POST['filtro_alumnos'] ?? '');
         $usarMapa = !empty($_POST['usar_mapa']) && (string) $_POST['usar_mapa'] !== '0';
         $ncs = migracion_csv_parse_filtro_numeros_control($filtroAlRaw);
         if ($ncs === [] && $usarMapa) {
-            $ncs = migracion_csv_ncs_desde_mapa_alumnos($pdo, $idPlantel > 0 ? $idPlantel : null);
+            $ncs = migracion_csv_ncs_desde_mapa_alumnos($pdo, $idPlantel);
         }
         if ($ncs === []) {
             echo json_encode([
