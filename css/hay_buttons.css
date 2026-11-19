@@ -46,6 +46,8 @@
 /* Excluir tabs, iconos, toggles y controles especiales */
 #main-content button:not(
     [class*="-tab"],
+    [class*="alumno-tab"],
+    .alumno-tab,
     [class*="modal-close"],
     [class*="btn-icon"],
     [class*="btn-toggle"],
@@ -87,6 +89,8 @@
 
 #main-content button:not([class]):not(
     [class*="-tab"],
+    [class*="alumno-tab"],
+    .alumno-tab,
     [class*="modal-close"],
     [class*="btn-icon"],
     [class*="btn-toggle"],

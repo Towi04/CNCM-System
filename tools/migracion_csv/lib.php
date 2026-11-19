@@ -892,12 +892,16 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     $out = [];
     $pgDel = migcsv_column_exists($pdo, 'pagos', 'deleted_at') ? ' AND p.deleted_at IS NULL' : '';
 
+    $hasRecibio = migcsv_column_exists($pdo, 'pagos', 'id_recibio');
+    $colRecibio = $hasRecibio ? ', p.id_recibio' : '';
+
     if (migcsv_table_exists($pdo, 'abonos')) {
         $abDel = migcsv_column_exists($pdo, 'abonos', 'deleted_at') ? ' AND a.deleted_at IS NULL' : '';
         $st = $pdo->prepare(
             "SELECT a.id AS id_abono, a.monto AS monto_abono, a.created_at AS abono_en,
                     p.id AS id_pago, p.folio, p.fecha, p.forma_pago, p.id_alumno, p.monto AS monto_pago,
                     ap.concepto, ap.tipo AS tipo_cargo
+                    $colRecibio
              FROM abonos a
              INNER JOIN pagos p ON p.id = a.id_pago
              LEFT JOIN alumnos_pagos ap ON ap.id = a.id_alumno_pago
@@ -913,6 +917,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
                 'id_pago_legado' => 'abono-' . (int) $r['id_abono'],
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
+                'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
                 'fecha' => !empty($r['fecha']) ? substr((string) $r['fecha'], 0, 19) : (string) ($r['abono_en'] ?? ''),
                 'monto' => $r['monto_abono'] ?? $r['monto_pago'] ?? '',
                 'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
@@ -927,6 +932,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     if (migcsv_table_exists($pdo, 'abonos')) {
         $st = $pdo->prepare(
             "SELECT p.id, p.folio, p.fecha, p.monto, p.forma_pago, p.id_alumno
+                    $colRecibio
              FROM pagos p
              WHERE p.id_alumno IN ($phA) $pgDel
                AND NOT EXISTS (
@@ -942,6 +948,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
                 'id_pago_legado' => 'pago-' . (int) $r['id'],
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
+                'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
                 'fecha' => !empty($r['fecha']) ? substr((string) $r['fecha'], 0, 19) : '',
                 'monto' => $r['monto'] ?? '',
                 'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
@@ -953,6 +960,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     } else {
         $st = $pdo->prepare(
             "SELECT p.id, p.folio, p.fecha, p.monto, p.forma_pago, p.id_alumno
+                    $colRecibio
              FROM pagos p
              WHERE p.id_alumno IN ($phA) $pgDel
              ORDER BY p.id"
@@ -964,6 +972,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
                 'id_pago_legado' => 'pago-' . (int) $r['id'],
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
+                'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
                 'fecha' => !empty($r['fecha']) ? substr((string) $r['fecha'], 0, 19) : '',
                 'monto' => $r['monto'] ?? '',
                 'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),

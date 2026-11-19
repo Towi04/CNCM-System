@@ -2435,7 +2435,24 @@ function migracion_csv_importar_alumnos(
 }
 
 /**
- * @return array{ok:bool, message:string, creados?:int, omitidos?:int, errores?:list<string>}
+ * Resuelve el usuario HAY que recibió el pago (mapa personal/usuario legado).
+ */
+function migracion_csv_resolver_recibio_pago(PDO $pdo, array $r): ?int
+{
+    $idRec = trim((string) ($r['id_recibio_legado'] ?? $r['id_usuario_legado'] ?? ''));
+    if ($idRec === '' || $idRec === '0') {
+        return null;
+    }
+    $mapped = migracion_csv_map_get($pdo, 'usuario', $idRec);
+    if ($mapped !== null && $mapped > 0) {
+        return $mapped;
+    }
+
+    return null;
+}
+
+/**
+ * @return array{ok:bool, message:string, creados?:int, omitidos?:int, actualizados?:int, errores?:list<string>}
  */
 function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel = null): array
 {
@@ -2446,15 +2463,35 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
     pago_ensure_schema($pdo);
     $creados = 0;
     $omitidos = 0;
+    $actualizados = 0;
     $errores = [];
     $idPlantelSesion = $forzarPlantel ?: (function_exists('plantel_id_activo') ? plantel_id_activo() : 0);
 
     foreach ($rows as $i => $r) {
         $line = $i + 2;
         $idLeg = trim((string) ($r['id_pago_legado'] ?? ''));
-        if ($idLeg !== '' && migracion_csv_map_get($pdo, 'pago', $idLeg) !== null) {
-            $omitidos++;
-            continue;
+        $idRecibioHay = migracion_csv_resolver_recibio_pago($pdo, $r);
+        if ($idLeg !== '') {
+            $idPagoExistente = migracion_csv_map_get($pdo, 'pago', $idLeg);
+            if ($idPagoExistente !== null && $idPagoExistente > 0) {
+                // Reimport: corregir «Recibió» si ahora resolvemos el cobrador del legado
+                if ($idRecibioHay !== null && $idRecibioHay > 0) {
+                    try {
+                        $stCur = $pdo->prepare('SELECT id_usuario FROM alumno_pagos WHERE id_pago = ? LIMIT 1');
+                        $stCur->execute([$idPagoExistente]);
+                        $cur = (int) ($stCur->fetchColumn() ?: 0);
+                        if ($cur !== $idRecibioHay) {
+                            $pdo->prepare('UPDATE alumno_pagos SET id_usuario = ? WHERE id_pago = ?')
+                                ->execute([$idRecibioHay, $idPagoExistente]);
+                            $actualizados++;
+                        }
+                    } catch (Throwable $e) {
+                        // ignore
+                    }
+                }
+                $omitidos++;
+                continue;
+            }
         }
         $nc = trim((string) ($r['numero_control'] ?? ''));
         $idAlLeg = trim((string) ($r['id_alumno_legado'] ?? ''));
@@ -2516,6 +2553,9 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
         $al = $stAl->fetch(PDO::FETCH_ASSOC) ?: [];
         $idPlantel = (int) ($al['id_plantel'] ?? $idPlantelSesion);
 
+        // Cobrador del legado (id_recibio → mapa usuario). Nunca forzar al operador actual.
+        $idUsuarioPago = $idRecibioHay;
+
         try {
             $pdo->prepare(
                 'INSERT INTO alumno_pagos (
@@ -2531,7 +2571,7 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
                 $monto,
                 $forma,
                 $concepto,
-                $_SESSION['user_id'] ?? null,
+                $idUsuarioPago,
                 $fecha,
             ]);
             $idPago = (int) $pdo->lastInsertId();
@@ -2544,13 +2584,18 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
         }
     }
 
-    migracion_csv_log($pdo, 'pagos', 'info', "Pagos: {$creados} creados, {$omitidos} omitidos");
+    $msg = "{$creados} pago(s) creado(s), {$omitidos} omitido(s)";
+    if ($actualizados > 0) {
+        $msg .= ", {$actualizados} cobrador(es) actualizado(s) desde legado";
+    }
+    migracion_csv_log($pdo, 'pagos', 'info', 'Pagos: ' . $msg);
 
     return [
-        'ok' => $creados > 0 || $omitidos > 0 || $errores === [],
-        'message' => "{$creados} pago(s) creado(s), {$omitidos} omitido(s)",
+        'ok' => $creados > 0 || $omitidos > 0 || $actualizados > 0 || $errores === [],
+        'message' => $msg,
         'creados' => $creados,
         'omitidos' => $omitidos,
+        'actualizados' => $actualizados,
         'errores' => array_slice($errores, 0, 40),
     ];
 }
@@ -2741,6 +2786,7 @@ function migracion_csv_importar_pagos_desde_legado(
     $done = $next >= $totalNc;
     $creados = (int) ($import['creados'] ?? 0);
     $omitidos = (int) ($import['omitidos'] ?? 0);
+    $actualizados = (int) ($import['actualizados'] ?? 0);
     $errores = $import['errores'] ?? [];
     if ($ncSinLegado !== []) {
         $errores[] = 'NC sin match en legado (lote): ' . implode(', ', array_slice($ncSinLegado, 0, 15))
@@ -2750,6 +2796,9 @@ function migracion_csv_importar_pagos_desde_legado(
     $msg = 'Lote NC ' . ($offset + 1) . '–' . $next . ' / ' . $totalNc
         . ': ' . count($rows) . ' pago(s) leído(s) del legado → '
         . $creados . ' creado(s), ' . $omitidos . ' omitido(s)';
+    if ($actualizados > 0) {
+        $msg .= ', ' . $actualizados . ' cobrador(es) corregido(s)';
+    }
     if ($ncSinLegado !== []) {
         $msg .= '; ' . count($ncSinLegado) . ' NC sin legado';
     }
@@ -2760,7 +2809,7 @@ function migracion_csv_importar_pagos_desde_legado(
     migracion_csv_log($pdoHay, 'pagos', 'info', $msg);
 
     return [
-        'ok' => !empty($import['ok']) || $creados > 0 || $omitidos > 0 || $rows === [],
+        'ok' => !empty($import['ok']) || $creados > 0 || $omitidos > 0 || $actualizados > 0 || $rows === [],
         'done' => $done,
         'message' => $msg,
         'offset' => $offset,
@@ -2772,6 +2821,7 @@ function migracion_csv_importar_pagos_desde_legado(
         'pagos_leidos' => count($rows),
         'creados' => $creados,
         'omitidos' => $omitidos,
+        'actualizados' => $actualizados,
         'errores' => array_slice($errores, 0, 40),
     ];
 }
@@ -3354,13 +3404,13 @@ function migracion_csv_ejemplo(PDO $pdo, string $tipo, ?string $slugPreferido = 
             return [
                 'filename' => 'ejemplo_05_pagos.csv',
                 'headers' => [
-                    'id_pago_legado', 'numero_control', 'id_alumno_legado', 'fecha', 'monto',
-                    'forma_pago', 'tipo', 'concepto', 'folio',
+                    'id_pago_legado', 'numero_control', 'id_alumno_legado', 'id_recibio_legado',
+                    'fecha', 'monto', 'forma_pago', 'tipo', 'concepto', 'folio',
                 ],
                 'rows' => [
-                    ['7001', '2501001', '9001', '2025-01-15', '1200', 'efectivo', 'colegiatura', 'Enero', 'F-1001'],
-                    ['7002', '2501002', '9002', '2025-01-16', '1200', 'transferencia', 'colegiatura', 'Enero', 'F-1002'],
-                    ['7003', '2501003', '9003', '2025-01-18', '800', 'efectivo', 'inscripcion', 'Inscripción', 'F-1003'],
+                    ['7001', '2501001', '9001', '101', '2025-01-15', '1200', 'efectivo', 'colegiatura', 'Enero', 'F-1001'],
+                    ['7002', '2501002', '9002', '101', '2025-01-16', '1200', 'transferencia', 'colegiatura', 'Enero', 'F-1002'],
+                    ['7003', '2501003', '9003', '102', '2025-01-18', '800', 'efectivo', 'inscripcion', 'Inscripción', 'F-1003'],
                 ],
             ];
 
