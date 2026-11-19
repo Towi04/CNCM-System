@@ -2556,6 +2556,227 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
 }
 
 /**
+ * Parsea lista de numero_control (líneas, CSV suelto o columna).
+ *
+ * @return list<string>
+ */
+function migracion_csv_parse_filtro_numeros_control(string $raw): array
+{
+    $out = [];
+    $seen = [];
+    foreach (preg_split('/\R/', $raw) ?: [] as $line) {
+        $line = trim((string) $line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        $low = strtolower($line);
+        if ($low === 'numero_control' || $low === 'id_alumno_legado'
+            || str_starts_with($low, 'numero_control,') || str_starts_with($low, 'id_alumno_legado,')) {
+            continue;
+        }
+        if (str_contains($line, ',')) {
+            $parts = str_getcsv($line);
+            $first = trim((string) ($parts[0] ?? ''));
+            if ($first === '' || strcasecmp($first, 'numero_control') === 0
+                || strcasecmp($first, 'id_alumno_legado') === 0) {
+                continue;
+            }
+            $line = $first;
+        }
+        if ($line === '' || isset($seen[$line])) {
+            continue;
+        }
+        $seen[$line] = true;
+        $out[] = $line;
+    }
+
+    return $out;
+}
+
+/**
+ * NCs de alumnos ya en el mapa HAY (opcionalmente filtrados por plantel).
+ *
+ * @return list<string>
+ */
+function migracion_csv_ncs_desde_mapa_alumnos(PDO $pdo, ?int $idPlantel = null): array
+{
+    migracion_csv_ensure_schema($pdo);
+    if ($idPlantel !== null && $idPlantel > 0) {
+        $st = $pdo->prepare(
+            'SELECT DISTINCT a.numero_control
+             FROM hay_migracion_csv_map m
+             INNER JOIN alumnos a ON a.id_alumno = m.id_hay
+             WHERE m.entidad = \'alumno\' AND a.numero_control IS NOT NULL AND a.numero_control != \'\'
+               AND a.id_plantel = ?
+             ORDER BY a.numero_control'
+        );
+        $st->execute([$idPlantel]);
+    } else {
+        $st = $pdo->query(
+            'SELECT DISTINCT a.numero_control
+             FROM hay_migracion_csv_map m
+             INNER JOIN alumnos a ON a.id_alumno = m.id_hay
+             WHERE m.entidad = \'alumno\' AND a.numero_control IS NOT NULL AND a.numero_control != \'\'
+             ORDER BY a.numero_control'
+        );
+    }
+    $out = [];
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $nc) {
+        $nc = trim((string) $nc);
+        if ($nc !== '') {
+            $out[] = $nc;
+        }
+    }
+
+    return array_values(array_unique($out));
+}
+
+/**
+ * Trae pagos del legado e importa a HAY por lotes de numero_control
+ * (sin descargar/subir CSV de pagos).
+ *
+ * @param list<string> $numerosControl
+ * @return array{
+ *   ok:bool, message:string, done?:bool, offset?:int, next_offset?:int,
+ *   total_nc?:int, lote_nc?:int, nc_procesados?:int, nc_sin_legado?:list<string>,
+ *   pagos_leidos?:int, creados?:int, omitidos?:int, errores?:list<string>
+ * }
+ */
+function migracion_csv_importar_pagos_desde_legado(
+    PDO $pdoHay,
+    array $numerosControl,
+    ?int $idPlantel = null,
+    int $offset = 0,
+    int $loteNc = 40
+): array {
+    if (!migracion_csv_puede()) {
+        return ['ok' => false, 'message' => 'No autorizado'];
+    }
+    $ncs = [];
+    $seen = [];
+    foreach ($numerosControl as $nc) {
+        $nc = trim((string) $nc);
+        if ($nc === '' || isset($seen[$nc])) {
+            continue;
+        }
+        $seen[$nc] = true;
+        $ncs[] = $nc;
+    }
+    if ($ncs === []) {
+        return ['ok' => false, 'message' => 'Indique numero_control (pegue la lista o use el mapa de alumnos)'];
+    }
+
+    $lib = dirname(__DIR__) . '/tools/migracion_csv/lib.php';
+    if (!is_readable($lib)) {
+        return ['ok' => false, 'message' => 'Falta tools/migracion_csv/lib.php'];
+    }
+    require_once $lib;
+    if (!function_exists('legacy_import_legacy_connection')) {
+        return ['ok' => false, 'message' => 'legacy_import no disponible'];
+    }
+    $conn = legacy_import_legacy_connection();
+    if (empty($conn['ok']) || !($conn['pdo'] instanceof PDO)) {
+        return [
+            'ok' => false,
+            'message' => 'Sin conexión al legado. Configure LEGACY_DB_* en config.local.php. '
+                . (string) ($conn['error'] ?? ''),
+        ];
+    }
+    /** @var PDO $pdoLeg */
+    $pdoLeg = $conn['pdo'];
+
+    $totalNc = count($ncs);
+    $loteNc = max(5, min(100, $loteNc));
+    $offset = max(0, $offset);
+    if ($offset >= $totalNc) {
+        return [
+            'ok' => true,
+            'done' => true,
+            'message' => 'Nada pendiente',
+            'offset' => $offset,
+            'next_offset' => $offset,
+            'total_nc' => $totalNc,
+            'lote_nc' => 0,
+            'nc_procesados' => 0,
+            'pagos_leidos' => 0,
+            'creados' => 0,
+            'omitidos' => 0,
+            'errores' => [],
+        ];
+    }
+
+    $lote = array_slice($ncs, $offset, $loteNc);
+    $idsLeg = migcsv_resolver_ids_alumnos($pdoLeg, $lote, true);
+    $ncSinLegado = [];
+    if (count($idsLeg) < count($lote)) {
+        // Detectar cuáles no resolvieron (consulta inversa cara; estimar por diferencia)
+        $found = [];
+        if ($idsLeg !== []) {
+            $ph = implode(',', array_fill(0, count($idsLeg), '?'));
+            $hasNuevo = migcsv_column_exists($pdoLeg, 'alumnos', 'nuevo_numero_control');
+            $sql = $hasNuevo
+                ? "SELECT CAST(COALESCE(NULLIF(nuevo_numero_control, 0), numero_control) AS CHAR) AS nc
+                   FROM alumnos WHERE id IN ($ph)"
+                : "SELECT CAST(numero_control AS CHAR) AS nc FROM alumnos WHERE id IN ($ph)";
+            try {
+                $st = $pdoLeg->prepare($sql);
+                $st->execute($idsLeg);
+                foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $ncFound) {
+                    $found[trim((string) $ncFound)] = true;
+                }
+            } catch (Throwable $e) {
+                // ignore
+            }
+        }
+        foreach ($lote as $nc) {
+            if (!isset($found[$nc])) {
+                $ncSinLegado[] = $nc;
+            }
+        }
+    }
+
+    $rows = $idsLeg !== [] ? migcsv_export_pagos_por_alumnos($pdoLeg, $idsLeg) : [];
+    $import = migracion_csv_importar_pagos($pdoHay, $rows, $idPlantel);
+    $next = $offset + count($lote);
+    $done = $next >= $totalNc;
+    $creados = (int) ($import['creados'] ?? 0);
+    $omitidos = (int) ($import['omitidos'] ?? 0);
+    $errores = $import['errores'] ?? [];
+    if ($ncSinLegado !== []) {
+        $errores[] = 'NC sin match en legado (lote): ' . implode(', ', array_slice($ncSinLegado, 0, 15))
+            . (count($ncSinLegado) > 15 ? '…' : '');
+    }
+
+    $msg = 'Lote NC ' . ($offset + 1) . '–' . $next . ' / ' . $totalNc
+        . ': ' . count($rows) . ' pago(s) leído(s) del legado → '
+        . $creados . ' creado(s), ' . $omitidos . ' omitido(s)';
+    if ($ncSinLegado !== []) {
+        $msg .= '; ' . count($ncSinLegado) . ' NC sin legado';
+    }
+    if ($done) {
+        $msg .= '. Completado.';
+    }
+
+    migracion_csv_log($pdoHay, 'pagos', 'info', $msg);
+
+    return [
+        'ok' => !empty($import['ok']) || $creados > 0 || $omitidos > 0 || $rows === [],
+        'done' => $done,
+        'message' => $msg,
+        'offset' => $offset,
+        'next_offset' => $next,
+        'total_nc' => $totalNc,
+        'lote_nc' => count($lote),
+        'nc_procesados' => count($lote),
+        'nc_sin_legado' => array_slice($ncSinLegado, 0, 40),
+        'pagos_leidos' => count($rows),
+        'creados' => $creados,
+        'omitidos' => $omitidos,
+        'errores' => array_slice($errores, 0, 40),
+    ];
+}
+
+/**
  * Tablas hijas típicas de grupos (se ignoran si no existen).
  *
  * @return list<string>

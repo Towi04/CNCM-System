@@ -507,6 +507,49 @@ try {
         exit;
     }
 
+    if ($action === 'import_pagos_legado') {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(180);
+        }
+        $filtroAlRaw = (string) ($_POST['filtro_alumnos'] ?? '');
+        $usarMapa = !empty($_POST['usar_mapa']) && (string) $_POST['usar_mapa'] !== '0';
+        $ncs = migracion_csv_parse_filtro_numeros_control($filtroAlRaw);
+        if ($ncs === [] && $usarMapa) {
+            $ncs = migracion_csv_ncs_desde_mapa_alumnos($pdo, $idPlantel > 0 ? $idPlantel : null);
+        }
+        if ($ncs === []) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Pegue numero_control (o suba el CSV de alumnos) o marque «Usar alumnos ya mapeados».',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $offset = max(0, (int) ($_POST['offset'] ?? 0));
+        $lote = (int) ($_POST['lote'] ?? 40);
+        $res = migracion_csv_importar_pagos_desde_legado(
+            $pdo,
+            $ncs,
+            $idPlantel > 0 ? $idPlantel : null,
+            $offset,
+            $lote
+        );
+        echo json_encode([
+            'status' => !empty($res['ok']) ? 'ok' : 'error',
+            'message' => $res['message'] ?? '',
+            'done' => !empty($res['done']),
+            'offset' => $res['offset'] ?? $offset,
+            'next_offset' => $res['next_offset'] ?? $offset,
+            'total_nc' => $res['total_nc'] ?? count($ncs),
+            'lote_nc' => $res['lote_nc'] ?? 0,
+            'pagos_leidos' => $res['pagos_leidos'] ?? 0,
+            'creados' => $res['creados'] ?? 0,
+            'omitidos' => $res['omitidos'] ?? 0,
+            'nc_sin_legado' => $res['nc_sin_legado'] ?? [],
+            'errores' => $res['errores'] ?? [],
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if ($action === 'revertir_grupos') {
         $confirm = strtoupper(trim((string) ($_POST['confirm'] ?? '')));
         $todos = !empty($_POST['todos']) && (string) $_POST['todos'] !== '0';

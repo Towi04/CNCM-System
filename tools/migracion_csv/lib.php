@@ -878,8 +878,11 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     }
     $ncMap = [];
     $phA = implode(',', array_fill(0, count($idsAlumnos), '?'));
+    $hasNuevoNc = migcsv_column_exists($pdo, 'alumnos', 'nuevo_numero_control');
     $stNc = $pdo->prepare(
-        "SELECT id, COALESCE(NULLIF(nuevo_numero_control, 0), numero_control) AS nc FROM alumnos WHERE id IN ($phA)"
+        $hasNuevoNc
+            ? "SELECT id, COALESCE(NULLIF(nuevo_numero_control, 0), numero_control) AS nc FROM alumnos WHERE id IN ($phA)"
+            : "SELECT id, numero_control AS nc FROM alumnos WHERE id IN ($phA)"
     );
     $stNc->execute($idsAlumnos);
     foreach ($stNc->fetchAll() as $r) {
