@@ -84,11 +84,19 @@ if (function_exists('plantel_list')) {
       <button type="button" class="primary" id="migcsv-export-legado" title="Genera el CSV del tipo seleccionado desde la BD legado del servidor">
         <i class="fas fa-cloud-download-alt"></i> Descargar del legado
       </button>
+      <button type="button" class="primary" id="migcsv-import-pagos-legado" title="Lee pagos del legado e importa a HAY por numero_control, sin CSV de pagos" style="background:#0a7a32; border-color:#0a7a32;">
+        <i class="fas fa-file-invoice-dollar"></i> Migrar pagos del legado
+      </button>
     </div>
+    <label for="migcsv-pagos-usar-mapa" style="display:inline-flex; align-items:center; gap:6px; margin-top:10px; color:#555; font-size:0.85rem;">
+      <input type="checkbox" id="migcsv-pagos-usar-mapa" value="1">
+      Si la lista de NC está vacía, usar alumnos ya mapeados del plantel
+    </label>
     <p style="margin:10px 0 0; color:#777; font-size:0.85rem;">
       Requiere <code>LEGACY_DB_*</code>. Grupos/alumnos: pegue las <strong>claves</strong> de grupo
-      (como en el legado). Pagos: pegue <code>numero_control</code>
-      (o suba el CSV de alumnos ya descargado; se lee esa columna).
+      (como en el legado). <strong>Pagos:</strong> no hace falta descargar el CSV enorme —
+      pegue o suba los <code>numero_control</code> y pulse <em>Migrar pagos del legado</em>
+      (el servidor consulta el legado e importa por lotes).
     </p>
   </div>
 
@@ -145,8 +153,9 @@ if (function_exists('plantel_list')) {
       <em>Re-provisionar mapeados</em> (usuario HAY + Google + Moodle con el NC).
     </p>
     <p style="margin:0; color:#777;">
-      <strong>Pagos:</strong> filtre y exporte por <code>numero_control</code>
-      (no hace falta <code>id_alumno_legado</code>). Puede pegar NCs o subir el CSV de alumnos.
+      <strong>Pagos:</strong> preferido — pegue NCs (o suba el CSV de alumnos) y
+      <em>Migrar pagos del legado</em>. Alternativa: descargar CSV de pagos e Importar.
+      Los ya migrados se omiten por <code>id_pago_legado</code>.
     </p>
   </div>
 </div>

@@ -42,7 +42,7 @@
   }
 
   function setBusy(busy, label) {
-    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-revertir-grupos', 'migcsv-template', 'migcsv-export-legado'].forEach((id) => {
+    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-revertir-grupos', 'migcsv-template', 'migcsv-export-legado', 'migcsv-import-pagos-legado'].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = !!busy;
     });
@@ -697,7 +697,7 @@
       return;
     }
     if (tipo === 'pagos' && !filtroAl && !filtro) {
-      showMsg('Para pagos pegue numero_control (o suba el CSV de alumnos), o use el filtro de grupos.', false);
+      showMsg('Para pagos use «Migrar pagos del legado» (recomendado), o pegue numero_control para descargar CSV.', false);
       return;
     }
     try {
@@ -714,6 +714,83 @@
     });
     showMsg('Descargando CSV desde la BD legado del servidor…', true);
     window.location.href = api + '?' + qs.toString();
+  });
+
+  async function importPagosLegadoLotes() {
+    const filtroAl = ($('migcsv-filtro-alumnos')?.value || '').trim();
+    const usarMapa = !!$('migcsv-pagos-usar-mapa')?.checked;
+    if (!filtroAl && !usarMapa) {
+      showMsg('Pegue numero_control, suba el CSV de alumnos, o marque «usar alumnos ya mapeados».', false);
+      return;
+    }
+    if (!confirm(
+      '¿Migrar pagos directo desde el legado?\n\n' +
+      'No descarga CSV: el servidor busca por número de control e importa a HAY por lotes.\n' +
+      'Los pagos ya migrados se omiten. Puede tardar varios minutos.'
+    )) return;
+    try {
+      localStorage.setItem(FILTRO_AL_KEY, filtroAl);
+    } catch (e) { /* ignore */ }
+
+    let offset = 0;
+    let totalCreados = 0;
+    let totalOmitidos = 0;
+    let totalLeidos = 0;
+    let rounds = 0;
+    const maxRounds = 200;
+    setBusy(true, 'Migrando pagos del legado…');
+    try {
+      while (rounds < maxRounds) {
+        rounds++;
+        const fd = new FormData();
+        fd.append('action', 'import_pagos_legado');
+        fd.append('id_plantel', String(idPlantel));
+        fd.append('filtro_alumnos', filtroAl);
+        if (usarMapa) fd.append('usar_mapa', '1');
+        fd.append('offset', String(offset));
+        fd.append('lote', '40');
+        setBusy(
+          true,
+          'Migrando pagos… lote desde NC #' + (offset + 1) +
+            (totalLeidos ? (' · ' + totalCreados + ' creados / ' + totalLeidos + ' leídos') : '')
+        );
+        const r = await fetch(api, {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-Requested-With': 'fetch' },
+          credentials: 'same-origin',
+        });
+        const data = await r.json();
+        if (data.status !== 'ok') {
+          showMsg(data.message || 'Error al migrar pagos', false);
+          return;
+        }
+        totalCreados += data.creados || 0;
+        totalOmitidos += data.omitidos || 0;
+        totalLeidos += data.pagos_leidos || 0;
+        offset = data.next_offset || (offset + (data.lote_nc || 40));
+        if (data.done) {
+          let text = 'Pagos legado terminado: ' + totalCreados + ' creado(s), '
+            + totalOmitidos + ' omitido(s), ' + totalLeidos + ' leído(s) del legado.';
+          if (data.errores && data.errores.length) {
+            text += ' — ' + data.errores.slice(0, 3).join('; ');
+          }
+          showMsg(text, !(data.errores && data.errores.length));
+          refreshEstado();
+          return;
+        }
+      }
+      showMsg('Se alcanzó el límite de lotes. Pulse de nuevo para continuar (ya migrados se omiten).', false);
+      refreshEstado();
+    } catch (e) {
+      showMsg('Error de red / timeout al migrar pagos. Puede reintentar; los ya importados se omiten.', false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  $('migcsv-import-pagos-legado')?.addEventListener('click', () => {
+    importPagosLegadoLotes();
   });
 
   $('migcsv-provision')?.addEventListener('click', async () => {

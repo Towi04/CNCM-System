@@ -116,9 +116,13 @@ correo institucional).
 
 `numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`, `folio`. Colegiatura congelada se define después en HAY.
 
-Para descargar pagos del legado pegue (o suba el CSV de alumnos) la columna
-`numero_control`; no hace falta `id_alumno_legado` ni el filtro de grupos.
-Si necesita el id interno legado, use el prefijo `id:123`.
+**Recomendado:** pegue `numero_control` (o suba el CSV de alumnos / marque «usar
+alumnos ya mapeados») y pulse **Migrar pagos del legado**. El servidor consulta
+el legado e importa a HAY por lotes — sin descargar/subir el CSV enorme de pagos.
+Los ya migrados se omiten por `id_pago_legado`.
+
+Alternativa: descargar CSV de pagos e Importar. Prefijo `id:123` solo si necesita
+el id interno legado.
 
 ## Fecha de inicio
 
