@@ -4,6 +4,9 @@ if (!defined('HAY_ROOT')) {
     define('HAY_ROOT', __DIR__);
 }
 
+/** Zona horaria operativa de planteles (centro de México). */
+date_default_timezone_set('America/Mexico_City');
+
 /** Dominio del correo institucional (@usuario.cncm.edu.mx) */
 define('INSTITUTIONAL_EMAIL_DOMAIN', 'cncm.edu.mx');
 /** Debe coincidir con SMTP_USER en config.mail.php (cuenta Google Workspace que envía) */
@@ -95,6 +98,14 @@ try {
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
+    // Alinea CURDATE()/NOW() de MySQL con la zona de PHP (CDMX por defecto).
+    try {
+        $tz = new DateTimeZone(date_default_timezone_get());
+        $offset = (new DateTime('now', $tz))->format('P');
+        $pdo->exec("SET time_zone = " . $pdo->quote($offset));
+    } catch (Throwable $e) {
+        // Sin zona: las fechas PHP siguen siendo la fuente de verdad en checadas.
+    }
     $GLOBALS['pdo'] = $pdo;
 } catch (PDOException $e) {
     if ($hayLocalConfig) {
