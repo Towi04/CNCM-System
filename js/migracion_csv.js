@@ -719,14 +719,20 @@
   async function importPagosLegadoLotes() {
     const filtroAl = ($('migcsv-filtro-alumnos')?.value || '').trim();
     const usarMapa = !!$('migcsv-pagos-usar-mapa')?.checked;
+    if (!idPlantel) {
+      showMsg('Seleccione el plantel de trabajo: el número de control no es único entre planteles.', false);
+      return;
+    }
     if (!filtroAl && !usarMapa) {
       showMsg('Pegue numero_control, suba el CSV de alumnos, o marque «usar alumnos ya mapeados».', false);
       return;
     }
     if (!confirm(
-      '¿Migrar pagos directo desde el legado?\n\n' +
-      'No descarga CSV: el servidor busca por número de control e importa a HAY por lotes.\n' +
-      'Los pagos ya migrados se omiten. Puede tardar varios minutos.'
+      '¿Migrar pagos del legado SOLO para el plantel activo?\n\n' +
+      'El número de control se repite entre planteles: solo se importan pagos de la sucursal\n' +
+      'legado que coincide con este plantel. Los ya migrados se omiten.\n' +
+      'Si mezcló planteles antes, borre con:\n' +
+      'php scripts/purge_pagos_migracion.php --plantel=SLUG --confirm="BORRAR PAGOS"'
     )) return;
     try {
       localStorage.setItem(FILTRO_AL_KEY, filtroAl);
