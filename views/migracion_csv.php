@@ -76,9 +76,9 @@ if (function_exists('plantel_list')) {
         </label>
       </div>
       <div class="field">
-        <label for="migcsv-sucursal">Sucursal legado (opcional)</label>
+        <label for="migcsv-sucursal">Sucursal legado <span style="color:#c62828;">(obligatoria para pagos)</span></label>
         <select id="migcsv-sucursal">
-          <option value="0">Todas</option>
+          <option value="0">— Elija sucursal —</option>
         </select>
       </div>
       <button type="button" class="primary" id="migcsv-export-legado" title="Genera el CSV del tipo seleccionado desde la BD legado del servidor">
@@ -93,10 +93,10 @@ if (function_exists('plantel_list')) {
       Si la lista de NC está vacía, usar alumnos ya mapeados del plantel
     </label>
     <p style="margin:10px 0 0; color:#777; font-size:0.85rem;">
-      Requiere <code>LEGACY_DB_*</code>. Grupos/alumnos: pegue las <strong>claves</strong> de grupo
-      (como en el legado). <strong>Pagos:</strong> no hace falta descargar el CSV enorme —
-      pegue o suba los <code>numero_control</code> y pulse <em>Migrar pagos del legado</em>
-      (el servidor consulta el legado e importa por lotes).
+      Requiere <code>LEGACY_DB_*</code>. Grupos/alumnos: pegue las <strong>claves</strong> de grupo.
+      <strong>Pagos:</strong> elija la <em>sucursal legado</em> (aunque el nombre no coincida con HAY),
+      pegue/suba los <code>numero_control</code> y pulse <em>Migrar pagos del legado</em>.
+      Destino = plantel HAY activo; origen = sucursal del desplegable.
     </p>
   </div>
 
@@ -153,11 +153,9 @@ if (function_exists('plantel_list')) {
       <em>Re-provisionar mapeados</em> (usuario HAY + Google + Moodle con el NC).
     </p>
     <p style="margin:0; color:#777;">
-      <strong>Pagos:</strong> preferido — con el <em>plantel activo</em> correcto, pegue NCs
-      (o suba el CSV / use mapeados) y <em>Migrar pagos del legado</em>.
-      El NC se repite entre planteles: solo se leen alumnos de la sucursal legado de ese plantel.
-      Si hay que rehacer: <code>php scripts/purge_pagos_migracion.php --plantel=slug --confirm="BORRAR PAGOS"</code>
-      y vuelva a migrar plantel por plantel.
+      <strong>Pagos:</strong> plantel HAY activo + sucursal legado en el desplegable + NCs
+      (CSV o mapeados) → <em>Migrar pagos del legado</em>.
+      Si hay que rehacer: <code>php scripts/purge_pagos_migracion.php --plantel=slug --confirm="BORRAR PAGOS"</code>.
     </p>
   </div>
 </div>

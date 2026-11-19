@@ -162,14 +162,14 @@
       }
       if (selSuc && Array.isArray(leg.sucursales)) {
         const cur = selSuc.value || '0';
-        selSuc.innerHTML = '<option value="0">Todas</option>';
+        selSuc.innerHTML = '<option value="0">— Elija sucursal legado —</option>';
         leg.sucursales.forEach((s) => {
           const opt = document.createElement('option');
           opt.value = String(s.id || '');
           opt.textContent = (s.id || '') + ' — ' + (s.nombre || '');
           selSuc.appendChild(opt);
         });
-        selSuc.value = cur;
+        if (cur && cur !== '0') selSuc.value = cur;
       }
     } catch (e) {
       el.textContent = 'Error de red al cargar estado';
@@ -719,8 +719,14 @@
   async function importPagosLegadoLotes() {
     const filtroAl = ($('migcsv-filtro-alumnos')?.value || '').trim();
     const usarMapa = !!$('migcsv-pagos-usar-mapa')?.checked;
+    const idSuc = parseInt($('migcsv-sucursal')?.value || '0', 10) || 0;
+    const sucLabel = ($('migcsv-sucursal')?.selectedOptions?.[0]?.textContent || '').trim();
     if (!idPlantel) {
-      showMsg('Seleccione el plantel de trabajo: el número de control no es único entre planteles.', false);
+      showMsg('Seleccione el plantel HAY de destino (arriba / sesión).', false);
+      return;
+    }
+    if (idSuc <= 0) {
+      showMsg('Elija la sucursal legado en el desplegable (de dónde leer los pagos).', false);
       return;
     }
     if (!filtroAl && !usarMapa) {
@@ -728,10 +734,11 @@
       return;
     }
     if (!confirm(
-      '¿Migrar pagos del legado SOLO para el plantel activo?\n\n' +
-      'El número de control se repite entre planteles: solo se importan pagos de la sucursal\n' +
-      'legado que coincide con este plantel. Los ya migrados se omiten.\n' +
-      'Si mezcló planteles antes, borre con:\n' +
+      '¿Migrar pagos?\n\n' +
+      'Destino HAY: plantel activo #' + idPlantel + '\n' +
+      'Origen legado: ' + sucLabel + '\n\n' +
+      'Solo se leen alumnos de esa sucursal legado (por NC). Los ya migrados se omiten.\n' +
+      'Si mezcló planteles antes:\n' +
       'php scripts/purge_pagos_migracion.php --plantel=SLUG --confirm="BORRAR PAGOS"'
     )) return;
     try {
@@ -752,6 +759,7 @@
         const fd = new FormData();
         fd.append('action', 'import_pagos_legado');
         fd.append('id_plantel', String(idPlantel));
+        fd.append('id_sucursal', String(idSuc));
         fd.append('filtro_alumnos', filtroAl);
         if (usarMapa) fd.append('usar_mapa', '1');
         fd.append('offset', String(offset));
