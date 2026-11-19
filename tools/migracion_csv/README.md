@@ -119,7 +119,9 @@ correo institucional).
 **Recomendado:** pegue `numero_control` (o suba el CSV de alumnos / marque «usar
 alumnos ya mapeados») y pulse **Migrar pagos del legado**. El servidor consulta
 el legado e importa a HAY por lotes — sin descargar/subir el CSV enorme de pagos.
-Los ya migrados se omiten por `id_pago_legado`.
+Los ya migrados se omiten por `id_pago_legado`. El cobrador («Recibió») viene de
+`id_recibio` del legado vía el mapa de personal/usuarios (no del operador que importa);
+al re-ejecutar se corrige el cobrador de pagos ya mapeados.
 
 Alternativa: descargar CSV de pagos e Importar. Prefijo `id:123` solo si necesita
 el id interno legado.

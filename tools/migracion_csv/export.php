@@ -83,7 +83,7 @@ switch ($tipo) {
     case 'pagos':
         $rows = migcsv_export_pagos($pdo, $idsGrupos);
         migcsv_csv_enviar('05_pagos.csv', [
-            'id_pago_legado', 'numero_control', 'id_alumno_legado', 'fecha', 'monto',
+            'id_pago_legado', 'numero_control', 'id_alumno_legado', 'id_recibio_legado', 'fecha', 'monto',
             'forma_pago', 'tipo', 'concepto', 'folio',
         ], $rows);
 

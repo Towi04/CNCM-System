@@ -735,6 +735,7 @@
     let offset = 0;
     let totalCreados = 0;
     let totalOmitidos = 0;
+    let totalActualizados = 0;
     let totalLeidos = 0;
     let rounds = 0;
     const maxRounds = 200;
@@ -767,11 +768,16 @@
         }
         totalCreados += data.creados || 0;
         totalOmitidos += data.omitidos || 0;
+        totalActualizados += data.actualizados || 0;
         totalLeidos += data.pagos_leidos || 0;
         offset = data.next_offset || (offset + (data.lote_nc || 40));
         if (data.done) {
           let text = 'Pagos legado terminado: ' + totalCreados + ' creado(s), '
-            + totalOmitidos + ' omitido(s), ' + totalLeidos + ' leído(s) del legado.';
+            + totalOmitidos + ' omitido(s), ' + totalLeidos + ' leído(s) del legado';
+          if (totalActualizados) {
+            text += ', ' + totalActualizados + ' cobrador(es) corregido(s)';
+          }
+          text += '.';
           if (data.errores && data.errores.length) {
             text += ' — ' + data.errores.slice(0, 3).join('; ');
           }

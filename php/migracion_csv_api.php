@@ -152,8 +152,8 @@ if ($action === 'export_legado') {
                     ? migcsv_export_pagos_por_alumnos($pdoLeg, $idsAlumnosFiltro)
                     : migcsv_export_pagos($pdoLeg, $idsGrupos);
                 migcsv_csv_enviar('05_pagos.csv', [
-                    'id_pago_legado', 'numero_control', 'id_alumno_legado', 'fecha', 'monto',
-                    'forma_pago', 'tipo', 'concepto', 'folio',
+                    'id_pago_legado', 'numero_control', 'id_alumno_legado', 'id_recibio_legado',
+                    'fecha', 'monto', 'forma_pago', 'tipo', 'concepto', 'folio',
                 ], $rows);
             default:
                 header('Content-Type: text/plain; charset=utf-8');
@@ -544,6 +544,7 @@ try {
             'pagos_leidos' => $res['pagos_leidos'] ?? 0,
             'creados' => $res['creados'] ?? 0,
             'omitidos' => $res['omitidos'] ?? 0,
+            'actualizados' => $res['actualizados'] ?? 0,
             'nc_sin_legado' => $res['nc_sin_legado'] ?? [],
             'errores' => $res['errores'] ?? [],
         ], JSON_UNESCAPED_UNICODE);
