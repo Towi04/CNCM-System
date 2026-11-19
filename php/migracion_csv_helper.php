@@ -616,6 +616,103 @@ function migracion_csv_preview_grupos(
         return strcasecmp((string) $a['nombre'], (string) $b['nombre']);
     });
 
+    // Proyectar claves en orden de importación (peek + offset) para no mostrar
+    // la misma IK1+CK1 en todas las filas de la vista previa.
+    /** @var array<int, string> $clavePorIdx */
+    $clavePorIdx = [];
+    /** @var array<int, int> $kidsBase peek inicial por plantel */
+    $kidsBase = [];
+    /** @var array<int, int> $kidsUsed cuántas parejas kids ya proyectadas por plantel */
+    $kidsUsed = [];
+    /** @var array<string, string> $kidsClavePorKey clave proyectada por rowKey kids */
+    $kidsClavePorKey = [];
+    /** @var array<string, int> $adultBase peek por plantel|prefijo */
+    $adultBase = [];
+    /** @var array<string, int> $adultUsed */
+    $adultUsed = [];
+
+    foreach ($rows as $idx => $rr) {
+        $idLegR = trim((string) ($rr['id_grupo_legado'] ?? ''));
+        $claveLegR = trim((string) ($rr['clave_legado'] ?? ''));
+        $yaMap = ($claveLegR !== '' && migracion_csv_map_get($pdo, 'grupo', $claveLegR) !== null)
+            || ($idLegR !== '' && migracion_csv_map_get($pdo, 'grupo', $idLegR) !== null);
+        if ($yaMap) {
+            $clavePorIdx[$idx] = '';
+            continue;
+        }
+        $claveEspRawR = strtoupper(trim((string) ($rr['clave_especialidad'] ?? '')));
+        $claveEspR = migracion_csv_normalizar_clave_especialidad($claveEspRawR);
+        $flagInfantilR = migracion_csv_parse_flag01($rr['infantil'] ?? null);
+        $metaR = $claveEspR !== ''
+            ? migracion_csv_area_desde_clave_especialidad($claveEspR)
+            : ['area' => 'I', 'extensivo' => false, 'kids' => false];
+        if ($claveEspR === '' && $flagInfantilR === true) {
+            $claveEspR = 'ING-K';
+            $metaR = migracion_csv_area_desde_clave_especialidad($claveEspR);
+        }
+        $rowKeyR = migracion_csv_grupo_row_key($rr, (int) $idx);
+        $nDupR = (int) ($conteoKeys[$rowKeyR] ?? 1);
+        $esParejaCsvR = $nDupR >= 2 && $flagInfantilR !== false && ($claveLegR !== '' || $idLegR !== '');
+        if ($flagInfantilR === false && empty($metaR['kids'])) {
+            $esKidsR = false;
+        } elseif ($flagInfantilR === true || !empty($metaR['kids'])) {
+            $esKidsR = true;
+        } else {
+            $esKidsR = $esParejaCsvR;
+        }
+        $idPlantelR = migracion_csv_resolver_plantel(
+            $pdo,
+            (string) ($rr['plantel_slug'] ?? $rr['sucursal'] ?? ''),
+            $forzarPlantel
+        );
+        if (!$idPlantelR) {
+            $clavePorIdx[$idx] = '';
+            continue;
+        }
+        try {
+            if ($esKidsR) {
+                if (isset($kidsClavePorKey[$rowKeyR])) {
+                    $clavePorIdx[$idx] = $kidsClavePorKey[$rowKeyR];
+                    continue;
+                }
+                if (!isset($kidsBase[$idPlantelR])) {
+                    $kidsBase[$idPlantelR] = function_exists('grupo_clave_peek_siguiente_numero')
+                        ? grupo_clave_peek_siguiente_numero($pdo, $idPlantelR, GRUPO_INFANTIL_SEQ_PREFIJO)
+                        : 1;
+                    $kidsUsed[$idPlantelR] = 0;
+                }
+                $num = $kidsBase[$idPlantelR] + $kidsUsed[$idPlantelR];
+                $kidsUsed[$idPlantelR]++;
+                $clave = 'IK' . $num . ' + CK' . $num;
+                $kidsClavePorKey[$rowKeyR] = $clave;
+                $clavePorIdx[$idx] = $clave;
+            } else {
+                if ($claveEspR === '') {
+                    $clavePorIdx[$idx] = '';
+                    continue;
+                }
+                $diasR = migracion_csv_parse_dias((string) ($rr['dias_clase'] ?? ''));
+                $horaR = trim((string) ($rr['hora_inicio'] ?? '08:00')) ?: '08:00';
+                $codHR = migracion_csv_infer_codigo_horario($diasR !== [] ? $diasR : [6], $horaR);
+                $prefijo = function_exists('grupo_clave_armar_prefijo')
+                    ? grupo_clave_armar_prefijo($metaR['area'], $codHR, !empty($metaR['extensivo']), false, '')
+                    : ($metaR['area'] . $codHR);
+                $seqKey = $idPlantelR . '|' . $prefijo;
+                if (!isset($adultBase[$seqKey])) {
+                    $adultBase[$seqKey] = function_exists('grupo_clave_peek_siguiente_numero')
+                        ? grupo_clave_peek_siguiente_numero($pdo, $idPlantelR, $prefijo)
+                        : 1;
+                    $adultUsed[$seqKey] = 0;
+                }
+                $num = $adultBase[$seqKey] + $adultUsed[$seqKey];
+                $adultUsed[$seqKey]++;
+                $clavePorIdx[$idx] = $prefijo . $num;
+            }
+        } catch (Throwable $e) {
+            $clavePorIdx[$idx] = '(se genera al importar)';
+        }
+    }
+
     $headers = [
         'clave_legado',
         'clave_especialidad',
@@ -684,7 +781,7 @@ function migracion_csv_preview_grupos(
         } elseif (!$ya && $esKids) {
             $accion = 'crear pareja kids (2h+2h)';
         }
-        $claveNueva = '';
+        $claveNueva = (string) ($clavePorIdx[$globalIdx] ?? '');
         $idPlantel = migracion_csv_resolver_plantel(
             $pdo,
             (string) ($r['plantel_slug'] ?? $r['sucursal'] ?? ''),
@@ -740,36 +837,7 @@ function migracion_csv_preview_grupos(
                     . ($fechaRawPrev !== '' ? " («{$fechaRawPrev}»)" : '');
             }
         }
-
-        if ($idPlantel && !$ya && ($espEstado === 'ok' || $esKids) && $fechaPrev !== '') {
-            try {
-                $dias = migracion_csv_parse_dias((string) ($r['dias_clase'] ?? ''));
-                $horaIni = trim((string) ($r['hora_inicio'] ?? '08:00')) ?: '08:00';
-                $codH = migracion_csv_infer_codigo_horario($dias !== [] ? $dias : [6], $horaIni);
-                if ($esKids) {
-                    if (function_exists('grupo_infantil_vista_previa')) {
-                        $prev = grupo_infantil_vista_previa($pdo, $idPlantel);
-                        $claveNueva = (string) ($prev['clave'] ?? ((string) ($prev['clave_ingles'] ?? '') . ' + ' . (string) ($prev['clave_computacion'] ?? '')));
-                    } else {
-                        $claveNueva = '(pareja kids)';
-                    }
-                } elseif ($claveEsp !== '' && function_exists('grupo_clave_vista_previa')) {
-                    $meta = migracion_csv_area_desde_clave_especialidad($claveEsp);
-                    $prev = grupo_clave_vista_previa(
-                        $pdo,
-                        $idPlantel,
-                        $meta['area'],
-                        $codH,
-                        $meta['extensivo'],
-                        false,
-                        ''
-                    );
-                    $claveNueva = (string) ($prev['clave'] ?? '');
-                }
-            } catch (Throwable $e) {
-                $claveNueva = '(se genera al importar)';
-            }
-        }
+        // clave_nueva_sugerida ya viene de $clavePorIdx (proyección secuencial arriba).
 
         $muestra[] = [
             'id_grupo_legado' => $idLeg,
@@ -804,7 +872,7 @@ function migracion_csv_preview_grupos(
     if ($faltanProf > 0) {
         $msg .= ". {$faltanProf} sin profesor claro — elija en el desplegable (se preselecciona el nombre más parecido).";
     }
-    $msg .= ' Kids: repita la misma clave/id legado en 2 filas (inglés + cómputo) o use ING-K (parte 2h+2h).';
+    $msg .= ' Claves sugeridas = proyección en orden de importación (al crear sí aumentan). Kids: 2 filas misma clave = 1 pareja.';
 
     return [
         'ok' => true,
