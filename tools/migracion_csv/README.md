@@ -109,6 +109,16 @@ reglas del sistema (número de control / correo institucional).
 Para descargar pagos del legado basta pegar (o subir el CSV de alumnos) la columna
 `id_alumno_legado`; no es obligatorio el filtro de grupos.
 
+## Fecha de inicio
+
+`fecha_inicio_estimada` / `fecha_inicio_legado` deben venir del legado (`YYYY-MM-DD` o `DD/MM/YYYY`).
+El import **ya no inventa la fecha de hoy** si falta o no parsea: la fila falla con error.
+Grupos con fecha ≤ hoy quedan en `iniciado`; futuros en `programado` (la vista de apertura
+solo marca *pendiente de autorización* cuando el inicio está cerca).
+
+Kids: 1 grupo legado con `IK`/`ING-K` → **2** grupos HAY (`IK{n}` + `CK{n}`). Cuente eso al
+comparar totales.
+
 ## Reintentar grupos mal importados
 
 En el Portal → Migración CSV → **Revertir grupos migrados** (plantel activo):
@@ -119,6 +129,17 @@ En el Portal → Migración CSV → **Revertir grupos migrados** (plantel activo
    el contador de claves (`grupo_clave_secuencia`) según lo que quede en el plantel
    (si no queda ninguno, las nuevas claves vuelven a empezar en 1).
 4. Vuelva a descargar/importar `03_grupos` con las claves legado.
+
+### Purga total desde terminal (todos los grupos del plantel)
+
+Si la tabla no estaba vacía o quedaron grupos fuera del mapa:
+
+```bash
+php scripts/purge_grupos_plantel.php --plantel=guerrero --confirm="BORRAR GRUPOS" --todos
+# opcional: --borrar-alumnos
+```
+
+Luego reimporte `03_grupos` y revise la vista **Grupos** (paginada: buscar / estado / 25–100 por página).
 
 ## Checklist operativo por plantel
 

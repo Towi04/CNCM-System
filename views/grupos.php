@@ -6,6 +6,47 @@ $idPlantel = plantel_scope_id($pdo);
 $rolEfectivo = function_exists('rbac_rol_efectivo') ? rbac_rol_efectivo() : ($_SESSION['rol'] ?? '');
 $idProfesorFiltro = ($rolEfectivo === 'profesor') ? (int) ($_SESSION['user_id'] ?? 0) : 0;
 
+$q = trim((string) ($_GET['q'] ?? ''));
+$filtroEstado = trim((string) ($_GET['estado'] ?? ''));
+$estadosOk = ['programado', 'pendiente_autorizacion', 'autorizado', 'iniciado'];
+if ($filtroEstado !== '' && !in_array($filtroEstado, $estadosOk, true)) {
+    $filtroEstado = '';
+}
+$perPageOpts = [25, 50, 100];
+$perPage = (int) ($_GET['per_page'] ?? 25);
+if (!in_array($perPage, $perPageOpts, true)) {
+    $perPage = 25;
+}
+$page = max(1, (int) ($_GET['page'] ?? 1));
+
+$where = ' WHERE g.id_plantel = ?';
+$params = [$idPlantel];
+if ($idProfesorFiltro > 0) {
+    $where .= ' AND ' . grupo_docente_sql_filtro_profesor('g');
+    grupo_docente_bind_filtro_profesor($idProfesorFiltro, $params);
+}
+if ($q !== '') {
+    $where .= ' AND (g.clave LIKE ? OR IFNULL(g.clave_anterior,\'\') LIKE ? OR CAST(g.id_grupo AS CHAR) = ?)';
+    $like = '%' . $q . '%';
+    $params[] = $like;
+    $params[] = $like;
+    $params[] = $q;
+}
+if ($filtroEstado !== '') {
+    $where .= ' AND g.estado_apertura = ?';
+    $params[] = $filtroEstado;
+}
+
+$sqlCount = 'SELECT COUNT(*) FROM grupos g' . $where;
+$stCount = $pdo->prepare($sqlCount);
+$stCount->execute($params);
+$totalGrupos = (int) $stCount->fetchColumn();
+$totalPages = max(1, (int) ceil($totalGrupos / $perPage));
+if ($page > $totalPages) {
+    $page = $totalPages;
+}
+$offset = ($page - 1) * $perPage;
+
 $sql = "
   SELECT
     g.id_grupo,
@@ -33,14 +74,10 @@ $sql = "
         AND asi.fecha >= (CURRENT_DATE - INTERVAL 30 DAY)
     ) AS activos_30d
   FROM grupos g
-  WHERE g.id_plantel = ?
+  {$where}
+  ORDER BY g.fecha_inicio DESC, g.clave ASC
+  LIMIT {$perPage} OFFSET {$offset}
 ";
-$params = [$idPlantel];
-if ($idProfesorFiltro > 0) {
-    $sql .= ' AND ' . grupo_docente_sql_filtro_profesor('g');
-    grupo_docente_bind_filtro_profesor($idProfesorFiltro, $params);
-}
-$sql .= ' ORDER BY g.fecha_inicio DESC, g.clave ASC';
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -58,6 +95,23 @@ $puedeDocentes = function_exists('grupo_docente_puede_gestionar') && grupo_docen
 $faseCache = [];
 $riesgoTotal = $puedeAvance ? count(grupo_avance_listar_riesgo_plantel($pdo, $idPlantel)) : 0;
 $gradPendientes = $puedeGraduacion ? count(graduacion_listar_alertas($pdo, $idPlantel, 'pendiente')) : 0;
+
+$qsBase = [];
+if ($q !== '') {
+    $qsBase['q'] = $q;
+}
+if ($filtroEstado !== '') {
+    $qsBase['estado'] = $filtroEstado;
+}
+if ($perPage !== 25) {
+    $qsBase['per_page'] = (string) $perPage;
+}
+$buildGruposQs = static function (array $extra) use ($qsBase): string {
+    $all = array_merge($qsBase, $extra);
+    return http_build_query($all);
+};
+$desde = $totalGrupos === 0 ? 0 : ($offset + 1);
+$hasta = min($offset + $perPage, $totalGrupos);
 ?>
 <link rel="stylesheet" href="css/resultados.css">
 <link rel="stylesheet" href="css/admin_catalogo.css">
@@ -98,9 +152,49 @@ $gradPendientes = $puedeGraduacion ? count(graduacion_listar_alertas($pdo, $idPl
     </div>
   </div>
 
+  <form class="grupos-toolbar" id="grupos-filtros" onsubmit="return false;" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:12px 0 8px;">
+    <label style="display:flex; gap:6px; align-items:center; margin:0;">
+      <span style="color:#555; font-size:0.9rem;">Buscar</span>
+      <input type="search" name="q" id="grupos-q" value="<?php echo htmlspecialchars($q, ENT_QUOTES, 'UTF-8'); ?>"
+        placeholder="Clave, clave anterior o id"
+        style="min-width:180px; padding:6px 10px; border:1px solid #ccc; border-radius:8px;">
+    </label>
+    <label style="display:flex; gap:6px; align-items:center; margin:0;">
+      <span style="color:#555; font-size:0.9rem;">Estado</span>
+      <select id="grupos-estado" style="padding:6px 8px; border:1px solid #ccc; border-radius:8px;">
+        <option value="">Todos</option>
+        <?php foreach ($estadosOk as $est): ?>
+          <option value="<?php echo htmlspecialchars($est); ?>" <?php echo $filtroEstado === $est ? 'selected' : ''; ?>>
+            <?php echo htmlspecialchars(function_exists('grupo_apertura_etiqueta_estado') ? grupo_apertura_etiqueta_estado($est) : $est); ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <label style="display:flex; gap:6px; align-items:center; margin:0;">
+      <span style="color:#555; font-size:0.9rem;">Por página</span>
+      <select id="grupos-per-page" style="padding:6px 8px; border:1px solid #ccc; border-radius:8px;">
+        <?php foreach ($perPageOpts as $pp): ?>
+          <option value="<?php echo $pp; ?>" <?php echo $perPage === $pp ? 'selected' : ''; ?>><?php echo $pp; ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <button type="button" class="secondary" id="grupos-btn-filtrar">Filtrar</button>
+    <?php if ($q !== '' || $filtroEstado !== ''): ?>
+      <button type="button" class="secondary" id="grupos-btn-limpiar">Limpiar</button>
+    <?php endif; ?>
+    <span style="color:#666; font-size:0.9rem; margin-left:auto;">
+      <?php if ($totalGrupos === 0): ?>
+        0 grupos
+      <?php else: ?>
+        <?php echo (int) $desde; ?>–<?php echo (int) $hasta; ?> de <?php echo (int) $totalGrupos; ?>
+        · pág. <?php echo (int) $page; ?>/<?php echo (int) $totalPages; ?>
+      <?php endif; ?>
+    </span>
+  </form>
+
   <div class="patron-desc">
     <?php if (empty($grupos)): ?>
-      <p>No hay grupos registrados.</p>
+      <p><?php echo ($q !== '' || $filtroEstado !== '') ? 'No hay grupos con esos filtros.' : 'No hay grupos registrados.'; ?></p>
     <?php else: ?>
       <div class="hist-lines">
         <?php foreach ($grupos as $g):
@@ -211,9 +305,65 @@ $gradPendientes = $puedeGraduacion ? count(graduacion_listar_alertas($pdo, $idPl
           </div>
         <?php endforeach; ?>
       </div>
+
+      <?php if ($totalPages > 1): ?>
+        <div class="grupos-pager" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center; margin-top:14px;">
+          <?php if ($page > 1): ?>
+            <button type="button" class="secondary" onclick="cargarSeccion('grupos', '<?php echo htmlspecialchars($buildGruposQs(['page' => 1]), ENT_QUOTES, 'UTF-8'); ?>')">« Primero</button>
+            <button type="button" class="secondary" onclick="cargarSeccion('grupos', '<?php echo htmlspecialchars($buildGruposQs(['page' => $page - 1]), ENT_QUOTES, 'UTF-8'); ?>')">‹ Anterior</button>
+          <?php endif; ?>
+          <?php
+            $winStart = max(1, $page - 2);
+            $winEnd = min($totalPages, $page + 2);
+            for ($p = $winStart; $p <= $winEnd; $p++):
+          ?>
+            <button type="button" class="<?php echo $p === $page ? 'primary' : 'secondary'; ?>"
+              onclick="cargarSeccion('grupos', '<?php echo htmlspecialchars($buildGruposQs(['page' => $p]), ENT_QUOTES, 'UTF-8'); ?>')">
+              <?php echo (int) $p; ?>
+            </button>
+          <?php endfor; ?>
+          <?php if ($page < $totalPages): ?>
+            <button type="button" class="secondary" onclick="cargarSeccion('grupos', '<?php echo htmlspecialchars($buildGruposQs(['page' => $page + 1]), ENT_QUOTES, 'UTF-8'); ?>')">Siguiente ›</button>
+            <button type="button" class="secondary" onclick="cargarSeccion('grupos', '<?php echo htmlspecialchars($buildGruposQs(['page' => $totalPages]), ENT_QUOTES, 'UTF-8'); ?>')">Último »</button>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
     <?php endif; ?>
   </div>
 </div>
+
+<script>
+(function () {
+  function gruposNavigate(page) {
+    const q = (document.getElementById('grupos-q')?.value || '').trim();
+    const estado = document.getElementById('grupos-estado')?.value || '';
+    const perPage = document.getElementById('grupos-per-page')?.value || '25';
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (estado) params.set('estado', estado);
+    if (perPage && perPage !== '25') params.set('per_page', perPage);
+    if (page && page > 1) params.set('page', String(page));
+    const qs = params.toString();
+    cargarSeccion('grupos', qs || null);
+  }
+  document.getElementById('grupos-btn-filtrar')?.addEventListener('click', () => gruposNavigate(1));
+  document.getElementById('grupos-btn-limpiar')?.addEventListener('click', () => {
+    const qEl = document.getElementById('grupos-q');
+    const eEl = document.getElementById('grupos-estado');
+    if (qEl) qEl.value = '';
+    if (eEl) eEl.value = '';
+    gruposNavigate(1);
+  });
+  document.getElementById('grupos-q')?.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      gruposNavigate(1);
+    }
+  });
+  document.getElementById('grupos-per-page')?.addEventListener('change', () => gruposNavigate(1));
+  document.getElementById('grupos-estado')?.addEventListener('change', () => gruposNavigate(1));
+})();
+</script>
 
 <?php if ($puedeAvance): ?>
 <script>
