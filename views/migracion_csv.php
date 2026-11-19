@@ -121,10 +121,10 @@ if (function_exists('plantel_list')) {
       según el tipo seleccionado. Planteles válidos: <?php echo $slugsTxt; ?>.
     </p>
     <p style="margin:0 0 8px; color:#777;">
-      En grupos, la vista previa permite elegir especialidad y profesor.
-      Columna <code>infantil</code>: use <code>0</code> adultos y <code>1</code> kids (se respeta).
-      Kids también = especialidad <code>ING-K</code> o la misma <code>clave_legado</code> en 2 filas
-      (inglés + cómputo) sin poner <code>infantil=0</code>.
+      En grupos, <code>clave_especialidad</code> es el catálogo (<code>ING</code>/<code>COMP</code>/<code>ING-K</code>
+      o atajos <code>I</code>/<code>C</code>/<code>IK</code>/<code>CK</code>/<code>PA</code>).
+      La clave de grupo (<code>IS1</code>, <code>CK3</code>…) la genera HAY.
+      <code>infantil</code>: <code>0</code> adulto, <code>1</code> kids. Fechas: <code>YYYY-MM-DD</code> o <code>DD/MM/YYYY</code>.
     </p>
     <p style="margin:0 0 8px; color:#777;">
       <strong>Alumnos:</strong> no se migran solos con los grupos. Use el <em>mismo</em> filtro
@@ -158,4 +158,4 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 ?>;
 </script>
-<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261119c'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(hay_asset_url('js/migracion_csv.js?v=20261119d'), ENT_QUOTES, 'UTF-8'); ?>"></script>
