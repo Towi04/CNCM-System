@@ -1392,19 +1392,28 @@ function migracion_csv_parse_flag01(mixed $v): ?bool
     return null;
 }
 
+/** Normaliza clave_legado para agrupar (mayúsculas, sin espacios raros). */
+function migracion_csv_norm_clave_legado(string $clave): string
+{
+    $clave = strtoupper(trim($clave));
+    $clave = str_replace(["\xC2\xA0", "\t", "\r", "\n"], ' ', $clave);
+    $clave = preg_replace('/\s+/u', '', $clave) ?? $clave;
+
+    return $clave;
+}
+
 /**
  * Clave para agrupar filas del CSV de grupos (legado).
- * Preferir clave_legado (uso operativo); si no, id_grupo_legado.
- * Sin clave/id no se agrupan entre sí (evita marcar todo el CSV como kids).
+ * Preferir clave_legado sola (IK+CK del mismo legado deben juntarse aunque
+ * plantel_slug venga vacío o distinto entre filas). Si no hay clave, id_grupo_legado.
  */
 function migracion_csv_grupo_row_key(array $r, ?int $rowIndex = null): string
 {
-    $clave = trim((string) ($r['clave_legado'] ?? ''));
-    $plantel = strtolower(trim((string) ($r['plantel_slug'] ?? $r['sucursal'] ?? '')));
+    $clave = migracion_csv_norm_clave_legado((string) ($r['clave_legado'] ?? $r['_clave_anterior'] ?? ''));
     if ($clave !== '') {
-        return 'clave:' . strtoupper($clave) . '|' . $plantel;
+        return 'clave:' . $clave;
     }
-    $idLeg = migracion_csv_norm_id_legado((string) ($r['id_grupo_legado'] ?? ''));
+    $idLeg = migracion_csv_norm_id_legado((string) ($r['id_grupo_legado'] ?? $r['_id_leg'] ?? ''));
     if ($idLeg !== '') {
         return 'id:' . $idLeg;
     }
@@ -1415,6 +1424,7 @@ function migracion_csv_grupo_row_key(array $r, ?int $rowIndex = null): string
     if ($rowIndex !== null) {
         return 'row:i' . $rowIndex;
     }
+    $plantel = strtolower(trim((string) ($r['plantel_slug'] ?? $r['sucursal'] ?? '')));
 
     return 'row:orphan|' . $plantel . '|' . md5(json_encode($r) ?: uniqid('', true));
 }
@@ -1728,6 +1738,18 @@ function migracion_csv_importar_grupos(PDO $pdo, array $rows, ?int $forzarPlante
                         $errores[] = "Línea {$line}: clave legado repetida {$nFilas} veces; se usaron las 2 primeras (inglés/cómputo)";
                     }
                 } else {
+                    // Una sola fila: solo ING-K parte 2h+2h. CK sola NO crea pareja (evita duplicar
+                    // cuando la fila IK no se agrupó por clave/plantel distinto).
+                    $espPrim = strtoupper((string) ($ing['_clave_esp'] ?? ''));
+                    $esSoloComp = str_starts_with($espPrim, 'COMP') || $espPrim === 'CK';
+                    if ($esSoloComp) {
+                        $claveLegMsg = (string) ($ing['_clave_anterior'] ?? $ing['clave_legado'] ?? '');
+                        $errores[] = "Línea {$line}: fila cómputo kids"
+                            . ($claveLegMsg !== '' ? " («{$claveLegMsg}»)" : '')
+                            . ' sin su fila de inglés con la misma clave_legado — no se crea (impide duplicar IK+CK).'
+                            . ' Suba ambas filas (IK y CK) con la misma clave_legado.';
+                        continue;
+                    }
                     // Una sola fila ING-K: bloque continuo 2h + 2h el mismo día
                     $ingRow = $ing;
                     $compRow = $ing;
