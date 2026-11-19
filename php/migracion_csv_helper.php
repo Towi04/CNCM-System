@@ -160,8 +160,16 @@ function migracion_csv_leer_archivo(string $tmpPath): array
 
         return ['headers' => [], 'rows' => [], 'error' => 'CSV vacío'];
     }
-    $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]) ?? (string) $header[0];
-    $headers = array_map(static fn ($h) => strtolower(trim((string) $h)), $header);
+    // Excel a veces escribe BOM UTF-8 dos veces; quitar todos al inicio de cada encabezado.
+    $headers = [];
+    foreach ($header as $i => $h) {
+        $h = (string) $h;
+        while (str_starts_with($h, "\xEF\xBB\xBF")) {
+            $h = substr($h, 3);
+        }
+        $h = preg_replace('/^\x{FEFF}+/u', '', $h) ?? $h;
+        $headers[] = strtolower(trim($h));
+    }
     $rows = [];
     while (($data = fgetcsv($fh)) !== false) {
         if ($data === [null] || $data === false) {
