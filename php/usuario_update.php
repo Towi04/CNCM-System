@@ -36,13 +36,17 @@ if ($id <= 0 || $nombre === '' || $apellido === '' || $username === '' || $email
 }
 
 $idScope = plantel_scope_id($pdo);
+$esAdmin = function_exists('plantel_es_admin') && plantel_es_admin();
 $stHome = $pdo->prepare('SELECT id_plantel FROM usuarios WHERE id_usuario = ? LIMIT 1');
 $stHome->execute([$id]);
-if ((int)($stHome->fetchColumn() ?: 0) !== $idScope) {
+$homePlantel = (int) ($stHome->fetchColumn() ?: 0);
+// Supervisor/admin (acceso multi-plantel) puede editar usuarios de cualquier sede;
+// el resto solo el plantel activo (misma regla que usuario_editar / bulk).
+if (!$esAdmin && $homePlantel !== $idScope) {
     echo json_encode(['status' => 'error', 'message' => 'Usuario no pertenece a este plantel'], JSON_UNESCAPED_UNICODE);
     exit;
 }
-if (!plantel_es_admin()) {
+if (!$esAdmin) {
     $idPlantelReg = $idScope;
 }
 
