@@ -216,6 +216,12 @@ try {
             $st->execute([$ent]);
             $maps[$ent] = (int) $st->fetchColumn();
         }
+        // Varias claves de mapa por alumno (nc:, NC plano, id legado) ≠ fichas duplicadas
+        $st = $pdo->prepare(
+            'SELECT COUNT(DISTINCT id_hay) FROM hay_migracion_csv_map WHERE entidad = ?'
+        );
+        $st->execute(['alumno']);
+        $maps['alumno_unicos'] = (int) $st->fetchColumn();
         $logs = $pdo->query(
             'SELECT tipo, nivel, mensaje, creado_en FROM hay_migracion_csv_log
              ORDER BY id DESC LIMIT 15'
@@ -305,23 +311,29 @@ try {
         if ($tipoPreview === 'alumnos') {
             $offset = (int) ($_POST['offset'] ?? 0);
             $limit = (int) ($_POST['limit'] ?? 50);
+            $soloAlertas = !empty($_POST['solo_alertas']) && (string) $_POST['solo_alertas'] !== '0';
             $res = migracion_csv_preview_alumnos(
                 $pdo,
                 $_FILES['csv']['tmp_name'],
                 $idPlantel > 0 ? $idPlantel : null,
                 $offset,
-                $limit
+                $limit,
+                $soloAlertas
             );
             echo json_encode([
                 'status' => !empty($res['ok']) ? 'ok' : 'error',
                 'message' => $res['message'] ?? '',
                 'headers' => $res['headers'] ?? [],
                 'total_filas' => $res['total_filas'] ?? 0,
+                'total_csv' => $res['total_csv'] ?? 0,
+                'con_alerta' => $res['con_alerta'] ?? 0,
                 'offset' => $res['offset'] ?? $offset,
                 'limit' => $res['limit'] ?? $limit,
+                'solo_alertas' => !empty($res['solo_alertas']),
                 'muestra' => $res['muestra'] ?? [],
                 'errores' => $res['errores'] ?? [],
                 'grupos_faltantes' => $res['grupos_faltantes'] ?? [],
+                'alertas_resumen' => $res['alertas_resumen'] ?? [],
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }

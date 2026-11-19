@@ -101,6 +101,11 @@ parte de los grupos importados: vuelva a exportar/importar `03_grupos` incluyend
 Kids: un alumno del grupo legado → IK y CK (dual).
 
 El `numero_control` del legado se **respeta tal cual** en HAY (no se regenera).
+Kids dual = **una** ficha HAY con vínculo a IK y CK (no dos alumnos). El contador de mapa
+puede listar ~3 claves por alumno (`nc:…`, NC plano, `id_alumno_legado`).
+
+Vista previa marca alertas (grupo faltante, teléfono >30 chars, sin NC, NC duplicado, etc.)
+y las pone primero; use «Solo alertas» para filtrar. Teléfonos largos se truncan al importar.
 
 **Importación en dos pasos:** por defecto Importar solo crea la ficha HAY + vínculo a grupo
 (sin Google Workspace ni Moodle). Cuando confirme que los alumnos están correctos, use

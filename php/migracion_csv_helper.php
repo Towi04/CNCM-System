@@ -97,6 +97,46 @@ function migracion_csv_norm_id_legado(string $id): string
     return $id;
 }
 
+/** Longitud máxima de alumnos.telefono / telefono2 (VARCHAR(30)). */
+function migracion_csv_telefono_max_len(): int
+{
+    return 30;
+}
+
+/**
+ * Limpia y trunca teléfono para que quepa en VARCHAR(30).
+ */
+function migracion_csv_norm_telefono(string $tel, ?int $max = null): string
+{
+    $max = $max ?? migracion_csv_telefono_max_len();
+    $tel = trim($tel);
+    $tel = preg_replace('/\s+/u', ' ', $tel) ?? $tel;
+    if ($tel === '') {
+        return '';
+    }
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($tel) > $max) {
+            return mb_substr($tel, 0, $max);
+        }
+
+        return $tel;
+    }
+    if (strlen($tel) > $max) {
+        return substr($tel, 0, $max);
+    }
+
+    return $tel;
+}
+
+function migracion_csv_telefono_len(string $tel): int
+{
+    if (function_exists('mb_strlen')) {
+        return (int) mb_strlen($tel);
+    }
+
+    return strlen($tel);
+}
+
 /**
  * @return list<string>
  */
@@ -2226,7 +2266,7 @@ function migracion_csv_importar_alumnos(
                     $formaPago,
                     $idEsp ?: null,
                     trim((string) ($r['email'] ?? '')) ?: null,
-                    trim((string) ($r['telefono'] ?? '')) ?: null,
+                    migracion_csv_norm_telefono((string) ($r['telefono'] ?? '')) ?: null,
                     $fecha,
                     $fecha . ' 09:00:00',
                 ]);
@@ -2242,7 +2282,7 @@ function migracion_csv_importar_alumnos(
                     $idGrupo,
                     $idEsp ?: null,
                     $formaPago,
-                    trim((string) ($r['telefono'] ?? '')),
+                    migracion_csv_norm_telefono((string) ($r['telefono'] ?? '')),
                     trim((string) ($r['email'] ?? '')),
                     $idAlumno,
                 ]);
@@ -3554,12 +3594,14 @@ function migracion_csv_importar_staff_emails(
 }
 
 /**
- * Vista previa de alumnos: indica si el grupo legado ya está mapeado.
+ * Vista previa de alumnos: grupo mapeado + alertas (teléfono, NC, etc.).
+ * Las filas con alerta aparecen primero. Con $soloAlertas solo se paginan esas.
  *
  * @return array{
  *   ok:bool, message?:string, headers?:list<string>, muestra?:list<array<string,mixed>>,
- *   total_filas?:int, offset?:int, limit?:int, errores?:list<string>,
- *   grupos_faltantes?:list<string>
+ *   total_filas?:int, total_csv?:int, con_alerta?:int, offset?:int, limit?:int,
+ *   errores?:list<string>, grupos_faltantes?:list<string>, alertas_resumen?:array<string,int>,
+ *   solo_alertas?:bool
  * }
  */
 function migracion_csv_preview_alumnos(
@@ -3567,7 +3609,8 @@ function migracion_csv_preview_alumnos(
     string $tmpPath,
     ?int $idPlantel = null,
     int $offset = 0,
-    int $limit = 50
+    int $limit = 50,
+    bool $soloAlertas = false
 ): array {
     if (!migracion_csv_puede()) {
         return ['ok' => false, 'message' => 'No autorizado'];
@@ -3582,84 +3625,176 @@ function migracion_csv_preview_alumnos(
         return ['ok' => false, 'message' => 'Sin filas de datos'];
     }
 
-    $total = count($rows);
+    $totalCsv = count($rows);
     $limit = max(10, min(100, $limit));
-    $offset = max(0, min($offset, max(0, $total - 1)));
+    $telMax = migracion_csv_telefono_max_len();
     $headers = [
-        'id_alumno_legado',
+        'fila',
+        'alerta',
         'numero_control',
         'nombres',
         'apellido_paterno',
-        'plantel_slug',
+        'telefono',
         'clave_legado',
         'grupo_hay',
         'grupo_estado',
         'accion',
+        'plantel_slug',
+        'id_alumno_legado',
         'id_grupo_legado',
     ];
-    $muestra = [];
-    $errores = [];
+
     /** @var array<string, true> $faltantes */
     $faltantes = [];
-    $end = min($total, $offset + $limit);
+    /** @var array<string, int> $resumen */
+    $resumen = [
+        'plantel' => 0,
+        'grupo_faltante' => 0,
+        'sin_nc' => 0,
+        'sin_nombre' => 0,
+        'telefono_largo' => 0,
+        'nc_duplicado' => 0,
+    ];
+    /** @var array<string, int> $ncPrimeraFila */
+    $ncPrimeraFila = [];
+    /** @var list<array<string,mixed>> $evaluadas */
+    $evaluadas = [];
+    $errores = [];
 
-    // Barrido completo para listar faltantes (barato: solo mapa)
-    foreach ($rows as $idx => $r) {
-        $idG = migracion_csv_norm_id_legado((string) ($r['id_grupo_legado'] ?? ''));
-        $claveG = trim((string) ($r['clave_grupo_legado'] ?? $r['clave_legado'] ?? ''));
-        $idP = migracion_csv_resolver_plantel($pdo, (string) ($r['plantel_slug'] ?? ''), $idPlantel);
-        if ($idP === null || $idP <= 0) {
-            continue;
-        }
-        [$gid] = migracion_csv_resolver_grupos_para_alumno($pdo, $idP, $idG, $claveG);
-        if ($gid === null || $gid <= 0) {
-            $ref = $claveG !== '' ? $claveG : ($idG !== '' ? $idG : '(vacío)');
-            $faltantes[$ref] = true;
-        }
-    }
-
-    for ($i = $offset; $i < $end; $i++) {
-        $r = $rows[$i];
+    foreach ($rows as $i => $r) {
+        $filaCsv = $i + 2;
         $idG = migracion_csv_norm_id_legado((string) ($r['id_grupo_legado'] ?? ''));
         $claveG = trim((string) ($r['clave_grupo_legado'] ?? $r['clave_legado'] ?? ''));
         $plantelRaw = trim((string) ($r['plantel_slug'] ?? ''));
+        $nc = trim((string) ($r['numero_control'] ?? ''));
+        $nombres = trim((string) ($r['nombres'] ?? ''));
+        $telRaw = trim((string) ($r['telefono'] ?? ''));
         $idP = migracion_csv_resolver_plantel($pdo, $plantelRaw, $idPlantel);
         $grupoHay = '';
         $estado = 'ok';
         $accion = 'crear/vincular';
+        /** @var list<string> $alertas */
+        $alertas = [];
+
+        if ($nombres === '' && $nc === '') {
+            continue;
+        }
+        if ($nc === '') {
+            $alertas[] = 'sin numero_control';
+            $resumen['sin_nc']++;
+            $accion = 'AVISO: sin NC';
+        } elseif (isset($ncPrimeraFila[$nc])) {
+            $alertas[] = 'NC duplicado (también fila ' . $ncPrimeraFila[$nc] . ')';
+            $resumen['nc_duplicado']++;
+        } else {
+            $ncPrimeraFila[$nc] = $filaCsv;
+        }
+        if ($nombres === '') {
+            $alertas[] = 'sin nombres';
+            $resumen['sin_nombre']++;
+        }
+        if ($telRaw !== '' && migracion_csv_telefono_len($telRaw) > $telMax) {
+            $alertas[] = 'teléfono >' . $telMax . ' chars (se truncará)';
+            $resumen['telefono_largo']++;
+        }
+
         if ($idP === null || $idP <= 0) {
             $estado = 'plantel';
             $accion = 'ERROR: plantel';
-            $errores[] = 'Fila ' . ($i + 2) . ': plantel no resuelto';
+            $alertas[] = 'plantel no resuelto';
+            $resumen['plantel']++;
+            $errores[] = 'Fila ' . $filaCsv . ': plantel no resuelto';
         } else {
             [$gid, $gidComp] = migracion_csv_resolver_grupos_para_alumno($pdo, $idP, $idG, $claveG);
             if ($gid === null || $gid <= 0) {
                 $estado = 'faltante';
                 $accion = 'ERROR: importe grupo';
-                $ref = $claveG !== '' ? $claveG : $idG;
-                $errores[] = 'Fila ' . ($i + 2) . ': grupo legado ' . $ref . ' no mapeado (use clave_legado)';
+                $ref = $claveG !== '' ? $claveG : ($idG !== '' ? $idG : '(vacío)');
+                $faltantes[$ref] = true;
+                $alertas[] = 'grupo no mapeado';
+                $resumen['grupo_faltante']++;
+                $errores[] = 'Fila ' . $filaCsv . ': grupo legado ' . $ref . ' no mapeado (use clave_legado)';
             } else {
                 $grupoHay = '#' . $gid . ($gidComp ? ('+#' . $gidComp) : '');
+                if ($gidComp) {
+                    $accion = 'crear/vincular (kids dual)';
+                }
             }
         }
-        $muestra[] = [
+
+        $evaluadas[] = [
+            'fila' => $filaCsv,
+            'alerta' => $alertas !== [] ? implode('; ', $alertas) : '',
+            'tiene_alerta' => $alertas !== [],
             'id_alumno_legado' => migracion_csv_norm_id_legado((string) ($r['id_alumno_legado'] ?? '')),
-            'numero_control' => trim((string) ($r['numero_control'] ?? '')),
-            'nombres' => trim((string) ($r['nombres'] ?? '')),
+            'numero_control' => $nc,
+            'nombres' => $nombres,
             'apellido_paterno' => trim((string) ($r['apellido_paterno'] ?? '')),
+            'telefono' => $telRaw,
             'plantel_slug' => $plantelRaw,
             'id_grupo_legado' => $idG,
             'clave_legado' => $claveG,
             'grupo_hay' => $grupoHay,
             'grupo_estado' => $estado,
             'accion' => $accion,
-            'fila' => $i + 2,
         ];
+    }
+
+    $conAlertaAll = 0;
+    foreach ($evaluadas as $row) {
+        if (!empty($row['tiene_alerta'])) {
+            $conAlertaAll++;
+        }
+    }
+
+    // Filas con alerta primero (para corregir antes de importar)
+    usort($evaluadas, static function (array $a, array $b): int {
+        $ha = !empty($a['tiene_alerta']) ? 1 : 0;
+        $hb = !empty($b['tiene_alerta']) ? 1 : 0;
+        if ($ha !== $hb) {
+            return $hb <=> $ha;
+        }
+
+        return ((int) $a['fila']) <=> ((int) $b['fila']);
+    });
+
+    if ($soloAlertas) {
+        $evaluadas = array_values(array_filter(
+            $evaluadas,
+            static fn (array $row): bool => !empty($row['tiene_alerta'])
+        ));
+    }
+
+    $total = count($evaluadas);
+    $offset = max(0, min($offset, max(0, $total > 0 ? $total - 1 : 0)));
+    $slice = array_slice($evaluadas, $offset, $limit);
+    $muestra = [];
+    foreach ($slice as $row) {
+        unset($row['tiene_alerta']);
+        $muestra[] = $row;
     }
 
     $faltanList = array_keys($faltantes);
     sort($faltanList, SORT_NATURAL);
-    $msg = $total . ' alumno(s)';
+
+    $msg = $totalCsv . ' alumno(s) en CSV';
+    if ($conAlertaAll > 0) {
+        $msg .= ' · ' . $conAlertaAll . ' con alerta';
+    } else {
+        $msg .= ' · sin alertas';
+    }
+    if ($soloAlertas) {
+        $msg .= ' (filtro: solo alertas, ' . $total . ')';
+    }
+    $partesAlerta = [];
+    foreach ($resumen as $k => $n) {
+        if ($n > 0) {
+            $partesAlerta[] = str_replace('_', ' ', $k) . ': ' . $n;
+        }
+    }
+    if ($partesAlerta !== []) {
+        $msg .= ' — ' . implode(', ', $partesAlerta);
+    }
     if ($faltanList !== []) {
         $msg .= '; grupos legado sin mapa: ' . implode(', ', array_slice($faltanList, 0, 15))
             . (count($faltanList) > 15 ? '…' : '');
@@ -3670,10 +3805,14 @@ function migracion_csv_preview_alumnos(
         'headers' => $headers,
         'muestra' => $muestra,
         'total_filas' => $total,
+        'total_csv' => $totalCsv,
+        'con_alerta' => $conAlertaAll,
         'offset' => $offset,
         'limit' => $limit,
-        'errores' => array_slice(array_values(array_unique($errores)), 0, 30),
+        'solo_alertas' => $soloAlertas,
+        'errores' => array_slice(array_values(array_unique($errores)), 0, 40),
         'grupos_faltantes' => $faltanList,
+        'alertas_resumen' => $resumen,
         'message' => $msg,
     ];
 }
