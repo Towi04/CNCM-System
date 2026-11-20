@@ -89,6 +89,7 @@ $puedeGraduacion = function_exists('graduacion_puede_decidir') && graduacion_pue
 $puedeApertura = function_exists('grupo_apertura_puede_gestionar') && grupo_apertura_puede_gestionar();
 $puedeMoodle = function_exists('moodle_inscripcion_puede_gestionar') && moodle_inscripcion_puede_gestionar();
 $puedeDocentes = function_exists('grupo_docente_puede_gestionar') && grupo_docente_puede_gestionar();
+$puedeCredenciales = function_exists('credencial_puede_generar') && credencial_puede_generar();
 
 // Avance/graduación automática: proceso pesado; se ejecuta vía API/cron, no en cada carga de la vista.
 
@@ -293,6 +294,17 @@ $hasta = min($offset + $perPage, $totalGrupos);
                 data-clave="<?php echo htmlspecialchars((string)$g['clave'], ENT_QUOTES, 'UTF-8'); ?>">
                 <i class="fas fa-print"></i>
               </button>
+              <?php if ($puedeCredenciales && (int) ($g['total_alumnos'] ?? 0) > 0): ?>
+                <button type="button" class="btn-icon-only btn-icon-only--muted btn-credenciales-grupo-pdf"
+                  title="Credenciales del grupo"
+                  data-tip="Generar e imprimir credenciales de todos los alumnos activos del grupo"
+                  aria-label="Credenciales del grupo"
+                  data-id="<?php echo (int)$g['id_grupo']; ?>"
+                  data-clave="<?php echo htmlspecialchars((string)$g['clave'], ENT_QUOTES, 'UTF-8'); ?>"
+                  data-total="<?php echo (int) ($g['total_alumnos'] ?? 0); ?>">
+                  <i class="fas fa-id-card"></i>
+                </button>
+              <?php endif; ?>
               <?php if ($puedeAvance): ?>
                 <button type="button" class="btn-icon-only btn-icon-only--ok btn-avanzar-grupo"
                   title="Avanzar al siguiente parcial"
@@ -426,6 +438,23 @@ $hasta = min($offset + $perPage, $totalGrupos);
       url.searchParams.set('semana_inicio', String(semana));
       url.searchParams.set('telefonos', incluirTelefonos ? '1' : '0');
       url.searchParams.set('filename', 'lista_' + clave);
+      window.open(url.toString(), '_blank', 'noopener');
+    });
+  });
+
+  document.querySelectorAll('.btn-credenciales-grupo-pdf').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idGrupo = btn.dataset.id;
+      if (!idGrupo) return;
+      const clave = btn.dataset.clave || 'grupo';
+      const total = parseInt(btn.dataset.total || '0', 10) || 0;
+      const ok = window.confirm(
+        '¿Generar e imprimir las credenciales de los ' + total + ' alumno(s) activos del grupo ' + clave + '?\n\n'
+        + 'Se abrirá un PDF con frente y reverso de cada alumno (plantilla activa del plantel).'
+      );
+      if (!ok) return;
+      const url = new URL(<?php echo json_encode(hay_asset_url('php/credencial_pdf.php'), JSON_UNESCAPED_UNICODE); ?>, window.location.href);
+      url.searchParams.set('id_grupo', idGrupo);
       window.open(url.toString(), '_blank', 'noopener');
     });
   });

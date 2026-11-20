@@ -278,9 +278,13 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
           rel="noopener"
           class="primary"
           style="display:block;box-sizing:border-box;margin-top:8px;width:100%;padding:10px;text-align:center;text-decoration:none;border-radius:8px;"
+          title="Abre el PDF de la credencial escolar (frente y reverso)"
         >
-          <i class="fas fa-id-card"></i> Generar / Imprimir credencial
+          <i class="fas fa-id-card"></i> Imprimir credencial escolar
         </a>
+        <p style="margin:6px 0 0;font-size:0.75rem;opacity:0.85;line-height:1.3;">
+          Credencial con foto y QR. Para imprimir todo un grupo, use el ícono de credencial en <strong>Grupos</strong>.
+        </p>
       <?php endif; ?>
       <?php if ($puedeCambioPlantel): ?>
         <button type="button" class="secondary" style="margin-top:8px; width:100%;" onclick="cargarSeccion('alumno_cambio_plantel', 'id_alumno=<?php echo (int)$id; ?>')">
