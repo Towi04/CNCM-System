@@ -322,11 +322,46 @@ function asistencia_lista_pdf_html(
     $direccion = trim((string) ($grupo['plantel_direccion'] ?? ''));
     $cct = trim((string) ($grupo['cct_lista'] ?? ''));
     $rvoe = trim((string) ($grupo['rvoe_lista'] ?? ''));
-    // Carta apaisada: nombre amplio; semanas compactas (colgroup + table-layout:fixed).
-    $pctAsist = max(1.4, min(2.8, round(46 / max(1, $numCols), 2)));
-    $pctFijos = 3.0 + 7.5 + ($incluirTelefonos ? 14.0 : 0.0);
-    $pctNombre = max(22.0, round(100.0 - $pctFijos - ($pctAsist * $numCols), 2));
-    $cellWidth = max(11, min(18, (int) floor(500 / max(1, $numCols))));
+
+    // Anchos por contenido (Carta apaisada ~100%): Nombre toma lo que pide el
+    // nombre más largo; N°/Ctrl/Tel fijos; el resto se reparte en celdas de asistencia.
+    $maxNombreChars = 12;
+    $maxCtrlChars = 6;
+    $maxTelChars = 0;
+    foreach ($alumnos as $alRow) {
+        $maxNombreChars = max($maxNombreChars, mb_strlen(asistencia_lista_pdf_nombre_alumno($alRow), 'UTF-8'));
+        $maxCtrlChars = max($maxCtrlChars, mb_strlen(trim((string) ($alRow['numero_control'] ?? '')), 'UTF-8'));
+        if ($incluirTelefonos) {
+            $maxTelChars = max(
+                $maxTelChars,
+                mb_strlen(asistencia_lista_pdf_tel_principal($alRow), 'UTF-8'),
+                mb_strlen(asistencia_lista_pdf_tel_opcional($alRow), 'UTF-8')
+            );
+        }
+    }
+    // Em aproximado a % de página Letter landscape (fuente ~8px).
+    $pctNum = 2.2;
+    $pctCtrl = max(6.5, min(11.0, round($maxCtrlChars * 0.95 + 1.5, 2)));
+    $pctTel = $incluirTelefonos ? max(7.0, min(10.0, round(max(10, $maxTelChars) * 0.72 + 1.0, 2))) : 0.0;
+    $pctTelTotal = $incluirTelefonos ? ($pctTel * 2) : 0.0;
+    // Semanas: celdas mínimas (solo marca √); el resto al nombre.
+    $pctAsistMin = $numCols >= 30 ? 1.15 : ($numCols >= 20 ? 1.35 : 1.6);
+    $pctAsistBudget = max(18.0, min(48.0, $pctAsistMin * max(1, $numCols)));
+    $pctAsist = $numCols > 0 ? round($pctAsistBudget / $numCols, 3) : 0.0;
+    $pctNombre = round(100.0 - $pctNum - $pctCtrl - $pctTelTotal - ($pctAsist * $numCols), 2);
+    // Garantizar nombre usable aunque haya muchas semanas.
+    if ($pctNombre < 22.0) {
+        $pctNombre = 22.0;
+        $rest = max(12.0, 100.0 - $pctNum - $pctCtrl - $pctTelTotal - $pctNombre);
+        $pctAsist = $numCols > 0 ? round($rest / $numCols, 3) : 0.0;
+    } elseif ($pctNombre > 48.0 && $numCols > 0) {
+        // No dejar el nombre excesivo si cabe; ceder un poco a asistencia.
+        $pctNombre = max(28.0, min(48.0, round($maxNombreChars * 0.9 + 8, 2)));
+        $rest = max(12.0, 100.0 - $pctNum - $pctCtrl - $pctTelTotal - $pctNombre);
+        $pctAsist = round($rest / $numCols, 3);
+    }
+    $fontNombre = $maxNombreChars >= 36 ? '7.5px' : ($maxNombreChars >= 28 ? '8px' : '8.5px');
+    $fontAsist = $numCols >= 28 ? '6.5px' : ($numCols >= 18 ? '7px' : '7.5px');
 
     ob_start();
     ?>
@@ -355,14 +390,28 @@ function asistencia_lista_pdf_html(
     .head strong { font-weight:700; }
     .materia { margin: 2px 0 5px; font-size:11px; }
     table.lista { width:100%; border-collapse:collapse; table-layout:fixed; }
-    table.lista th, table.lista td { border:1px solid #222; padding:2px 3px; vertical-align:middle; }
+    table.lista th, table.lista td { border:1px solid #222; padding:1px 3px; vertical-align:middle; }
     table.lista th { font-weight:700; text-align:center; background:#f7f7f7; }
-    table.lista td { height:17px; overflow:hidden; }
-    th.num, td.num { text-align:center; white-space:nowrap; }
-    th.ctrl, td.ctrl { text-align:center; white-space:nowrap; font-size:8.5px; }
-    th.tel, td.tel { font-size:7.5px; white-space:nowrap; overflow:hidden; }
-    th.nombre, td.nombre { text-align:left; white-space:nowrap; font-size:8.5px; overflow:hidden; text-overflow:ellipsis; }
-    th.asist, td.asist { text-align:center; padding:0; white-space:nowrap; }
+    table.lista td { height:16px; }
+    th.num, td.num { text-align:center; white-space:nowrap; overflow:visible; }
+    th.ctrl, td.ctrl { text-align:center; white-space:nowrap; font-size:8px; overflow:visible; word-break:break-all; }
+    th.tel, td.tel { font-size:7px; white-space:nowrap; overflow:visible; }
+    th.nombre, td.nombre {
+      text-align:left;
+      font-size:<?php echo htmlspecialchars($fontNombre, ENT_QUOTES, 'UTF-8'); ?>;
+      line-height:1.15;
+      white-space:normal;
+      word-wrap:break-word;
+      overflow-wrap:anywhere;
+      overflow:visible;
+    }
+    th.asist, td.asist {
+      text-align:center;
+      padding:0;
+      white-space:nowrap;
+      font-size:<?php echo htmlspecialchars($fontAsist, ENT_QUOTES, 'UTF-8'); ?>;
+      overflow:hidden;
+    }
     .obs { margin-top:8px; font-size:11px; }
     .obs-line { border-bottom:1px solid #111; height:16px; }
     .foot { margin-top:8px; text-align:center; font-size:10px; line-height:1.25; }
@@ -409,27 +458,27 @@ function asistencia_lista_pdf_html(
       </div>
     </div>
     <div class="materia"><strong>Materia:</strong> ________________________</div>
-    <table class="lista">
+    <table class="lista" width="100%">
       <colgroup>
-        <col style="width:<?php echo $incluirTelefonos ? '3%' : '3.5%'; ?>">
-        <col style="width:<?php echo $incluirTelefonos ? '7%' : '8%'; ?>">
-        <col style="width:<?php echo htmlspecialchars((string) $pctNombre, ENT_QUOTES, 'UTF-8'); ?>%">
+        <col width="<?php echo htmlspecialchars((string) $pctNum, ENT_QUOTES, 'UTF-8'); ?>%" style="width:<?php echo htmlspecialchars((string) $pctNum, ENT_QUOTES, 'UTF-8'); ?>%">
+        <col width="<?php echo htmlspecialchars((string) $pctCtrl, ENT_QUOTES, 'UTF-8'); ?>%" style="width:<?php echo htmlspecialchars((string) $pctCtrl, ENT_QUOTES, 'UTF-8'); ?>%">
+        <col width="<?php echo htmlspecialchars((string) $pctNombre, ENT_QUOTES, 'UTF-8'); ?>%" style="width:<?php echo htmlspecialchars((string) $pctNombre, ENT_QUOTES, 'UTF-8'); ?>%">
         <?php if ($incluirTelefonos): ?>
-          <col style="width:7%">
-          <col style="width:7%">
+          <col width="<?php echo htmlspecialchars((string) $pctTel, ENT_QUOTES, 'UTF-8'); ?>%" style="width:<?php echo htmlspecialchars((string) $pctTel, ENT_QUOTES, 'UTF-8'); ?>%">
+          <col width="<?php echo htmlspecialchars((string) $pctTel, ENT_QUOTES, 'UTF-8'); ?>%" style="width:<?php echo htmlspecialchars((string) $pctTel, ENT_QUOTES, 'UTF-8'); ?>%">
         <?php endif; ?>
         <?php for ($c = 0; $c < $numCols; $c++): ?>
-          <col style="width:<?php echo htmlspecialchars((string) $pctAsist, ENT_QUOTES, 'UTF-8'); ?>%; min-width:<?php echo (int) $cellWidth; ?>px">
+          <col width="<?php echo htmlspecialchars((string) $pctAsist, ENT_QUOTES, 'UTF-8'); ?>%" style="width:<?php echo htmlspecialchars((string) $pctAsist, ENT_QUOTES, 'UTF-8'); ?>%">
         <?php endfor; ?>
       </colgroup>
       <thead>
         <tr>
-          <th class="num" rowspan="2">N°</th>
-          <th class="ctrl" rowspan="2">N° Ctrl</th>
-          <th class="nombre" rowspan="2">Nombre</th>
+          <th class="num" rowspan="2" width="<?php echo htmlspecialchars((string) $pctNum, ENT_QUOTES, 'UTF-8'); ?>%">N°</th>
+          <th class="ctrl" rowspan="2" width="<?php echo htmlspecialchars((string) $pctCtrl, ENT_QUOTES, 'UTF-8'); ?>%">N° Ctrl</th>
+          <th class="nombre" rowspan="2" width="<?php echo htmlspecialchars((string) $pctNombre, ENT_QUOTES, 'UTF-8'); ?>%">Nombre</th>
           <?php if ($incluirTelefonos): ?>
-            <th class="tel" rowspan="2">Tel</th>
-            <th class="tel" rowspan="2">Tel 2</th>
+            <th class="tel" rowspan="2" width="<?php echo htmlspecialchars((string) $pctTel, ENT_QUOTES, 'UTF-8'); ?>%">Tel</th>
+            <th class="tel" rowspan="2" width="<?php echo htmlspecialchars((string) $pctTel, ENT_QUOTES, 'UTF-8'); ?>%">Tel 2</th>
           <?php endif; ?>
           <?php foreach ($semanas as $semana): ?>
             <th class="asist" colspan="<?php echo count($dias); ?>"><?php echo (int) $semana; ?></th>
@@ -438,7 +487,7 @@ function asistencia_lista_pdf_html(
         <tr>
           <?php foreach ($semanas as $_semana): ?>
             <?php foreach ($dias as $dia): ?>
-              <th class="asist"><?php echo htmlspecialchars($dia['label']); ?></th>
+              <th class="asist" width="<?php echo htmlspecialchars((string) $pctAsist, ENT_QUOTES, 'UTF-8'); ?>%"><?php echo htmlspecialchars($dia['label']); ?></th>
             <?php endforeach; ?>
           <?php endforeach; ?>
         </tr>
@@ -454,7 +503,7 @@ function asistencia_lista_pdf_html(
               <td class="tel"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_tel_principal($al)) : ''; ?></td>
               <td class="tel"><?php echo $al ? htmlspecialchars(asistencia_lista_pdf_tel_opcional($al)) : ''; ?></td>
             <?php endif; ?>
-            <?php for ($c = 0; $c < $numCols; $c++): ?><td class="asist"></td><?php endfor; ?>
+            <?php for ($c = 0; $c < $numCols; $c++): ?><td class="asist">&nbsp;</td><?php endfor; ?>
           </tr>
         <?php endfor; ?>
       </tbody>
