@@ -70,7 +70,7 @@ if ($debeCompletarPerfil) {
     <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/main.css?v=20260608'), ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/plantel_fondo.css'), ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/top_nav.css'), ENT_QUOTES, 'UTF-8'); ?>">
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/side_nav.css'), ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(hay_asset_url('css/side_nav.css?v=20261120'), ENT_QUOTES, 'UTF-8'); ?>">
     <style>
     .rbac-sim-banner {
         display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;

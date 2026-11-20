@@ -31,6 +31,12 @@ $esAlumno = (rbac_rol_efectivo() === 'alumno');
 require_once __DIR__ . '/../avatar_helper.php';
 $avatarUrl = user_avatar_public_url($_SESSION['avatar'] ?? null);
 $puedeSimularRol = rbac_puede_simular_rol();
+$rolesSimular = $puedeSimularRol && function_exists('rbac_roles_para_simular')
+    ? rbac_roles_para_simular()
+    : [];
+$etiquetasRol = function_exists('rbac_roles_etiquetas') ? rbac_roles_etiquetas() : [];
+$estaSimulando = function_exists('rbac_esta_simulando_rol') && rbac_esta_simulando_rol();
+$rolSimApi = function_exists('hay_asset_url') ? hay_asset_url('php/perfil_cambiar_rol.php') : 'php/perfil_cambiar_rol.php';
 ?>
 <nav class="side-nav" id="sidebar" aria-label="Menú principal">
     <div class="sidebar-brand">
@@ -70,6 +76,68 @@ $puedeSimularRol = rbac_puede_simular_rol();
             <a href="<?php echo htmlspecialchars(function_exists('hay_asset_url') ? hay_asset_url('php/logout.php') : 'php/logout.php', ENT_QUOTES, 'UTF-8'); ?>" class="logout-link"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a>
         </div>
     </div>
+
+    <?php if ($rolesSimular !== [] || $estaSimulando): ?>
+    <div class="sidebar-role-switch" id="sidebar-role-switch">
+        <div class="sidebar-role-switch__label">
+            <i class="fas fa-user-friends" aria-hidden="true"></i>
+            Cubrir un puesto
+        </div>
+        <?php if ($estaSimulando): ?>
+            <p class="sidebar-role-switch__hint">
+                Viendo menú de <strong><?php echo htmlspecialchars(rbac_etiqueta_rol()); ?></strong>
+            </p>
+            <button type="button" class="sidebar-role-switch__btn" id="sidebar-rol-restaurar">
+                Volver a mi rol
+            </button>
+        <?php else: ?>
+            <p class="sidebar-role-switch__hint">
+                Cambia al menú de ese rol (recepción, coordinación…).
+            </p>
+            <select id="sidebar-rol-simular" class="sidebar-role-switch__select" aria-label="Rol a cubrir">
+                <option value="">— Elegir rol —</option>
+                <?php foreach ($rolesSimular as $rolOpt): ?>
+                    <option value="<?php echo htmlspecialchars($rolOpt, ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php echo htmlspecialchars($etiquetasRol[$rolOpt] ?? strtoupper($rolOpt)); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        <?php endif; ?>
+    </div>
+    <script>
+    (function () {
+      const api = <?php echo json_encode($rolSimApi, JSON_UNESCAPED_UNICODE); ?>;
+      async function cambiarRol(accion, rol) {
+        const fd = new FormData();
+        fd.append('accion', accion);
+        if (rol) fd.append('rol', rol);
+        try {
+          const res = await fetch(api, { method: 'POST', body: fd, credentials: 'same-origin' });
+          const data = await res.json();
+          if (data.status !== 'ok') {
+            alert(data.message || 'No se pudo cambiar la vista de rol');
+            return;
+          }
+          window.location.reload();
+        } catch (e) {
+          alert('Error de red al cambiar rol');
+        }
+      }
+      document.getElementById('sidebar-rol-simular')?.addEventListener('change', function () {
+        const rol = this.value;
+        if (!rol) return;
+        if (!confirm('¿Cambiar el menú a «' + (this.options[this.selectedIndex].text || rol) + '»?')) {
+          this.value = '';
+          return;
+        }
+        cambiarRol('cambiar', rol);
+      });
+      document.getElementById('sidebar-rol-restaurar')?.addEventListener('click', function () {
+        cambiarRol('restaurar', 'real');
+      });
+    })();
+    </script>
+    <?php endif; ?>
 
     <ul class="sidebar-menu">
         <?php if ($esAlumno): ?>
