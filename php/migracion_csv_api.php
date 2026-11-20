@@ -152,7 +152,8 @@ if ($action === 'export_legado') {
                 $rows = migcsv_export_alumnos($pdoLeg, $idsGrupos);
                 migcsv_csv_enviar('04_alumnos.csv', [
                     'id_alumno_legado', 'numero_control', 'nombres', 'apellido_paterno', 'apellido_materno',
-                    'email', 'telefono', 'plantel_slug', 'id_sucursal_legado',
+                    'email', 'telefono', 'telefono2', 'domicilio', 'colonia', 'municipio', 'codigo_postal',
+                    'plantel_slug', 'id_sucursal_legado',
                     'clave_legado', 'fecha_inicio', 'forma_pago',
                     'id_asesor_legado', 'asesor_nombre', 'status_legado',
                     'id_grupo_legado',
@@ -513,6 +514,25 @@ try {
             'staff_ok' => $res['staff_ok'] ?? 0,
             'staff_fail' => $res['staff_fail'] ?? 0,
             'errores' => $res['errores'] ?? [],
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($action === 'normalizar_folios_mig') {
+        if ($idPlantel <= 0) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Seleccione el plantel activo',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $n = migracion_csv_normalizar_folios_mig($pdo, $idPlantel);
+        echo json_encode([
+            'status' => 'ok',
+            'message' => $n > 0
+                ? "{$n} folio(s) MIG-* renombrado(s) a LEG-*"
+                : 'No había folios MIG-* por normalizar en este plantel',
+            'folios_normalizados' => $n,
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }

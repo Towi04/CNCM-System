@@ -46,6 +46,26 @@ function migcsv_table_exists(PDO $pdo, string $table): bool
     return (bool) $st->fetchColumn();
 }
 
+/**
+ * Folio unificado para pagos migrados: siempre prefijo LEG-.
+ * Si el legado traía folio (p. ej. FOLIO-123) → LEG-FOLIO-123;
+ * si venía vacío → LEG-{id_pago_legado} (abono-N / pago-N).
+ */
+function migcsv_folio_legado(string $folioLegado, string $idPagoLegado): string
+{
+    $folio = trim($folioLegado);
+    if ($folio !== '') {
+        if (str_starts_with(strtoupper($folio), 'LEG-')) {
+            return $folio;
+        }
+
+        return 'LEG-' . $folio;
+    }
+    $idPagoLegado = trim($idPagoLegado);
+
+    return $idPagoLegado !== '' ? ('LEG-' . $idPagoLegado) : '';
+}
+
 function migcsv_column_exists(PDO $pdo, string $table, string $column): bool
 {
     $st = $pdo->prepare(
@@ -753,6 +773,10 @@ function migcsv_export_alumnos(PDO $pdo, array $idsGrupos): array
             }
             $claveGrupo = $claveCache[$gid];
         }
+        $tel = trim((string) ($r['telefono'] ?? ''));
+        $cel = trim((string) ($r['celular'] ?? ''));
+        $telPrimario = $tel !== '' ? $tel : $cel;
+        $telSecundario = ($tel !== '' && $cel !== '') ? $cel : '';
         $out[] = [
             'id_alumno_legado' => $idAl,
             'numero_control' => $nc > 0 ? (string) $nc : '',
@@ -760,7 +784,12 @@ function migcsv_export_alumnos(PDO $pdo, array $idsGrupos): array
             'apellido_paterno' => trim((string) ($r['apellido_paterno'] ?? '')),
             'apellido_materno' => trim((string) ($r['apellido_materno'] ?? '')),
             'email' => trim((string) ($r['email'] ?? '')),
-            'telefono' => trim((string) (($r['telefono'] ?? '') ?: ($r['celular'] ?? ''))),
+            'telefono' => $telPrimario,
+            'telefono2' => $telSecundario,
+            'domicilio' => trim((string) ($r['domicilio'] ?? '')),
+            'colonia' => trim((string) ($r['colonia'] ?? '')),
+            'municipio' => trim((string) ($r['municipio'] ?? '')),
+            'codigo_postal' => trim((string) ($r['codigo_postal'] ?? '')),
             'id_sucursal_legado' => (int) ($r['id_sucursal'] ?? 0),
             'plantel_slug' => migcsv_slug_sucursal((string) ($r['sucursal_nombre'] ?? '')),
             'id_grupo_legado' => $gid,
@@ -948,7 +977,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
                 'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
                 'tipo' => $tipo,
                 'concepto' => $concepto !== '' ? $concepto : 'Pago legado',
-                'folio' => $r['folio'] !== null && $r['folio'] !== '' ? ('LEG-' . $r['folio']) : '',
+                'folio' => migcsv_folio_legado((string) ($r['folio'] ?? ''), 'abono-' . (int) $r['id_abono']),
             ];
         }
     }
@@ -969,8 +998,9 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
         $st->execute($idsAlumnos);
         foreach ($st->fetchAll() as $r) {
             $idAl = (int) $r['id_alumno'];
+            $idPagoLeg = 'pago-' . (int) $r['id'];
             $out[] = [
-                'id_pago_legado' => 'pago-' . (int) $r['id'],
+                'id_pago_legado' => $idPagoLeg,
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
                 'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
@@ -979,7 +1009,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
                 'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
                 'tipo' => 'abono',
                 'concepto' => 'Pago legado',
-                'folio' => $r['folio'] !== null && $r['folio'] !== '' ? ('LEG-' . $r['folio']) : '',
+                'folio' => migcsv_folio_legado((string) ($r['folio'] ?? ''), $idPagoLeg),
             ];
         }
     } else {
@@ -993,8 +1023,9 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
         $st->execute($idsAlumnos);
         foreach ($st->fetchAll() as $r) {
             $idAl = (int) $r['id_alumno'];
+            $idPagoLeg = 'pago-' . (int) $r['id'];
             $out[] = [
-                'id_pago_legado' => 'pago-' . (int) $r['id'],
+                'id_pago_legado' => $idPagoLeg,
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
                 'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
@@ -1003,7 +1034,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
                 'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
                 'tipo' => 'abono',
                 'concepto' => 'Pago legado',
-                'folio' => $r['folio'] !== null && $r['folio'] !== '' ? ('LEG-' . $r['folio']) : '',
+                'folio' => migcsv_folio_legado((string) ($r['folio'] ?? ''), $idPagoLeg),
             ];
         }
     }

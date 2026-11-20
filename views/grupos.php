@@ -274,6 +274,17 @@ $hasta = min($offset + $perPage, $totalGrupos);
                   <i class="fas fa-calendar-check"></i>
                 </button>
               <?php endif; ?>
+              <?php if ($puedeApertura): ?>
+                <button type="button" class="btn-icon-only btn-icon-only--edit btn-ajustar-fecha-grupo"
+                  title="Ajustar fecha de inicio"
+                  data-tip="Cambiar fecha de inicio (corrige adeudo tras migración)"
+                  aria-label="Ajustar fecha de inicio"
+                  data-id="<?php echo (int)$g['id_grupo']; ?>"
+                  data-fecha="<?php echo htmlspecialchars((string)$g['fecha_inicio'], ENT_QUOTES, 'UTF-8'); ?>"
+                  data-clave="<?php echo htmlspecialchars((string)$g['clave'], ENT_QUOTES, 'UTF-8'); ?>">
+                  <i class="fas fa-calendar-day"></i>
+                </button>
+              <?php endif; ?>
               <button type="button" class="btn-icon-only btn-icon-only--muted btn-lista-asistencia-pdf"
                 title="Imprimir lista de asistencia"
                 data-tip="Imprimir lista de asistencia (horizontal)"
@@ -416,6 +427,33 @@ $hasta = min($offset + $perPage, $totalGrupos);
       url.searchParams.set('telefonos', incluirTelefonos ? '1' : '0');
       url.searchParams.set('filename', 'lista_' + clave);
       window.open(url.toString(), '_blank', 'noopener');
+    });
+  });
+
+  document.querySelectorAll('.btn-ajustar-fecha-grupo').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const idGrupo = btn.dataset.id;
+      if (!idGrupo) return;
+      const actual = btn.dataset.fecha || '';
+      const clave = btn.dataset.clave || 'grupo';
+      const nueva = window.prompt(
+        'Nueva fecha de inicio para ' + clave + ' (AAAA-MM-DD).\nActual: ' + actual + '\nEsto recalcula el adeudo de colegiatura.',
+        actual
+      );
+      if (nueva === null) return;
+      const motivo = window.prompt('Motivo del ajuste (opcional):', 'Ajuste tras migración') || '';
+      const fd = new FormData();
+      fd.append('action', 'ajustar_fecha');
+      fd.append('id_grupo', idGrupo);
+      fd.append('nueva_fecha', nueva.trim());
+      fd.append('motivo', motivo);
+      try {
+        const { data } = await hayFetchJson('php/grupo_apertura_api.php', { method: 'POST', body: fd });
+        alert(data.message || '');
+        if (data.status === 'ok') cargarSeccion('grupos');
+      } catch (e) {
+        alert(e.message || 'No se pudo ajustar la fecha');
+      }
     });
   });
 })();

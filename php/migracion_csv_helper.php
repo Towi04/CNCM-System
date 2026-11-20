@@ -2316,12 +2316,20 @@ function migracion_csv_importar_alumnos(
                         ? alumno_generar_numero_control($pdo, $idPlantel)
                         : ('TMP' . time() . $line);
                 }
+                $tel1 = migracion_csv_norm_telefono((string) ($r['telefono'] ?? '')) ?: null;
+                $tel2 = migracion_csv_norm_telefono((string) ($r['telefono2'] ?? '')) ?: null;
+                $dom = trim((string) ($r['domicilio'] ?? '')) ?: null;
+                $col = trim((string) ($r['colonia'] ?? '')) ?: null;
+                $mun = trim((string) ($r['municipio'] ?? '')) ?: null;
+                $cp = trim((string) ($r['codigo_postal'] ?? '')) ?: null;
                 $pdo->prepare(
                     'INSERT INTO alumnos (
                         id_grupo, id_plantel, numero_control, nombre, apellido, nombres,
                         apellido_paterno, apellido_materno, estado, activo, forma_pago,
-                        id_especialidad, email, telefono, fecha_alta, creado_en
-                     ) VALUES (?,?,?,?,?,?,?,?,\'activo\',1,?,?,?,?,?,?)'
+                        id_especialidad, email, telefono, telefono2,
+                        domicilio, colonia, municipio, codigo_postal,
+                        fecha_alta, creado_en
+                     ) VALUES (?,?,?,?,?,?,?,?,\'activo\',1,?,?,?,?,?,?,?,?,?,?,?)'
                 )->execute([
                     $idGrupo,
                     $idPlantel,
@@ -2334,7 +2342,12 @@ function migracion_csv_importar_alumnos(
                     $formaPago,
                     $idEsp ?: null,
                     trim((string) ($r['email'] ?? '')) ?: null,
-                    migracion_csv_norm_telefono((string) ($r['telefono'] ?? '')) ?: null,
+                    $tel1,
+                    $tel2,
+                    $dom,
+                    $col,
+                    $mun,
+                    $cp,
                     $fecha,
                     $fecha . ' 09:00:00',
                 ]);
@@ -2343,7 +2356,13 @@ function migracion_csv_importar_alumnos(
             } else {
                 $pdo->prepare(
                     'UPDATE alumnos SET id_grupo=?, id_especialidad=?, estado=\'activo\', activo=1,
-                     forma_pago=?, telefono=COALESCE(NULLIF(?, \'\'), telefono),
+                     forma_pago=?,
+                     telefono=COALESCE(NULLIF(?, \'\'), telefono),
+                     telefono2=COALESCE(NULLIF(?, \'\'), telefono2),
+                     domicilio=COALESCE(NULLIF(?, \'\'), domicilio),
+                     colonia=COALESCE(NULLIF(?, \'\'), colonia),
+                     municipio=COALESCE(NULLIF(?, \'\'), municipio),
+                     codigo_postal=COALESCE(NULLIF(?, \'\'), codigo_postal),
                      email=COALESCE(NULLIF(?, \'\'), email)
                      WHERE id_alumno=?'
                 )->execute([
@@ -2351,6 +2370,11 @@ function migracion_csv_importar_alumnos(
                     $idEsp ?: null,
                     $formaPago,
                     migracion_csv_norm_telefono((string) ($r['telefono'] ?? '')),
+                    migracion_csv_norm_telefono((string) ($r['telefono2'] ?? '')),
+                    trim((string) ($r['domicilio'] ?? '')),
+                    trim((string) ($r['colonia'] ?? '')),
+                    trim((string) ($r['municipio'] ?? '')),
+                    trim((string) ($r['codigo_postal'] ?? '')),
                     trim((string) ($r['email'] ?? '')),
                     $idAlumno,
                 ]);
@@ -2613,6 +2637,32 @@ function migracion_csv_resolver_sucursal_legado(PDO $pdoHay, PDO $pdoLeg, int $i
 }
 
 /**
+ * Renombra folios MIG-* → LEG-* en pagos del plantel (migración antigua).
+ *
+ * @return int Filas actualizadas
+ */
+function migracion_csv_normalizar_folios_mig(PDO $pdo, int $idPlantel): int
+{
+    if ($idPlantel <= 0) {
+        return 0;
+    }
+    try {
+        $st = $pdo->prepare(
+            "UPDATE alumno_pagos
+             SET folio = CONCAT('LEG-', SUBSTRING(folio, 5))
+             WHERE id_plantel = ?
+               AND folio LIKE 'MIG-%'
+               AND folio NOT LIKE 'LEG-%'"
+        );
+        $st->execute([$idPlantel]);
+
+        return (int) $st->rowCount();
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+/**
  * @return array{ok:bool, message:string, creados?:int, omitidos?:int, actualizados?:int, errores?:list<string>}
  */
 function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel = null): array
@@ -2637,6 +2687,9 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
             'errores' => ['Falta id_plantel para importar pagos'],
         ];
     }
+
+    // Unificar folios antiguos MIG-* → LEG-* en el plantel (idempotente).
+    $foliosNormalizados = migracion_csv_normalizar_folios_mig($pdo, $idPlantelSesion);
 
     foreach ($rows as $i => $r) {
         $line = $i + 2;
@@ -2709,8 +2762,14 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
             $fecha .= ' 12:00:00';
         }
         $folio = trim((string) ($r['folio'] ?? ''));
+        // Unificar prefijo LEG- (antes MIG- cuando el legado no traía folio).
+        if ($folio !== '' && strncasecmp($folio, 'MIG-', 4) === 0) {
+            $folio = 'LEG-' . substr($folio, 4);
+        }
         if ($folio === '' && $idLeg !== '') {
-            $folio = 'MIG-' . $idLeg;
+            $folio = 'LEG-' . $idLeg;
+        } elseif ($folio !== '' && strncasecmp($folio, 'LEG-', 4) !== 0) {
+            $folio = 'LEG-' . $folio;
         }
         $forma = trim((string) ($r['forma_pago'] ?? 'Efectivo')) ?: 'Efectivo';
         $concepto = trim((string) ($r['concepto'] ?? 'Pago migración')) ?: 'Pago migración';
@@ -2760,14 +2819,18 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
     if ($actualizados > 0) {
         $msg .= ", {$actualizados} cobrador(es) actualizado(s) desde legado";
     }
+    if ($foliosNormalizados > 0) {
+        $msg .= ", {$foliosNormalizados} folio(s) MIG→LEG normalizado(s)";
+    }
     migracion_csv_log($pdo, 'pagos', 'info', 'Pagos: ' . $msg);
 
     return [
-        'ok' => $creados > 0 || $omitidos > 0 || $actualizados > 0 || $errores === [],
+        'ok' => $creados > 0 || $omitidos > 0 || $actualizados > 0 || $foliosNormalizados > 0 || $errores === [],
         'message' => $msg,
         'creados' => $creados,
         'omitidos' => $omitidos,
         'actualizados' => $actualizados,
+        'folios_normalizados' => $foliosNormalizados,
         'errores' => array_slice($errores, 0, 40),
     ];
 }
@@ -3667,13 +3730,14 @@ function migracion_csv_ejemplo(PDO $pdo, string $tipo, ?string $slugPreferido = 
                 'filename' => 'ejemplo_04_alumnos.csv',
                 'headers' => [
                     'id_alumno_legado', 'numero_control', 'nombres', 'apellido_paterno', 'apellido_materno',
-                    'email', 'telefono', 'plantel_slug', 'clave_legado', 'fecha_inicio',
+                    'email', 'telefono', 'telefono2', 'domicilio', 'colonia', 'municipio', 'codigo_postal',
+                    'plantel_slug', 'clave_legado', 'fecha_inicio',
                     'forma_pago', 'id_asesor_legado', 'asesor_nombre',
                 ],
                 'rows' => [
-                    ['9001', '2501001', 'Pedro', 'Ramírez', 'Solís', '', '5551112233', $slug, 'IS100', '2025-01-11', 'mensual', '', ''],
-                    ['9002', '2501002', 'Lucía', 'Gómez', 'Nava', 'lucia@ejemplo.com', '', $slug, 'IS100', '2025-01-11', 'mensual', '', ''],
-                    ['9003', '2501003', 'Diego', 'Torres', '', '', '', $slug, 'IKCF100', '2025-01-11', 'mensual', '', ''],
+                    ['9001', '2501001', 'Pedro', 'Ramírez', 'Solís', '', '5551112233', '5559998877', 'Av. Reforma 100', 'Centro', 'Chilpancingo', '39000', $slug, 'IS100', '2025-01-11', 'mensual', '', ''],
+                    ['9002', '2501002', 'Lucía', 'Gómez', 'Nava', 'lucia@ejemplo.com', '5552223344', '', 'Calle 5 #20', 'Obrera', 'Acapulco', '39300', $slug, 'IS100', '2025-01-11', 'mensual', '', ''],
+                    ['9003', '2501003', 'Diego', 'Torres', '', '', '', '', '', '', '', '', $slug, 'IKCF100', '2025-01-11', 'mensual', '', ''],
                 ],
             ];
 

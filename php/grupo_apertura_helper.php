@@ -27,7 +27,7 @@ function grupo_apertura_ensure_schema(PDO $pdo): void
         'CREATE TABLE IF NOT EXISTS grupo_apertura_log (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,
             id_grupo INT UNSIGNED NOT NULL,
-            accion ENUM(\'pendiente\',\'autorizado\',\'pospuesto\') NOT NULL,
+            accion ENUM(\'pendiente\',\'autorizado\',\'pospuesto\',\'ajustar_fecha\') NOT NULL,
             fecha_anterior DATE NULL,
             fecha_nueva DATE NULL,
             motivo TEXT NULL,
@@ -38,6 +38,14 @@ function grupo_apertura_ensure_schema(PDO $pdo): void
             KEY idx_gal_grupo (id_grupo)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
     );
+    try {
+        $pdo->exec(
+            "ALTER TABLE grupo_apertura_log
+             MODIFY accion ENUM('pendiente','autorizado','pospuesto','ajustar_fecha') NOT NULL"
+        );
+    } catch (Throwable $e) {
+        // ya actualizado o sin tabla
+    }
 }
 
 function grupo_apertura_puede_gestionar(): bool
@@ -253,6 +261,75 @@ function grupo_apertura_posponer(
     $msg = 'Grupo pospuesto al ' . date('d/m/Y', strtotime($nuevaFecha));
     if ((int) ($remap['remap_count'] ?? 0) > 0) {
         $msg .= '. Se ajustaron ' . (int) $remap['remap_count'] . ' pago(s) de colegiatura al nuevo periodo.';
+    }
+
+    return ['ok' => true, 'message' => $msg, 'pagos_remapeados' => (int) ($remap['remap_count'] ?? 0)];
+}
+
+/**
+ * Ajusta la fecha de inicio de un grupo (incluso ya iniciado).
+ * Útil tras migración CSV cuando el adeudo quedó inflado por una fecha antigua.
+ * Remapea periodo_ref de colegiaturas al nuevo ancla.
+ *
+ * @return array{ok:bool, message:string, pagos_remapeados?:int}
+ */
+function grupo_apertura_ajustar_fecha(
+    PDO $pdo,
+    int $idGrupo,
+    string $nuevaFecha,
+    string $motivo,
+    int $idUsuario,
+    ?int $idPlantel = null
+): array {
+    if (!grupo_apertura_puede_gestionar()) {
+        return ['ok' => false, 'message' => 'Sin permiso para ajustar la fecha de inicio'];
+    }
+    grupo_apertura_ensure_schema($pdo);
+    $nuevaFecha = trim($nuevaFecha);
+    if ($nuevaFecha === '' || strtotime($nuevaFecha) === false) {
+        return ['ok' => false, 'message' => 'Fecha de inicio inválida'];
+    }
+    $nuevaFecha = date('Y-m-d', strtotime($nuevaFecha));
+    $g = grupo_apertura_obtener($pdo, $idGrupo, $idPlantel);
+    if (!$g) {
+        return ['ok' => false, 'message' => 'Grupo no encontrado'];
+    }
+    $fechaAnterior = (string) $g['fecha_inicio'];
+    if ($nuevaFecha === $fechaAnterior) {
+        return ['ok' => false, 'message' => 'La fecha es la misma que la actual'];
+    }
+
+    $remap = pago_remap_colegiaturas_por_pospon_grupo($pdo, $idGrupo, $fechaAnterior, $nuevaFecha);
+
+    $pdo->prepare('UPDATE grupos SET fecha_inicio = ? WHERE id_grupo = ?')
+        ->execute([$nuevaFecha, $idGrupo]);
+
+    // Alinear vínculo activo alumno↔grupo (ancla de colegiatura por alumno).
+    try {
+        $pdo->prepare(
+            'UPDATE alumno_grupos SET fecha_inicio = ? WHERE id_grupo = ? AND activo = 1'
+        )->execute([$nuevaFecha, $idGrupo]);
+    } catch (Throwable $e) {
+        // columna puede variar en entornos antiguos
+    }
+
+    $motivo = trim($motivo) ?: 'Ajuste de fecha de inicio';
+    $pdo->prepare(
+        'INSERT INTO grupo_apertura_log (id_grupo, accion, fecha_anterior, fecha_nueva, motivo, id_usuario, pagos_remapeados)
+         VALUES (?, \'ajustar_fecha\', ?, ?, ?, ?, ?)'
+    )->execute([
+        $idGrupo,
+        $fechaAnterior,
+        $nuevaFecha,
+        $motivo,
+        $idUsuario > 0 ? $idUsuario : null,
+        (int) ($remap['remap_count'] ?? 0),
+    ]);
+
+    $msg = 'Fecha de inicio ajustada a ' . date('d/m/Y', strtotime($nuevaFecha))
+        . ' (antes ' . date('d/m/Y', strtotime($fechaAnterior)) . ')';
+    if ((int) ($remap['remap_count'] ?? 0) > 0) {
+        $msg .= '. Se ajustaron ' . (int) $remap['remap_count'] . ' pago(s) de colegiatura.';
     }
 
     return ['ok' => true, 'message' => $msg, 'pagos_remapeados' => (int) ($remap['remap_count'] ?? 0)];

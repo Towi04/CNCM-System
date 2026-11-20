@@ -51,6 +51,20 @@ if ($action === 'posponer') {
     exit;
 }
 
+if ($action === 'ajustar_fecha') {
+    $idGrupo = (int) ($_POST['id_grupo'] ?? 0);
+    $nuevaFecha = trim((string) ($_POST['nueva_fecha'] ?? ''));
+    $motivo = trim((string) ($_POST['motivo'] ?? ''));
+    $res = grupo_apertura_ajustar_fecha($pdo, $idGrupo, $nuevaFecha, $motivo, $idUsuario);
+    hay_json_response([
+        'status' => $res['ok'] ? 'ok' : 'error',
+        'message' => $res['message'],
+        'pagos_remapeados' => $res['pagos_remapeados'] ?? 0,
+        'seccion' => 'grupos',
+    ]);
+    exit;
+}
+
 if ($action === 'detalle') {
     $idGrupo = (int) ($_GET['id_grupo'] ?? $_POST['id_grupo'] ?? 0);
     $g = grupo_apertura_obtener($pdo, $idGrupo);

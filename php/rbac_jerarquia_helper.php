@@ -107,6 +107,7 @@ function rbac_cap_recepcion(): array
         'menu_cronologia',
         'menu_alumnos',
         'menu_credenciales',
+        'menu_grupos',
         'menu_mi_evaluacion',
         'menu_matriz_entrenamiento',
         'menu_mi_expediente',
