@@ -165,7 +165,8 @@ const fd = new FormData();
 fd.append('action', 'mensaje');
 fd.append('csrf', token);
 fd.append('id_conversacion', '12');
-fd.append('mensaje', '¿Qué vocabulario veo en la semana 2 del parcial F1?');
+fd.append('mensaje', '¿Qué temas se ven en la semana 3 de A1?');
+// También: "temario de A1+ semana 2", "parcial A1-1 semana 1", "vocabulario F1"
 const r = await fetch('php/tutor_api.php', { method: 'POST', body: fd, credentials: 'include' });
 ```
 
