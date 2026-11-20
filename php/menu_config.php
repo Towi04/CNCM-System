@@ -205,8 +205,6 @@ function menu_cncm_secciones(): array
 
                 ['cap' => 'menu_alumnos', 'seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
 
-                ['cap' => 'menu_credenciales', 'seccion' => 'alumnos', 'icon' => 'fa-id-card', 'text' => 'Credenciales', 'title' => 'Generar credenciales de alumnos', 'breadcrumb' => 'CREDENCIALES'],
-
                 ['cap' => 'menu_alumno_cambio_plantel', 'seccion' => 'alumno_cambio_plantel', 'icon' => 'fa-exchange-alt', 'text' => 'Cambio de plantel', 'title' => 'Cambio de plantel de alumnos', 'breadcrumb' => 'CAMBIO DE PLANTEL'],
 
             ],
@@ -382,8 +380,6 @@ function menu_cncm_director_items(): array
         ['callback' => 'nomina_puede_gestionar', 'seccion' => 'director_nomina', 'icon' => 'fa-money-check-alt', 'text' => 'Nómina personal', 'title' => 'Nómina del personal', 'breadcrumb' => 'NÓMINA'],
 
         ['cap' => 'menu_alumnos', 'seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
-
-        ['cap' => 'menu_credenciales', 'seccion' => 'alumnos', 'icon' => 'fa-id-card', 'text' => 'Credenciales alumnos', 'title' => 'Generar credenciales de alumnos', 'breadcrumb' => 'CREDENCIALES'],
 
         ['cap' => 'menu_alumno_cambio_plantel', 'seccion' => 'alumno_cambio_plantel', 'icon' => 'fa-exchange-alt', 'text' => 'Cambio de plantel', 'title' => 'Cambio de plantel de alumnos', 'breadcrumb' => 'CAMBIO DE PLANTEL'],
 
@@ -761,8 +757,6 @@ function menu_cncm_secciones_compactas(): array
                 ['staff' => true, 'seccion' => 'inicio_panel', 'icon' => 'fa-home', 'text' => 'Inicio', 'title' => 'Inicio', 'breadcrumb' => 'INICIO'],
 
                 ['cap' => 'menu_alumnos', 'seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
-
-                ['cap' => 'menu_credenciales', 'seccion' => 'alumnos', 'icon' => 'fa-id-card', 'text' => 'Credenciales', 'title' => 'Generar credenciales de alumnos', 'breadcrumb' => 'CREDENCIALES'],
 
                 ['cap' => 'menu_grupos', 'seccion' => 'grupos', 'icon' => 'fa-users', 'text' => 'Grupos', 'title' => 'Ver grupos e imprimir listas', 'breadcrumb' => 'GRUPOS'],
 

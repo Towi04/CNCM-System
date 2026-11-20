@@ -488,25 +488,18 @@ function credencial_imagen_data_uri(?string $path): string
     return 'data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($abs));
 }
 
-/** @param array<string,mixed> $plantilla @param array<string,mixed> $valores */
-function credencial_render_html(array $plantilla, array $valores): string
+/**
+ * @param array<string,mixed> $plantilla
+ * @param array<string,mixed> $valores
+ */
+function credencial_render_card_pair(array $plantilla, array $valores): string
 {
-    $w = (float) ($plantilla['ancho_mm'] ?? 85.6);
-    $h = (float) ($plantilla['alto_mm'] ?? 54);
     $verifyUrl = (string) ($valores['verify_url'] ?? '');
     $valores['qr_verificacion'] = function_exists('documento_qr_data_uri')
         ? documento_qr_data_uri($verifyUrl)
         : '';
     $valores['foto'] = credencial_imagen_data_uri((string) ($valores['foto'] ?? ''));
-    $html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-        @page { margin:0; size:' . $w . 'mm ' . $h . 'mm; }
-        html, body { margin:0; padding:0; font-family:DejaVu Sans, sans-serif; }
-        .card { position:relative; width:' . $w . 'mm; height:' . $h . 'mm; overflow:hidden; page-break-after:always; }
-        .card:last-child { page-break-after:auto; }
-        .bg { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
-        .field { position:absolute; z-index:1; line-height:1.15; overflow:hidden; }
-        .photo { object-fit:cover; }
-    </style></head><body>';
+    $html = '';
     foreach (['frente', 'reverso'] as $lado) {
         $campos = $plantilla['campos_' . $lado . '_json'] ?? [];
         if (is_string($campos)) {
@@ -552,9 +545,193 @@ function credencial_render_html(array $plantilla, array $valores): string
         }
         $html .= '</div>';
     }
+
+    return $html;
+}
+
+/**
+ * @param array<string,mixed> $plantilla
+ * @param list<array<string,mixed>> $listaValores
+ */
+function credencial_render_html_lote(array $plantilla, array $listaValores): string
+{
+    $w = (float) ($plantilla['ancho_mm'] ?? 85.6);
+    $h = (float) ($plantilla['alto_mm'] ?? 54);
+    $html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+        @page { margin:0; size:' . $w . 'mm ' . $h . 'mm; }
+        html, body { margin:0; padding:0; font-family:DejaVu Sans, sans-serif; }
+        .card { position:relative; width:' . $w . 'mm; height:' . $h . 'mm; overflow:hidden; page-break-after:always; }
+        .card:last-child { page-break-after:auto; }
+        .bg { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+        .field { position:absolute; z-index:1; line-height:1.15; overflow:hidden; }
+        .photo { object-fit:cover; }
+    </style></head><body>';
+    foreach ($listaValores as $valores) {
+        $html .= credencial_render_card_pair($plantilla, $valores);
+    }
     $html .= '</body></html>';
 
     return $html;
+}
+
+/** @param array<string,mixed> $plantilla @param array<string,mixed> $valores */
+function credencial_render_html(array $plantilla, array $valores): string
+{
+    return credencial_render_html_lote($plantilla, [$valores]);
+}
+
+/**
+ * Genera (o reemite) credenciales de todos los alumnos activos del grupo.
+ *
+ * @return array{ok:bool,message?:string,generados?:int,omitidos?:int,errores?:list<string>,id_credenciales?:list<int>,clave?:string}
+ */
+function credencial_generar_grupo(
+    PDO $pdo,
+    int $idGrupo,
+    int $idPlantilla = 0,
+    ?int $idUsuario = null
+): array {
+    if (!credencial_puede_generar()) {
+        return ['ok' => false, 'message' => 'Sin permiso para generar credenciales'];
+    }
+    credencial_ensure_schema($pdo);
+    $idPlantel = plantel_scope_id($pdo);
+    $st = $pdo->prepare(
+        'SELECT id_grupo, clave FROM grupos WHERE id_grupo = ? AND id_plantel = ? LIMIT 1'
+    );
+    $st->execute([$idGrupo, $idPlantel]);
+    $grupo = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$grupo) {
+        return ['ok' => false, 'message' => 'Grupo no encontrado en el plantel activo'];
+    }
+
+    $plantilla = $idPlantilla > 0
+        ? credencial_plantilla_obtener($pdo, $idPlantilla, $idPlantel)
+        : credencial_plantilla_activa($pdo, $idPlantel);
+    if (!$plantilla || (int) ($plantilla['activo'] ?? 0) !== 1) {
+        return ['ok' => false, 'message' => 'No hay una plantilla activa para este plantel'];
+    }
+
+    $stA = $pdo->prepare(
+        'SELECT ag.id_alumno
+         FROM alumno_grupos ag
+         INNER JOIN alumnos a ON a.id_alumno = ag.id_alumno AND a.id_plantel = ?
+         WHERE ag.id_grupo = ? AND ag.activo = 1
+         ORDER BY a.apellido_paterno ASC, a.apellido_materno ASC, a.nombre ASC'
+    );
+    $stA->execute([$idPlantel, $idGrupo]);
+    $ids = array_map('intval', $stA->fetchAll(PDO::FETCH_COLUMN) ?: []);
+    if ($ids === []) {
+        return ['ok' => false, 'message' => 'No hay alumnos activos en el grupo'];
+    }
+
+    $idUsuario = $idUsuario ?? (int) ($_SESSION['user_id'] ?? 0);
+    $idPlantillaActiva = (int) $plantilla['id_plantilla'];
+    $idsCred = [];
+    $errores = [];
+    $omitidos = 0;
+    foreach ($ids as $idAlumno) {
+        $res = credencial_generar($pdo, $idAlumno, $idPlantillaActiva, $idUsuario);
+        if (!$res['ok']) {
+            $omitidos++;
+            $errores[] = 'Alumno #' . $idAlumno . ': ' . (string) ($res['message'] ?? 'error');
+            continue;
+        }
+        $idsCred[] = (int) $res['id_credencial'];
+    }
+
+    if ($idsCred === []) {
+        return [
+            'ok' => false,
+            'message' => 'No se pudo generar ninguna credencial. '
+                . ($errores[0] ?? 'Revise plantilla y números de control.'),
+            'errores' => $errores,
+            'omitidos' => $omitidos,
+            'clave' => (string) $grupo['clave'],
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'message' => count($idsCred) . ' credencial(es) del grupo ' . $grupo['clave'],
+        'generados' => count($idsCred),
+        'omitidos' => $omitidos,
+        'errores' => $errores,
+        'id_credenciales' => $idsCred,
+        'clave' => (string) $grupo['clave'],
+        'id_plantilla' => $idPlantillaActiva,
+    ];
+}
+
+/**
+ * @param list<int> $idsCredencial
+ * @return array{ok:bool,message?:string,contenido?:string,filename?:string}
+ */
+function credencial_generar_pdf_lote(PDO $pdo, array $idsCredencial, string $filenameHint = 'credenciales'): array
+{
+    $idsCredencial = array_values(array_filter(array_map('intval', $idsCredencial), static fn ($id) => $id > 0));
+    if ($idsCredencial === []) {
+        return ['ok' => false, 'message' => 'Sin credenciales para imprimir'];
+    }
+
+    $listaValores = [];
+    $plantilla = null;
+    foreach ($idsCredencial as $idCredencial) {
+        $credencial = credencial_obtener($pdo, $idCredencial);
+        if (!$credencial) {
+            continue;
+        }
+        if ($plantilla === null) {
+            $plantilla = credencial_plantilla_obtener(
+                $pdo,
+                (int) $credencial['id_plantilla'],
+                (int) $credencial['id_plantel']
+            );
+            if (!$plantilla) {
+                return ['ok' => false, 'message' => 'Plantilla no encontrada'];
+            }
+        }
+        $plantel = plantel_find($pdo, (int) $credencial['id_plantel']) ?: [];
+        $listaValores[] = [
+            'numero_control' => (string) $credencial['numero_control'],
+            'nombre_completo' => (string) $credencial['nombre_completo'],
+            'especialidad' => (string) ($credencial['especialidad_nombre'] ?? ''),
+            'foto' => (string) ($credencial['foto_path'] ?? ''),
+            'cct' => (string) ($plantel['cct'] ?? ''),
+            'rvoe' => (string) ($plantel['rvoe'] ?? ''),
+            'vigencia' => date('d/m/Y', strtotime((string) $credencial['vigencia_inicio']))
+                . ' al ' . date('d/m/Y', strtotime((string) $credencial['vigencia_fin'])),
+            'plantel_nombre' => (string) ($plantel['nombre'] ?? ''),
+            'verify_url' => credencial_url_verificacion((string) $credencial['token_verificacion']),
+        ];
+    }
+
+    if ($listaValores === [] || $plantilla === null) {
+        return ['ok' => false, 'message' => 'No hay credenciales válidas para el PDF'];
+    }
+
+    $html = credencial_render_html_lote($plantilla, $listaValores);
+    $autoload = dirname(__DIR__) . '/vendor/autoload.php';
+    if (is_file($autoload)) {
+        require_once $autoload;
+    }
+    if (!class_exists('Dompdf\\Dompdf') || !class_exists('Dompdf\\Options')) {
+        return ['ok' => false, 'message' => 'Dompdf no disponible'];
+    }
+    $options = new Dompdf\Options();
+    $options->set('isRemoteEnabled', true);
+    $options->set('defaultFont', 'DejaVu Sans');
+    $dompdf = new Dompdf\Dompdf($options);
+    $dompdf->loadHtml($html, 'UTF-8');
+    $w = (float) ($plantilla['ancho_mm'] ?? 85.6);
+    $h = (float) ($plantilla['alto_mm'] ?? 54);
+    $dompdf->setPaper([0.0, 0.0, $w * 2.83465, $h * 2.83465]);
+    $dompdf->render();
+    $pdf = $dompdf->output();
+    $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $filenameHint) ?: 'credenciales';
+    $filename = 'credenciales_' . $safe . '_' . date('Ymd_His') . '.pdf';
+
+    return ['ok' => true, 'contenido' => $pdf, 'filename' => $filename];
 }
 
 /** @return array{ok:bool,message?:string,contenido?:string,filename?:string,pdf_path?:string} */
