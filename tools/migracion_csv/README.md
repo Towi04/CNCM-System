@@ -116,10 +116,17 @@ correo institucional).
 
 ### 05_pagos
 
-`numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`, `folio`.
-Todos los folios migrados usan el prefijo **`LEG-`**: si el legado tenía folio
-(`FOLIO-123`) queda `LEG-FOLIO-123`; si venía vacío, `LEG-abono-N` / `LEG-pago-N`.
-(Versiones antiguas usaban `MIG-` cuando faltaba folio; al reimportar se normalizan a `LEG-`.)
+`numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`,
+`cuenta_contable` (`A`/`B`), `folio`.
+
+El legado usa **dos secuencias** (cuenta A / cuenta B):
+- **A** = tarjeta, transferencia o efectivo con factura → suele vivir en `pagos.folio_fiscal`
+- **B** = efectivo sin factura → `pagos.folio`
+
+Folios migrados: **`LEG-A-{n}`** / **`LEG-B-{n}`** (si falta el número en ambas
+columnas, `LEG-{A|B}-abono-N`). Versiones antiguas usaban `MIG-` o `LEG-{n}` sin
+cuenta; **Unificar folios MIG→LEG** (o reimportar) los pasa a `LEG-A-`/`LEG-B-`
+según `forma_pago`.
 Colegiatura congelada se define después en HAY.
 
 **Recomendado:** plantel HAY activo + **sucursal legado en el desplegable** (aunque el

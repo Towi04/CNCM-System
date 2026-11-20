@@ -2637,7 +2637,8 @@ function migracion_csv_resolver_sucursal_legado(PDO $pdoHay, PDO $pdoLeg, int $i
 }
 
 /**
- * Renombra folios MIG-* → LEG-* en pagos del plantel (migración antigua).
+ * Normaliza folios migrados del plantel a LEG-A-* / LEG-B-* según forma_pago.
+ * Cubre: MIG-*, LEG-{n}, LEG-FOLIO-*, LEG-abono-*, LEG-pago-* (sin cuenta).
  *
  * @return int Filas actualizadas
  */
@@ -2646,20 +2647,136 @@ function migracion_csv_normalizar_folios_mig(PDO $pdo, int $idPlantel): int
     if ($idPlantel <= 0) {
         return 0;
     }
+    if (function_exists('pago_ensure_schema')) {
+        pago_ensure_schema($pdo);
+    }
+    // Ampliar folio: LEG-A- + secuencia legado puede superar VARCHAR(20).
+    try {
+        $pdo->exec('ALTER TABLE alumno_pagos MODIFY folio VARCHAR(40) NULL');
+    } catch (Throwable $e) {
+        // ignore
+    }
+
     try {
         $st = $pdo->prepare(
-            "UPDATE alumno_pagos
-             SET folio = CONCAT('LEG-', SUBSTRING(folio, 5))
+            "SELECT id_pago, folio, forma_pago, tipo, cuenta_contable
+             FROM alumno_pagos
              WHERE id_plantel = ?
-               AND folio LIKE 'MIG-%'
-               AND folio NOT LIKE 'LEG-%'"
+               AND folio IS NOT NULL
+               AND folio <> ''
+               AND folio NOT LIKE 'LEG-A-%'
+               AND folio NOT LIKE 'LEG-B-%'
+               AND (
+                    folio LIKE 'MIG-%'
+                    OR folio LIKE 'LEG-%'
+               )"
         );
         $st->execute([$idPlantel]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if ($rows === []) {
+            return 0;
+        }
+        $up = $pdo->prepare(
+            'UPDATE alumno_pagos SET folio = ?, cuenta_contable = COALESCE(NULLIF(cuenta_contable, \'\'), ?)
+             WHERE id_pago = ?'
+        );
+        $n = 0;
+        foreach ($rows as $r) {
+            $folio = trim((string) ($r['folio'] ?? ''));
+            if ($folio === '') {
+                continue;
+            }
+            $forma = (string) ($r['forma_pago'] ?? 'Efectivo');
+            $tipo = (string) ($r['tipo'] ?? 'abono');
+            $cuenta = strtoupper(trim((string) ($r['cuenta_contable'] ?? '')));
+            if ($cuenta !== 'A' && $cuenta !== 'B') {
+                if (function_exists('pago_resolver_cuenta_contable')) {
+                    $cuenta = pago_resolver_cuenta_contable($forma, false, $tipo);
+                } elseif (function_exists('migcsv_cuenta_contable_legado')) {
+                    $cuenta = migcsv_cuenta_contable_legado($forma, null, null, $tipo);
+                } else {
+                    $cuenta = 'B';
+                }
+            }
+            $resto = $folio;
+            if (strncasecmp($resto, 'MIG-', 4) === 0) {
+                $resto = substr($resto, 4);
+            } elseif (strncasecmp($resto, 'LEG-A-', 6) === 0 || strncasecmp($resto, 'LEG-B-', 6) === 0) {
+                continue;
+            } elseif (strncasecmp($resto, 'LEG-', 4) === 0) {
+                $resto = substr($resto, 4);
+            }
+            if (preg_match('/^FOLIO[-_]?(.+)$/i', $resto, $m)) {
+                $resto = trim($m[1]);
+            }
+            $resto = trim($resto);
+            if ($resto === '') {
+                continue;
+            }
+            $nuevo = 'LEG-' . $cuenta . '-' . $resto;
+            if ($nuevo === $folio) {
+                continue;
+            }
+            $up->execute([$nuevo, $cuenta, (int) $r['id_pago']]);
+            $n++;
+        }
 
-        return (int) $st->rowCount();
+        return $n;
     } catch (Throwable $e) {
         return 0;
     }
+}
+
+/**
+ * Normaliza un folio CSV/import a LEG-A-/LEG-B- y resuelve cuenta.
+ *
+ * @return array{folio:string, cuenta:string}
+ */
+function migracion_csv_folio_cuenta_import(
+    string $folioRaw,
+    string $formaPago,
+    string $tipo,
+    string $idLeg,
+    string $cuentaCsv = ''
+): array {
+    $cuenta = strtoupper(trim($cuentaCsv));
+    if ($cuenta !== 'A' && $cuenta !== 'B') {
+        if (function_exists('migcsv_cuenta_contable_legado')) {
+            $cuenta = migcsv_cuenta_contable_legado($formaPago, null, null, $tipo);
+        } elseif (function_exists('pago_resolver_cuenta_contable')) {
+            $cuenta = pago_resolver_cuenta_contable($formaPago, false, $tipo);
+        } else {
+            $cuenta = 'B';
+        }
+    }
+
+    $folio = trim($folioRaw);
+    if ($folio !== '' && (strncasecmp($folio, 'LEG-A-', 6) === 0 || strncasecmp($folio, 'LEG-B-', 6) === 0)) {
+        // Respetar cuenta del folio si ya viene tipada
+        $cuenta = strtoupper(substr($folio, 4, 1)) === 'A' ? 'A' : 'B';
+
+        return ['folio' => $folio, 'cuenta' => $cuenta];
+    }
+
+    if (function_exists('migcsv_folio_legado')) {
+        // Reutilizar builder: folio fiscal vacío aquí; el CSV ya trae el número correcto
+        $folio = migcsv_folio_legado($folio, $idLeg !== '' ? $idLeg : 'SIN', $cuenta, null);
+    } else {
+        if ($folio !== '' && strncasecmp($folio, 'MIG-', 4) === 0) {
+            $folio = substr($folio, 4);
+        } elseif ($folio !== '' && strncasecmp($folio, 'LEG-', 4) === 0) {
+            $folio = substr($folio, 4);
+        }
+        if ($folio !== '' && preg_match('/^FOLIO[-_]?(.+)$/i', $folio, $m)) {
+            $folio = trim($m[1]);
+        }
+        if ($folio === '' && $idLeg !== '') {
+            $folio = $idLeg;
+        }
+        $folio = $folio !== '' ? ('LEG-' . $cuenta . '-' . $folio) : ('LEG-' . $cuenta . '-SIN');
+    }
+
+    return ['folio' => $folio, 'cuenta' => $cuenta];
 }
 
 /**
@@ -2761,18 +2878,17 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
         } elseif (strlen($fecha) === 10) {
             $fecha .= ' 12:00:00';
         }
-        $folio = trim((string) ($r['folio'] ?? ''));
-        // Unificar prefijo LEG- (antes MIG- cuando el legado no traía folio).
-        if ($folio !== '' && strncasecmp($folio, 'MIG-', 4) === 0) {
-            $folio = 'LEG-' . substr($folio, 4);
-        }
-        if ($folio === '' && $idLeg !== '') {
-            $folio = 'LEG-' . $idLeg;
-        } elseif ($folio !== '' && strncasecmp($folio, 'LEG-', 4) !== 0) {
-            $folio = 'LEG-' . $folio;
-        }
         $forma = trim((string) ($r['forma_pago'] ?? 'Efectivo')) ?: 'Efectivo';
         $concepto = trim((string) ($r['concepto'] ?? 'Pago migración')) ?: 'Pago migración';
+        $fc = migracion_csv_folio_cuenta_import(
+            (string) ($r['folio'] ?? ''),
+            $forma,
+            $tipo,
+            $idLeg,
+            (string) ($r['cuenta_contable'] ?? '')
+        );
+        $folio = $fc['folio'];
+        $cuentaContable = $fc['cuenta'];
 
         $stAl = $pdo->prepare('SELECT id_plantel, id_especialidad FROM alumnos WHERE id_alumno = ?');
         $stAl->execute([$idAlumno]);
@@ -2791,8 +2907,8 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
             $pdo->prepare(
                 'INSERT INTO alumno_pagos (
                     id_alumno, id_plantel, id_especialidad, tipo, folio, monto, forma_pago,
-                    concepto, id_usuario, creado_en
-                 ) VALUES (?,?,?,?,?,?,?,?,?,?)'
+                    cuenta_contable, concepto, id_usuario, creado_en
+                 ) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
             )->execute([
                 $idAlumno,
                 $idPlantel ?: null,
@@ -2801,6 +2917,7 @@ function migracion_csv_importar_pagos(PDO $pdo, array $rows, ?int $forzarPlantel
                 $folio !== '' ? $folio : null,
                 $monto,
                 $forma,
+                $cuentaContable,
                 $concepto,
                 $idUsuarioPago,
                 $fecha,
@@ -3746,12 +3863,12 @@ function migracion_csv_ejemplo(PDO $pdo, string $tipo, ?string $slugPreferido = 
                 'filename' => 'ejemplo_05_pagos.csv',
                 'headers' => [
                     'id_pago_legado', 'numero_control', 'id_alumno_legado', 'id_recibio_legado',
-                    'fecha', 'monto', 'forma_pago', 'tipo', 'concepto', 'folio',
+                    'fecha', 'monto', 'forma_pago', 'tipo', 'concepto', 'cuenta_contable', 'folio',
                 ],
                 'rows' => [
-                    ['7001', '2501001', '9001', '101', '2025-01-15', '1200', 'efectivo', 'colegiatura', 'Enero', 'F-1001'],
-                    ['7002', '2501002', '9002', '101', '2025-01-16', '1200', 'transferencia', 'colegiatura', 'Enero', 'F-1002'],
-                    ['7003', '2501003', '9003', '102', '2025-01-18', '800', 'efectivo', 'inscripcion', 'Inscripción', 'F-1003'],
+                    ['7001', '2501001', '9001', '101', '2025-01-15', '1200', 'efectivo', 'colegiatura', 'Enero', 'B', 'LEG-B-1001'],
+                    ['7002', '2501002', '9002', '101', '2025-01-16', '1200', 'transferencia', 'colegiatura', 'Enero', 'A', 'LEG-A-1002'],
+                    ['7003', '2501003', '9003', '102', '2025-01-18', '800', 'efectivo', 'inscripcion', 'Inscripción', 'B', 'LEG-B-1003'],
                 ],
             ];
 

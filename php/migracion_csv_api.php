@@ -164,7 +164,7 @@ if ($action === 'export_legado') {
                     : migcsv_export_pagos($pdoLeg, $idsGrupos);
                 migcsv_csv_enviar('05_pagos.csv', [
                     'id_pago_legado', 'numero_control', 'id_alumno_legado', 'id_recibio_legado',
-                    'fecha', 'monto', 'forma_pago', 'tipo', 'concepto', 'folio',
+                    'fecha', 'monto', 'forma_pago', 'tipo', 'concepto', 'cuenta_contable', 'folio',
                 ], $rows);
             default:
                 header('Content-Type: text/plain; charset=utf-8');
@@ -530,8 +530,8 @@ try {
         echo json_encode([
             'status' => 'ok',
             'message' => $n > 0
-                ? "{$n} folio(s) MIG-* renombrado(s) a LEG-*"
-                : 'No había folios MIG-* por normalizar en este plantel',
+                ? "{$n} folio(s) renombrado(s) a LEG-A-* / LEG-B-* según forma de pago"
+                : 'No había folios migrados por normalizar en este plantel (ya están LEG-A/LEG-B)',
             'folios_normalizados' => $n,
         ], JSON_UNESCAPED_UNICODE);
         exit;

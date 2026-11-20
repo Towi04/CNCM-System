@@ -87,8 +87,8 @@ if (function_exists('plantel_list')) {
       <button type="button" class="primary" id="migcsv-import-pagos-legado" title="Lee pagos del legado e importa a HAY por numero_control, sin CSV de pagos" style="background:#0a7a32; border-color:#0a7a32;">
         <i class="fas fa-file-invoice-dollar"></i> Migrar pagos del legado
       </button>
-      <button type="button" class="secondary" id="migcsv-normalizar-folios" title="Renombra folios antiguos MIG-* a LEG-* en el plantel activo">
-        <i class="fas fa-exchange-alt"></i> Unificar folios MIG→LEG
+      <button type="button" class="secondary" id="migcsv-normalizar-folios" title="Renombra folios MIG-/LEG-* a LEG-A-* o LEG-B-* según forma de pago">
+        <i class="fas fa-exchange-alt"></i> Unificar folios → LEG-A / LEG-B
       </button>
     </div>
     <label for="migcsv-pagos-usar-mapa" style="display:inline-flex; align-items:center; gap:6px; margin-top:10px; color:#555; font-size:0.85rem;">
@@ -158,8 +158,10 @@ if (function_exists('plantel_list')) {
     <p style="margin:0 0 8px; color:#777;">
       <strong>Pagos:</strong> plantel HAY activo + sucursal legado en el desplegable + NCs
       (CSV o mapeados) → <em>Migrar pagos del legado</em>.
-      Folios migrados usan prefijo <code>LEG-</code> (antes, sin folio del legado, se usaba <code>MIG-</code>;
-      use <em>Unificar folios MIG→LEG</em> para corregir los ya importados).
+      Folios migrados: <code>LEG-A-{n}</code> (tarjeta/transfer/factura) y
+      <code>LEG-B-{n}</code> (efectivo). El legado tiene dos secuencias
+      (<code>folio</code> / <code>folio_fiscal</code>); use
+      <em>Unificar folios MIG→LEG</em> para corregir los ya importados.
       Si hay que rehacer: <code>php scripts/purge_pagos_migracion.php --plantel=slug --confirm="BORRAR PAGOS"</code>.
     </p>
     <p style="margin:0; color:#777;">

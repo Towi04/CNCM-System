@@ -814,7 +814,7 @@
   });
 
   $('migcsv-normalizar-folios')?.addEventListener('click', async () => {
-    if (!confirm('¿Renombrar folios MIG-* a LEG-* en los pagos del plantel activo?')) return;
+    if (!confirm('¿Renombrar folios migrados a LEG-A-* / LEG-B-* según forma de pago (tarjeta/transfer → A, efectivo → B)?')) return;
     const fd = new FormData();
     fd.append('action', 'normalizar_folios_mig');
     fd.append('id_plantel', String(idPlantel));
