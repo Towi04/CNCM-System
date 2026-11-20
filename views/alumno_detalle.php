@@ -935,7 +935,7 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
   <div class="catalog-modal__dialog" style="max-width:560px;">
     <h3>Inscribir a curso Moodle</h3>
     <p style="color:#666; font-size:0.9rem;">
-      Elija cualquier curso disponible en Moodle. No hace falta que el alumno esté inscrito en esa especialidad en HAY.
+      Elija el curso por su <strong>nombre en Moodle</strong>. No necesita saber el ID ni que el alumno esté en esa especialidad en HAY.
       Si no tiene cuenta Moodle, se creará automáticamente.
     </p>
     <?php
@@ -948,13 +948,13 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
         <option value="<?php echo (int)$e['id_especialidad']; ?>"><?php echo htmlspecialchars($e['nombre']); ?></option>
       <?php endforeach; ?>
     </select>
+    <label>Buscar curso</label>
+    <input type="search" id="moodle-alumno-curso-filtro" placeholder="Escriba parte del nombre…" style="width:100%; padding:8px; margin-bottom:8px;" autocomplete="off">
     <label>Curso Moodle</label>
-    <select id="moodle-alumno-curso" style="width:100%; padding:8px; margin-bottom:8px;">
+    <select id="moodle-alumno-curso" size="10" style="width:100%; padding:8px; margin-bottom:8px; min-height:220px;">
       <option value="">— Cargando cursos… —</option>
     </select>
-    <p id="moodle-alumno-cursos-hint" style="margin:0 0 10px; color:#666; font-size:0.85rem;"></p>
-    <label>O ID interno de curso (si no aparece en la lista)</label>
-    <input type="number" id="moodle-alumno-curso-manual" min="2" placeholder="Ej. 168" style="width:100%; padding:8px; margin-bottom:12px;">
+    <p id="moodle-alumno-cursos-hint" style="margin:0 0 12px; color:#666; font-size:0.85rem;"></p>
     <div class="catalog-modal__actions">
       <button type="button" id="moodle-alumno-cancel">Cancelar</button>
       <button type="button" class="primary" id="moodle-alumno-save">Inscribir</button>
@@ -1148,41 +1148,65 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
   document.getElementById('esp-nueva-id')?.addEventListener('change', filtrarGruposPorUbicacion);
 
   const moodleApi = 'php/moodle_inscripcion_api.php';
+  let moodleCursosCache = [];
+
+  function escTxt(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function pintarCursosMoodleAlumno(filtro) {
+    const sel = document.getElementById('moodle-alumno-curso');
+    if (!sel) return;
+    const q = String(filtro || '').trim().toLowerCase();
+    const list = !q
+      ? moodleCursosCache
+      : moodleCursosCache.filter((c) => {
+          const nom = String(c.label || c.fullname || c.shortname || '').toLowerCase();
+          return nom.includes(q);
+        });
+    if (!list.length) {
+      sel.innerHTML = '<option value="">— Sin coincidencias —</option>';
+      return;
+    }
+    sel.innerHTML = list.map((c) => {
+      const nombre = c.label || c.fullname || c.shortname || '';
+      const oculto = Number(c.visible) === 0 ? ' (oculto en Moodle)' : '';
+      return '<option value="' + c.id + '">' + escTxt(nombre + oculto) + '</option>';
+    }).join('');
+  }
+
   async function cargarCursosMoodleAlumno() {
     const sel = document.getElementById('moodle-alumno-curso');
     const hint = document.getElementById('moodle-alumno-cursos-hint');
-    const idEsp = document.getElementById('moodle-alumno-esp')?.value || '';
+    const filtro = document.getElementById('moodle-alumno-curso-filtro');
     if (!sel) return;
-    sel.innerHTML = '<option value="">— Cargando… —</option>';
-    if (hint) hint.textContent = '';
+    sel.innerHTML = '<option value="">— Cargando catálogo Moodle… —</option>';
+    if (hint) hint.textContent = 'Consultando Moodle…';
+    if (filtro) filtro.value = '';
+    moodleCursosCache = [];
     try {
-      // Catálogo completo de Moodle; especialidad solo anota fases (no filtra).
-      const url = moodleApi + '?action=cursos' + (idEsp && idEsp !== '0' ? '&id_especialidad=' + encodeURIComponent(idEsp) : '');
-      const { data } = await hayFetchJson(url);
+      // Catálogo completo de Moodle (nombres), sin mapas HAY.
+      const { data } = await hayFetchJson(moodleApi + '?action=cursos');
       const cursos = data.cursos || [];
+      moodleCursosCache = cursos;
       if (!cursos.length) {
         sel.innerHTML = '<option value="">— Sin cursos Moodle disponibles —</option>';
         if (hint) {
           hint.textContent = data.message
-            || (!data.moodle_enabled ? 'Moodle no configurado.' : 'El token no listó cursos. Use el ID interno abajo o revise config.');
+            || (!data.moodle_enabled ? 'Moodle no configurado.' : 'Moodle no devolvió cursos. Revise permisos del webservice.');
           hint.style.color = '#c62828';
         }
         return;
       }
-      sel.innerHTML = '<option value="">— Elija curso (' + cursos.length + ') —</option>' +
-        cursos.map((c) => {
-          const label = (c.fullname || c.shortname || ('Curso #' + c.id))
-            + ' · #' + c.id
-            + (c.fase ? ' · ' + c.fase : '')
-            + (c.visible === 0 ? ' (oculto)' : '');
-          return '<option value="' + c.id + '">' + label.replace(/</g, '&lt;') + '</option>';
-        }).join('');
+      pintarCursosMoodleAlumno('');
       if (hint) {
-        hint.textContent = data.message || (cursos.length + ' cursos disponibles en Moodle.');
+        hint.textContent = data.message || (cursos.length + ' cursos en Moodle. Elija por nombre.');
         hint.style.color = '#666';
       }
     } catch (e) {
-      sel.innerHTML = '<option value="">Error: ' + (e.message || 'Moodle') + '</option>';
+      sel.innerHTML = '<option value="">Error al cargar Moodle</option>';
       if (hint) {
         hint.textContent = e.message || 'Error al consultar Moodle';
         hint.style.color = '#c62828';
@@ -1192,8 +1216,6 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
 
   function abrirModalMoodleAlumno() {
     document.getElementById('modal-moodle-alumno')?.classList.add('is-open');
-    const manual = document.getElementById('moodle-alumno-curso-manual');
-    if (manual) manual.value = '';
     return cargarCursosMoodleAlumno();
   }
 
@@ -1203,15 +1225,15 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
   document.getElementById('btn-moodle-tab-inscribir')?.addEventListener('click', () => {
     abrirModalMoodleAlumno();
   });
-  document.getElementById('moodle-alumno-esp')?.addEventListener('change', cargarCursosMoodleAlumno);
+  document.getElementById('moodle-alumno-curso-filtro')?.addEventListener('input', (ev) => {
+    pintarCursosMoodleAlumno(ev.target.value);
+  });
   document.getElementById('moodle-alumno-cancel')?.addEventListener('click', () => {
     document.getElementById('modal-moodle-alumno')?.classList.remove('is-open');
   });
   document.getElementById('moodle-alumno-save')?.addEventListener('click', async () => {
-    const sel = document.getElementById('moodle-alumno-curso')?.value || '';
-    const manual = document.getElementById('moodle-alumno-curso-manual')?.value || '';
-    const courseId = parseInt(manual || sel, 10) || 0;
-    if (courseId <= 1) { alert('Seleccione un curso o indique el ID interno'); return; }
+    const courseId = parseInt(document.getElementById('moodle-alumno-curso')?.value || '', 10) || 0;
+    if (courseId <= 1) { alert('Seleccione un curso de la lista'); return; }
     const fd = new FormData();
     fd.append('action', 'inscribir_alumno');
     fd.append('id_alumno', idAlumno);

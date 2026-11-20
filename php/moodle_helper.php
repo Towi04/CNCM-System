@@ -48,7 +48,7 @@ function moodle_base_url(): string
 }
 
 /** @return array<string,mixed> */
-function moodle_api_call(string $functionName, array $params = []): array
+function moodle_api_call(string $functionName, array $params = [], int $timeoutSec = 20): array
 {
     if (!moodle_enabled()) {
         return ['ok' => false, 'message' => 'Moodle no configurado'];
@@ -59,6 +59,7 @@ function moodle_api_call(string $functionName, array $params = []): array
         . '&wsfunction=' . urlencode($functionName)
         . '&moodlewsrestformat=json';
 
+    $timeoutSec = max(8, min(90, $timeoutSec));
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $serverUrl);
     curl_setopt($ch, CURLOPT_POST, 1);
@@ -66,7 +67,7 @@ function moodle_api_call(string $functionName, array $params = []): array
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeoutSec);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
     if (defined('CURLOPT_POSTREDIR')) {
@@ -554,30 +555,127 @@ function moodle_es_invalidparameter(array $res): bool
     return $code === 'invalidparameter' || str_contains($msg, 'invalid parameter');
 }
 
-/** @return list<array<string,mixed>> */
-function moodle_courses_raw(): array
+/**
+ * Normaliza una lista cruda de cursos Moodle (omite site course id=1).
+ *
+ * @param mixed $data
+ * @return list<array<string,mixed>>
+ */
+function moodle_courses_normalize_list($data): array
 {
-    if (!moodle_enabled()) {
+    if (!is_array($data)) {
         return [];
     }
-    $res = moodle_api_call('core_course_get_courses', []);
-    if (empty($res['ok']) || !is_array($res['data'] ?? null)) {
-        return [];
+    // Algunas respuestas vienen como { courses: [...] }
+    if (isset($data['courses']) && is_array($data['courses'])) {
+        $data = $data['courses'];
     }
-
     $out = [];
-    foreach ($res['data'] as $c) {
-        if (!is_array($c) || (int) ($c['id'] ?? 0) <= 1) {
+    foreach ($data as $c) {
+        if (!is_array($c)) {
             continue;
         }
-        $out[] = $c;
+        $id = (int) ($c['id'] ?? 0);
+        if ($id <= 1) {
+            continue;
+        }
+        $out[$id] = $c;
     }
 
-    return $out;
+    return array_values($out);
 }
 
-/** @return list<array<string,mixed>> */
-function moodle_list_courses(): array
+/**
+ * Catálogo completo de cursos vía varias WS (el token a veces no responde a get_courses vacío).
+ *
+ * @return list<array<string,mixed>>
+ */
+function moodle_courses_raw(): array
+{
+    static $cache = null;
+    if (is_array($cache)) {
+        return $cache;
+    }
+    if (!moodle_enabled()) {
+        $cache = [];
+
+        return $cache;
+    }
+
+    $byId = [];
+
+    $merge = static function (array $rows) use (&$byId): void {
+        foreach ($rows as $c) {
+            $id = (int) ($c['id'] ?? 0);
+            if ($id > 1) {
+                $byId[$id] = $c;
+            }
+        }
+    };
+
+    // 1) Listado clásico
+    $res = moodle_api_call('core_course_get_courses', [], 45);
+    if (!empty($res['ok'])) {
+        $merge(moodle_courses_normalize_list($res['data'] ?? null));
+    }
+
+    // 2) Búsqueda amplia (Moodle 3.9+)
+    if (count($byId) < 2) {
+        $resSearch = moodle_api_call('core_course_search_courses', [
+            'criterianame' => 'search',
+            'criteriavalue' => '',
+            'page' => 0,
+            'perpage' => 0,
+        ], 45);
+        if (empty($resSearch['ok']) || moodle_courses_normalize_list($resSearch['data'] ?? null) === []) {
+            // Algunos sitios exigen un comodín / página grande
+            $resSearch = moodle_api_call('core_course_search_courses', [
+                'criterianame' => 'search',
+                'criteriavalue' => 'a',
+                'page' => 0,
+                'perpage' => 1000,
+            ], 45);
+        }
+        if (!empty($resSearch['ok'])) {
+            $merge(moodle_courses_normalize_list($resSearch['data'] ?? null));
+        }
+    }
+
+    // 3) Por categorías (cubre tokens sin permiso de listado global)
+    if (count($byId) < 2) {
+        $resCat = moodle_api_call('core_course_get_categories', [], 30);
+        $cats = [];
+        if (!empty($resCat['ok']) && is_array($resCat['data'] ?? null)) {
+            $cats = $resCat['data'];
+        }
+        foreach ($cats as $cat) {
+            if (!is_array($cat)) {
+                continue;
+            }
+            $catId = (int) ($cat['id'] ?? 0);
+            if ($catId <= 0) {
+                continue;
+            }
+            $resByCat = moodle_api_call('core_course_get_courses_by_field', [
+                'field' => 'category',
+                'value' => (string) $catId,
+            ], 30);
+            if (!empty($resByCat['ok'])) {
+                $merge(moodle_courses_normalize_list($resByCat['data'] ?? null));
+            }
+        }
+    }
+
+    $cache = array_values($byId);
+
+    return $cache;
+}
+
+/**
+ * @param bool $incluirFallbackConfig Si true y Moodle vacío, usa mapas de config.local.php (solo resolución interna).
+ * @return list<array<string,mixed>>
+ */
+function moodle_list_courses(bool $incluirFallbackConfig = true): array
 {
     $out = [];
     foreach (moodle_courses_raw() as $c) {
@@ -587,11 +685,13 @@ function moodle_list_courses(): array
             'fullname' => (string) ($c['fullname'] ?? ''),
             'idnumber' => (string) ($c['idnumber'] ?? ''),
             'visible' => (int) ($c['visible'] ?? 1),
+            'categoryid' => (int) ($c['categoryid'] ?? $c['category'] ?? 0),
+            'fuente' => 'moodle',
         ];
     }
 
-    // Si el token no lista cursos, ofrecer los mapeados en config.local.php.
-    if ($out === []) {
+    // Fallback solo para resolvers internos (ubicación, etc.), NO para el desplegable de recepción.
+    if ($out === [] && $incluirFallbackConfig) {
         $bySn = function_exists('moodle_course_map_by_shortname') ? moodle_course_map_by_shortname() : [];
         $seen = [];
         foreach ($bySn as $sn => $id) {
@@ -627,7 +727,12 @@ function moodle_list_courses(): array
         }
     }
 
-    usort($out, static fn($a, $b) => strcmp($a['shortname'], $b['shortname']));
+    usort($out, static function ($a, $b) {
+        $na = (string) ($a['fullname'] ?: $a['shortname']);
+        $nb = (string) ($b['fullname'] ?: $b['shortname']);
+
+        return strcasecmp($na, $nb);
+    });
 
     return $out;
 }

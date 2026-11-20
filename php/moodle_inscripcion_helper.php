@@ -42,57 +42,52 @@ function moodle_inscripcion_cursos_opciones_info(?int $idEspecialidad = null): a
         ];
     }
 
-    $items = moodle_list_courses();
+    // Catálogo real de Moodle (sin fallback a mapas HAY/config: recepción debe ver nombres Moodle).
+    $items = moodle_list_courses(false);
     $out = [];
-    $faseCursos = [];
-    if ($idEspecialidad !== null && $idEspecialidad > 0 && function_exists('fase_ensure_moodle_columns')) {
-        global $pdo;
-        if (isset($pdo) && $pdo instanceof PDO) {
-            fase_ensure_moodle_columns($pdo);
-            $st = $pdo->prepare(
-                'SELECT moodle_course_id, clave_fase, nombre_fase
-                 FROM especialidad_fases
-                 WHERE id_especialidad = ? AND activo = 1
-                   AND moodle_course_id IS NOT NULL AND moodle_course_id > 0
-                 ORDER BY orden ASC'
-            );
-            $st->execute([$idEspecialidad]);
-            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $f) {
-                $faseCursos[(int) $f['moodle_course_id']] = $f;
-            }
-        }
-    }
-
     foreach ($items as $c) {
         if (!is_array($c)) {
+            continue;
+        }
+        // Solo cursos que vienen de Moodle (no config HAY)
+        if (($c['fuente'] ?? 'moodle') === 'config') {
             continue;
         }
         $id = (int) ($c['id'] ?? 0);
         if ($id <= 1) {
             continue;
         }
-        // Incluir también cursos ocultos en Moodle: el staff puede activarlos a propósito.
-        $fase = $faseCursos[$id] ?? null;
+        // Preferir visibles; los ocultos al final con etiqueta
         $fullname = trim((string) ($c['fullname'] ?? ''));
         $short = trim((string) ($c['shortname'] ?? ''));
+        $nombre = $fullname !== '' ? $fullname : ($short !== '' ? $short : '');
+        if ($nombre === '') {
+            continue; // sin nombre usable para recepción
+        }
         $out[] = [
             'id' => $id,
             'shortname' => $short,
-            'fullname' => $fullname !== '' ? $fullname : ($short !== '' ? $short : ('Curso #' . $id)),
+            'fullname' => $nombre,
+            'label' => $nombre, // solo nombre para el desplegable
             'idnumber' => (string) ($c['idnumber'] ?? ''),
             'visible' => (int) ($c['visible'] ?? 1),
-            'fuente' => (string) ($c['fuente'] ?? 'moodle'),
-            'fase' => $fase ? (string) ($fase['clave_fase'] ?? $fase['nombre_fase'] ?? '') : '',
+            'fuente' => 'moodle',
         ];
     }
 
     usort($out, static function ($a, $b) {
+        $va = (int) ($a['visible'] ?? 1) === 1 ? 0 : 1;
+        $vb = (int) ($b['visible'] ?? 1) === 1 ? 0 : 1;
+        if ($va !== $vb) {
+            return $va <=> $vb;
+        }
+
         return strcasecmp((string) ($a['fullname'] ?? ''), (string) ($b['fullname'] ?? ''));
     });
 
     $msg = $out === []
-        ? 'Moodle no devolvió cursos para este token. Revise permisos del webservice o MOODLE_COURSE_BY_SHORTNAME en config.local.php.'
-        : '';
+        ? 'No se pudieron listar cursos desde Moodle. En Moodle → Servicios web, el token necesita: core_course_get_courses (o core_course_search_courses / core_course_get_categories).'
+        : count($out) . ' curso(s) disponibles en Moodle.';
 
     return [
         'cursos' => $out,
