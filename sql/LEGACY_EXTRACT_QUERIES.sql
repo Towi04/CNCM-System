@@ -173,7 +173,8 @@ ORDER BY a.id;
 --   monto       ← abonos.monto
 --   fecha_pago / creado_en ← pagos.fecha (o abonos.created_at)
 --   id_usuario  ← equivalencia users.id (pagos.id_recibio)
---   folio       ← 'LEG-' + pagos.folio
+--   folio       ← LEG-A-{folio_fiscal|folio} o LEG-B-{folio} según forma_pago / venta_fiscal
+--                 (A=tarjeta/transfer/factura, B=efectivo; ver migcsv_folio_legado)
 --   concepto    ← alumnos_pagos.concepto
 --   tipo        ← inscripcion | mensualidad | semanal | abono
 --   forma_pago  ← pagos.forma_pago (o 'Efectivo' si se normaliza)

@@ -42,7 +42,7 @@
   }
 
   function setBusy(busy, label) {
-    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-revertir-grupos', 'migcsv-template', 'migcsv-export-legado', 'migcsv-import-pagos-legado'].forEach((id) => {
+    ['migcsv-import', 'migcsv-preview', 'migcsv-provision', 'migcsv-revertir-grupos', 'migcsv-template', 'migcsv-export-legado', 'migcsv-import-pagos-legado', 'migcsv-normalizar-folios'].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = !!busy;
     });
@@ -811,6 +811,23 @@
 
   $('migcsv-import-pagos-legado')?.addEventListener('click', () => {
     importPagosLegadoLotes();
+  });
+
+  $('migcsv-normalizar-folios')?.addEventListener('click', async () => {
+    if (!confirm('¿Renombrar folios migrados a LEG-A-* / LEG-B-* según forma de pago (tarjeta/transfer → A, efectivo → B)?')) return;
+    const fd = new FormData();
+    fd.append('action', 'normalizar_folios_mig');
+    fd.append('id_plantel', String(idPlantel));
+    setBusy(true, 'Unificando folios…');
+    try {
+      const r = await fetch(api, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
+      const data = await r.json();
+      showMsg(data.message || '', data.status === 'ok');
+    } catch (e) {
+      showMsg('Error de red al normalizar folios', false);
+    } finally {
+      setBusy(false);
+    }
   });
 
   $('migcsv-provision')?.addEventListener('click', async () => {

@@ -139,6 +139,15 @@ $grupoSel = (int) ($_GET['grupo'] ?? 0);
                 · <?php echo substr($s['hora_inicio'], 0, 5); ?>–<?php echo substr($s['hora_fin'], 0, 5); ?>
               <?php endif; ?>
             </div>
+            <button type="button"
+              class="btn-lista-asistencia-pdf"
+              style="margin-top:8px; font-size:0.85rem;"
+              title="Imprimir lista de asistencia"
+              data-id="<?php echo (int)$s['id_grupo']; ?>"
+              data-clave="<?php echo htmlspecialchars((string)$s['clave'], ENT_QUOTES, 'UTF-8'); ?>"
+              onclick="event.stopPropagation();">
+              <i class="fas fa-print"></i> Imprimir lista
+            </button>
           </div>
           <div class="asist-contador">
             <div class="asist-contador__item">
@@ -227,6 +236,31 @@ $grupoSel = (int) ($_GET['grupo'] ?? 0);
     };
     card.addEventListener('click', open);
     card.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(); });
+  });
+
+  document.querySelectorAll('.btn-lista-asistencia-pdf').forEach((btn) => {
+    btn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const idGrupo = btn.dataset.id;
+      if (!idGrupo) return;
+      const clave = btn.dataset.clave || 'grupo';
+      const incluirTelefonos = window.confirm('¿Incluir números de teléfono de los alumnos en la lista de asistencia?');
+      const semanaActual = <?php echo (int) date('W'); ?>;
+      const respuesta = window.prompt('¿A partir de qué número de semana debe iniciar la lista?', String(semanaActual));
+      if (respuesta === null) return;
+      const semana = parseInt(respuesta, 10);
+      if (!Number.isInteger(semana) || semana < 1 || semana > 53) {
+        alert('Indique una semana válida entre 1 y 53.');
+        return;
+      }
+      const url = new URL('<?php echo htmlspecialchars(hay_asset_url('php/asistencia_lista_pdf.php'), ENT_QUOTES, 'UTF-8'); ?>', window.location.href);
+      url.searchParams.set('id_grupo', idGrupo);
+      url.searchParams.set('semana_inicio', String(semana));
+      url.searchParams.set('telefonos', incluirTelefonos ? '1' : '0');
+      url.searchParams.set('filename', 'lista_' + clave);
+      window.open(url.toString(), '_blank', 'noopener');
+    });
   });
 
   <?php if ($grupoSel > 0): ?>

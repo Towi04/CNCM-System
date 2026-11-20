@@ -92,7 +92,9 @@ El id interno de BD (`id_grupo_legado`) es opcional; el enlace operativo es la *
 ### 04_alumnos
 
 `numero_control`, nombres, `clave_legado` del grupo ya importado,
-`fecha_inicio`, `id_asesor_legado` / `asesor_nombre`.
+`fecha_inicio`, `id_asesor_legado` / `asesor_nombre`,
+contacto: `telefono`, `telefono2` (celular legado), `domicilio`, `colonia`,
+`municipio`, `codigo_postal`.
 
 **No se crean al importar grupos.** Pegue las **mismas claves** con las que importó
 `03_grupos`, descargue `04_alumnos.csv` (Portal → Descargar del legado), revise Vista previa
@@ -114,7 +116,18 @@ correo institucional).
 
 ### 05_pagos
 
-`numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`, `folio`. Colegiatura congelada se define después en HAY.
+`numero_control`, `fecha`, `monto`, `forma_pago`, `tipo`, `concepto`,
+`cuenta_contable` (`A`/`B`), `folio`.
+
+El legado usa **dos secuencias** (cuenta A / cuenta B):
+- **A** = tarjeta, transferencia o efectivo con factura → suele vivir en `pagos.folio_fiscal`
+- **B** = efectivo sin factura → `pagos.folio`
+
+Folios migrados: **`LEG-A-{n}`** / **`LEG-B-{n}`** (si falta el número en ambas
+columnas, `LEG-{A|B}-abono-N`). Versiones antiguas usaban `MIG-` o `LEG-{n}` sin
+cuenta; **Unificar folios MIG→LEG** (o reimportar) los pasa a `LEG-A-`/`LEG-B-`
+según `forma_pago`.
+Colegiatura congelada se define después en HAY.
 
 **Recomendado:** plantel HAY activo + **sucursal legado en el desplegable** (aunque el
 nombre no coincida) + `numero_control` (CSV / mapeados) → **Migrar pagos del legado**.

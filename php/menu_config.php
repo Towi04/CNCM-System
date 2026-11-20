@@ -764,6 +764,8 @@ function menu_cncm_secciones_compactas(): array
 
                 ['cap' => 'menu_credenciales', 'seccion' => 'alumnos', 'icon' => 'fa-id-card', 'text' => 'Credenciales', 'title' => 'Generar credenciales de alumnos', 'breadcrumb' => 'CREDENCIALES'],
 
+                ['cap' => 'menu_grupos', 'seccion' => 'grupos', 'icon' => 'fa-users', 'text' => 'Grupos', 'title' => 'Ver grupos e imprimir listas', 'breadcrumb' => 'GRUPOS'],
+
                 ['callback' => 'operativo_piso_puede_ver', 'seccion' => 'piso_operativo', 'icon' => 'fa-concierge-bell', 'text' => 'Piso operativo', 'title' => 'Entrega documentos y cobranza', 'breadcrumb' => 'PISO OPERATIVO'],
 
                 ['cap' => 'menu_consulta_adeudo', 'seccion' => 'consulta_adeudo', 'icon' => 'fa-calculator', 'text' => 'Consulta de adeudo', 'title' => 'Consulta de adeudo', 'breadcrumb' => 'CONSULTA ADEUDO'],
@@ -980,6 +982,8 @@ function menu_cncm_secciones_por_rol(): array
             'rol' => true,
 
             'items' => [
+
+                ['seccion' => 'grupos', 'icon' => 'fa-users', 'text' => 'Grupos', 'title' => 'Ver grupos e imprimir listas', 'breadcrumb' => 'GRUPOS'],
 
                 ['callback' => 'operativo_piso_puede_ver', 'seccion' => 'piso_operativo', 'icon' => 'fa-concierge-bell', 'text' => 'Piso operativo', 'title' => 'Entrega documentos y cobranza', 'breadcrumb' => 'PISO OPERATIVO'],
 

@@ -46,6 +46,110 @@ function migcsv_table_exists(PDO $pdo, string $table): bool
     return (bool) $st->fetchColumn();
 }
 
+/**
+ * Cuenta contable legado → HAY: A = tarjeta/transfer/factura; B = efectivo sin factura.
+ *
+ * @param mixed $ventaFiscal  abonos.venta_fiscal (0/1/null)
+ * @param mixed $folioFiscal  pagos.folio_fiscal
+ */
+function migcsv_cuenta_contable_legado(
+    string $formaPago,
+    $ventaFiscal = null,
+    $folioFiscal = null,
+    string $tipo = 'abono'
+): string {
+    if (strtolower($tipo) === 'producto') {
+        return 'B';
+    }
+    if ($ventaFiscal !== null && $ventaFiscal !== '' && (int) $ventaFiscal === 1) {
+        return 'A';
+    }
+    if ($folioFiscal !== null && trim((string) $folioFiscal) !== '' && (int) $folioFiscal > 0) {
+        // Folio fiscal presente ⇒ ticket de cuenta A (secuencia distinta).
+        return 'A';
+    }
+    $f = mb_strtolower(trim($formaPago), 'UTF-8');
+    if (
+        str_contains($f, 'tarjeta')
+        || str_contains($f, 'transfer')
+        || str_contains($f, 'débito')
+        || str_contains($f, 'debito')
+        || str_contains($f, 'crédito')
+        || str_contains($f, 'credito')
+        || str_contains($f, 'factura')
+    ) {
+        return 'A';
+    }
+
+    return 'B';
+}
+
+/**
+ * Elige el número de folio de la secuencia correcta:
+ * - Cuenta A → preferir folio_fiscal (si existe), si no folio
+ * - Cuenta B → preferir folio, si no folio_fiscal
+ */
+function migcsv_numero_folio_cuenta(string $cuenta, $folio, $folioFiscal): string
+{
+    $folio = trim((string) ($folio ?? ''));
+    $folioFiscal = trim((string) ($folioFiscal ?? ''));
+    // Quitar etiqueta visual "FOLIO-" si viniera embebida
+    foreach ([&$folio, &$folioFiscal] as &$v) {
+        if ($v !== '' && preg_match('/^FOLIO[-_]?(.+)$/i', $v, $m)) {
+            $v = trim($m[1]);
+        }
+    }
+    unset($v);
+
+    $cuenta = strtoupper($cuenta) === 'A' ? 'A' : 'B';
+    if ($cuenta === 'A') {
+        if ($folioFiscal !== '' && $folioFiscal !== '0') {
+            return $folioFiscal;
+        }
+        if ($folio !== '' && $folio !== '0') {
+            return $folio;
+        }
+    } else {
+        if ($folio !== '' && $folio !== '0') {
+            return $folio;
+        }
+        if ($folioFiscal !== '' && $folioFiscal !== '0') {
+            return $folioFiscal;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Folio migrado: LEG-A-{n} / LEG-B-{n} según cuenta y secuencia legado.
+ * Si falta el número en ambas secuencias, usa LEG-{cuenta}-{id_pago_legado}.
+ */
+function migcsv_folio_legado(
+    string $folioLegado,
+    string $idPagoLegado,
+    string $cuenta = 'B',
+    $folioFiscal = null
+): string {
+    $cuenta = strtoupper(trim($cuenta)) === 'A' ? 'A' : 'B';
+    $num = migcsv_numero_folio_cuenta($cuenta, $folioLegado, $folioFiscal);
+    if ($num !== '') {
+        // Evitar doble prefijo si ya viene LEG-A-/LEG-B-
+        $up = strtoupper($num);
+        if (str_starts_with($up, 'LEG-A-') || str_starts_with($up, 'LEG-B-')) {
+            return $num;
+        }
+        if (str_starts_with($up, 'LEG-')) {
+            $num = substr($num, 4);
+        }
+
+        return 'LEG-' . $cuenta . '-' . $num;
+    }
+    $idPagoLegado = trim($idPagoLegado);
+
+    return $idPagoLegado !== '' ? ('LEG-' . $cuenta . '-' . $idPagoLegado) : ('LEG-' . $cuenta . '-SIN');
+}
+
 function migcsv_column_exists(PDO $pdo, string $table, string $column): bool
 {
     $st = $pdo->prepare(
@@ -753,6 +857,10 @@ function migcsv_export_alumnos(PDO $pdo, array $idsGrupos): array
             }
             $claveGrupo = $claveCache[$gid];
         }
+        $tel = trim((string) ($r['telefono'] ?? ''));
+        $cel = trim((string) ($r['celular'] ?? ''));
+        $telPrimario = $tel !== '' ? $tel : $cel;
+        $telSecundario = ($tel !== '' && $cel !== '') ? $cel : '';
         $out[] = [
             'id_alumno_legado' => $idAl,
             'numero_control' => $nc > 0 ? (string) $nc : '',
@@ -760,7 +868,12 @@ function migcsv_export_alumnos(PDO $pdo, array $idsGrupos): array
             'apellido_paterno' => trim((string) ($r['apellido_paterno'] ?? '')),
             'apellido_materno' => trim((string) ($r['apellido_materno'] ?? '')),
             'email' => trim((string) ($r['email'] ?? '')),
-            'telefono' => trim((string) (($r['telefono'] ?? '') ?: ($r['celular'] ?? ''))),
+            'telefono' => $telPrimario,
+            'telefono2' => $telSecundario,
+            'domicilio' => trim((string) ($r['domicilio'] ?? '')),
+            'colonia' => trim((string) ($r['colonia'] ?? '')),
+            'municipio' => trim((string) ($r['municipio'] ?? '')),
+            'codigo_postal' => trim((string) ($r['codigo_postal'] ?? '')),
             'id_sucursal_legado' => (int) ($r['id_sucursal'] ?? 0),
             'plantel_slug' => migcsv_slug_sucursal((string) ($r['sucursal_nombre'] ?? '')),
             'id_grupo_legado' => $gid,
@@ -920,13 +1033,19 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     $hasRecibio = migcsv_column_exists($pdo, 'pagos', 'id_recibio');
     $colRecibio = $hasRecibio ? ', p.id_recibio' : '';
 
+    $hasFolioFiscal = migcsv_column_exists($pdo, 'pagos', 'folio_fiscal');
+    $colFolioFiscal = $hasFolioFiscal ? ', p.folio_fiscal' : '';
+    $hasVentaFiscal = migcsv_table_exists($pdo, 'abonos')
+        && migcsv_column_exists($pdo, 'abonos', 'venta_fiscal');
+    $colVentaFiscal = $hasVentaFiscal ? ', a.venta_fiscal' : '';
+
     if (migcsv_table_exists($pdo, 'abonos')) {
         $abDel = migcsv_column_exists($pdo, 'abonos', 'deleted_at') ? ' AND a.deleted_at IS NULL' : '';
         $st = $pdo->prepare(
             "SELECT a.id AS id_abono, a.monto AS monto_abono, a.created_at AS abono_en,
                     p.id AS id_pago, p.folio, p.fecha, p.forma_pago, p.id_alumno, p.monto AS monto_pago,
                     ap.concepto, ap.tipo AS tipo_cargo
-                    $colRecibio
+                    $colFolioFiscal $colVentaFiscal $colRecibio
              FROM abonos a
              INNER JOIN pagos p ON p.id = a.id_pago
              LEFT JOIN alumnos_pagos ap ON ap.id = a.id_alumno_pago
@@ -938,17 +1057,31 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
             $idAl = (int) $r['id_alumno'];
             $concepto = (string) ($r['concepto'] ?? '');
             $tipo = migcsv_tipo_pago_desde_concepto($concepto, (string) ($r['tipo_cargo'] ?? ''));
+            $forma = (string) ($r['forma_pago'] ?? 'Efectivo');
+            $idAbonoLeg = 'abono-' . (int) $r['id_abono'];
+            $cuenta = migcsv_cuenta_contable_legado(
+                $forma,
+                $r['venta_fiscal'] ?? null,
+                $r['folio_fiscal'] ?? null,
+                $tipo
+            );
             $out[] = [
-                'id_pago_legado' => 'abono-' . (int) $r['id_abono'],
+                'id_pago_legado' => $idAbonoLeg,
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
                 'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
                 'fecha' => !empty($r['fecha']) ? substr((string) $r['fecha'], 0, 19) : (string) ($r['abono_en'] ?? ''),
                 'monto' => $r['monto_abono'] ?? $r['monto_pago'] ?? '',
-                'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
+                'forma_pago' => $forma,
                 'tipo' => $tipo,
                 'concepto' => $concepto !== '' ? $concepto : 'Pago legado',
-                'folio' => $r['folio'] !== null && $r['folio'] !== '' ? ('LEG-' . $r['folio']) : '',
+                'cuenta_contable' => $cuenta,
+                'folio' => migcsv_folio_legado(
+                    (string) ($r['folio'] ?? ''),
+                    $idAbonoLeg,
+                    $cuenta,
+                    $r['folio_fiscal'] ?? null
+                ),
             ];
         }
     }
@@ -957,7 +1090,7 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
     if (migcsv_table_exists($pdo, 'abonos')) {
         $st = $pdo->prepare(
             "SELECT p.id, p.folio, p.fecha, p.monto, p.forma_pago, p.id_alumno
-                    $colRecibio
+                    $colFolioFiscal $colRecibio
              FROM pagos p
              WHERE p.id_alumno IN ($phA) $pgDel
                AND NOT EXISTS (
@@ -969,23 +1102,32 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
         $st->execute($idsAlumnos);
         foreach ($st->fetchAll() as $r) {
             $idAl = (int) $r['id_alumno'];
+            $idPagoLeg = 'pago-' . (int) $r['id'];
+            $forma = (string) ($r['forma_pago'] ?? 'Efectivo');
+            $cuenta = migcsv_cuenta_contable_legado($forma, null, $r['folio_fiscal'] ?? null, 'abono');
             $out[] = [
-                'id_pago_legado' => 'pago-' . (int) $r['id'],
+                'id_pago_legado' => $idPagoLeg,
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
                 'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
                 'fecha' => !empty($r['fecha']) ? substr((string) $r['fecha'], 0, 19) : '',
                 'monto' => $r['monto'] ?? '',
-                'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
+                'forma_pago' => $forma,
                 'tipo' => 'abono',
                 'concepto' => 'Pago legado',
-                'folio' => $r['folio'] !== null && $r['folio'] !== '' ? ('LEG-' . $r['folio']) : '',
+                'cuenta_contable' => $cuenta,
+                'folio' => migcsv_folio_legado(
+                    (string) ($r['folio'] ?? ''),
+                    $idPagoLeg,
+                    $cuenta,
+                    $r['folio_fiscal'] ?? null
+                ),
             ];
         }
     } else {
         $st = $pdo->prepare(
             "SELECT p.id, p.folio, p.fecha, p.monto, p.forma_pago, p.id_alumno
-                    $colRecibio
+                    $colFolioFiscal $colRecibio
              FROM pagos p
              WHERE p.id_alumno IN ($phA) $pgDel
              ORDER BY p.id"
@@ -993,17 +1135,26 @@ function migcsv_export_pagos_por_alumnos(PDO $pdo, array $idsAlumnos): array
         $st->execute($idsAlumnos);
         foreach ($st->fetchAll() as $r) {
             $idAl = (int) $r['id_alumno'];
+            $idPagoLeg = 'pago-' . (int) $r['id'];
+            $forma = (string) ($r['forma_pago'] ?? 'Efectivo');
+            $cuenta = migcsv_cuenta_contable_legado($forma, null, $r['folio_fiscal'] ?? null, 'abono');
             $out[] = [
-                'id_pago_legado' => 'pago-' . (int) $r['id'],
+                'id_pago_legado' => $idPagoLeg,
                 'numero_control' => $ncMap[$idAl] ?? '',
                 'id_alumno_legado' => $idAl,
                 'id_recibio_legado' => $hasRecibio ? (string) ((int) ($r['id_recibio'] ?? 0) ?: '') : '',
                 'fecha' => !empty($r['fecha']) ? substr((string) $r['fecha'], 0, 19) : '',
                 'monto' => $r['monto'] ?? '',
-                'forma_pago' => (string) ($r['forma_pago'] ?? 'Efectivo'),
+                'forma_pago' => $forma,
                 'tipo' => 'abono',
                 'concepto' => 'Pago legado',
-                'folio' => $r['folio'] !== null && $r['folio'] !== '' ? ('LEG-' . $r['folio']) : '',
+                'cuenta_contable' => $cuenta,
+                'folio' => migcsv_folio_legado(
+                    (string) ($r['folio'] ?? ''),
+                    $idPagoLeg,
+                    $cuenta,
+                    $r['folio_fiscal'] ?? null
+                ),
             ];
         }
     }
