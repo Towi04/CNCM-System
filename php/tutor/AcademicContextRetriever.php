@@ -53,33 +53,21 @@ final class AcademicContextRetriever
     /** @return list<string> */
 
     public function tokenizar(string $texto): array
-
     {
-
         $texto = mb_strtolower($texto);
-
-        $texto = preg_replace('/[^\p{L}\p{N}\s-]/u', ' ', $texto) ?? $texto;
-
+        // Conservar + y - para códigos CEFR (A1+, A1-1, A1+1).
+        $texto = preg_replace('/[^\p{L}\p{N}\s+\-]/u', ' ', $texto) ?? $texto;
         $parts = preg_split('/\s+/u', trim($texto), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-
         $tokens = [];
-
         foreach ($parts as $p) {
-
-            if (mb_strlen($p) < 3 || in_array($p, self::STOP_WORDS, true)) {
-
+            $esCefr = (bool) preg_match('/^[abc][12]\+?(?:-?\d)?$/u', $p);
+            if (!$esCefr && (mb_strlen($p) < 3 || in_array($p, self::STOP_WORDS, true))) {
                 continue;
-
             }
-
             $tokens[] = $p;
-
         }
 
-
-
         return array_values(array_unique($tokens));
-
     }
 
 
@@ -101,111 +89,119 @@ final class AcademicContextRetriever
 
 
         $numSemana = $this->extraerNumeroSemana($pregunta);
-
-        $idFaseRef = $this->extraerIdFase($pregunta, $espIds, $ctxUsuario);
-
+        $refFase = $this->resolverFasePregunta($pregunta, $espIds, $ctxUsuario);
+        $idFaseRef = $refFase['id_fase'];
+        $idsFaseNivel = $refFase['ids_nivel'];
+        $nivelExplicito = $refFase['explicita'];
         $intencionTemario = $this->intencionTemario($pregunta);
 
-
-
         $especialidades = [];
-
         $fases = [];
-
         $semanas = [];
 
-
-
         if ($numSemana !== null) {
-
-            $semanas = $this->obtenerSemanasPorNumero($espIds, $numSemana, $idFaseRef, $ctxUsuario, $limite);
-
+            $semanas = $this->obtenerSemanasPorNumero(
+                $espIds,
+                $numSemana,
+                $idFaseRef,
+                $ctxUsuario,
+                $limite,
+                $idsFaseNivel
+            );
         }
-
-
 
         if ($idFaseRef !== null) {
-
             $fase = $this->obtenerFasePorId($idFaseRef);
-
             if ($fase) {
-
                 $fases[] = $fase;
-
             }
-
+        } elseif ($idsFaseNivel !== []) {
+            foreach (array_slice($idsFaseNivel, 0, 4) as $idFn) {
+                $fase = $this->obtenerFasePorId((int) $idFn);
+                if ($fase) {
+                    $fases[] = $fase;
+                }
+            }
         }
 
-
-
-        if ($ctxUsuario !== null && $intencionTemario && empty($fases)) {
-
+        // Solo usar la fase actual del alumno si NO mencionó otro nivel (A1, A1+, …).
+        if ($ctxUsuario !== null && $intencionTemario && empty($fases) && !$nivelExplicito) {
             $idFaseAlumno = (int) ($ctxUsuario['id_fase'] ?? 0);
-
             if ($idFaseAlumno > 0) {
-
                 $faseAlumno = $this->obtenerFasePorId($idFaseAlumno);
-
                 if ($faseAlumno) {
-
                     $fases[] = $faseAlumno;
-
                 }
-
                 if ($numSemana !== null && $semanas === []) {
-
-                    $semanas = $this->obtenerSemanasPorNumero($espIds, $numSemana, $idFaseAlumno, $ctxUsuario, $limite);
-
+                    $semanas = $this->obtenerSemanasPorNumero(
+                        $espIds,
+                        $numSemana,
+                        $idFaseAlumno,
+                        $ctxUsuario,
+                        $limite
+                    );
                 }
-
             }
-
         }
-
-
 
         $tokens = $this->tokenizar($pregunta);
-
         if ($tokens === [] && $intencionTemario) {
-
             $tokens = ['temario'];
-
         }
-
-
 
         if ($tokens !== []) {
-
             $especialidades = $this->buscarEspecialidades($tokens, $espIds, 4);
-
-            $fases = $this->fusionarFilas($fases, $this->buscarFases($tokens, $espIds, min(5, $limite)));
-
+            $fases = $this->fusionarFilas($fases, $this->buscarFases($tokens, $espIds, min(8, $limite)));
             $semanas = $this->fusionarFilas($semanas, $this->buscarSemanas($tokens, $espIds, $limite));
-
         }
 
-
+        // Evitar que LIKE '%a1%' mezcle A1 con A1+ cuando el usuario nombró el nivel.
+        if ($nivelExplicito && !empty($refFase['nivel'])) {
+            $fases = $this->filtrarFilasPorNivelCefr($fases, (string) $refFase['nivel']);
+            $semanas = $this->filtrarFilasPorNivelCefr($semanas, (string) $refFase['nivel']);
+        }
 
         if ($intencionTemario && $semanas === [] && $numSemana !== null) {
-            $primeraFase = $this->listarFasesResumen($espIds, $ctxUsuario, 1);
-            if ($primeraFase !== []) {
-                $fases = $this->fusionarFilas($fases, $primeraFase);
+            if ($idsFaseNivel !== []) {
                 $semanas = $this->obtenerSemanasPorNumero(
                     $espIds,
                     $numSemana,
-                    (int) ($primeraFase[0]['id_fase'] ?? 0),
+                    null,
                     $ctxUsuario,
-                    $limite
+                    $limite,
+                    $idsFaseNivel
                 );
+                foreach (array_slice($idsFaseNivel, 0, 4) as $idFn) {
+                    $fase = $this->obtenerFasePorId((int) $idFn);
+                    if ($fase) {
+                        $fases = $this->fusionarFilas($fases, [$fase]);
+                    }
+                }
+            } elseif (!$nivelExplicito) {
+                $primeraFase = $this->listarFasesResumen($espIds, $ctxUsuario, 1);
+                if ($primeraFase !== []) {
+                    $fases = $this->fusionarFilas($fases, $primeraFase);
+                    $semanas = $this->obtenerSemanasPorNumero(
+                        $espIds,
+                        $numSemana,
+                        (int) ($primeraFase[0]['id_fase'] ?? 0),
+                        $ctxUsuario,
+                        $limite
+                    );
+                }
             }
         }
 
         if ($intencionTemario && $semanas === [] && $numSemana === null) {
-
             $numSemana = 1;
-
-            $semanas = $this->obtenerSemanasPorNumero($espIds, 1, $idFaseRef, $ctxUsuario, $limite);
-
+            $semanas = $this->obtenerSemanasPorNumero(
+                $espIds,
+                1,
+                $idFaseRef,
+                $ctxUsuario,
+                $limite,
+                $idsFaseNivel
+            );
         }
 
 
@@ -504,48 +500,218 @@ final class AcademicContextRetriever
 
      */
 
-    private function extraerIdFase(string $pregunta, array $espIds, ?array $ctxUsuario): ?int
 
+    /**
+     * Resuelve a qué parcial(es) apunta la pregunta.
+     * Prioridad: clave exacta (A1-1 / A1+1) → nivel CEFR (A1 / A1+) → F12 / parcial N
+     * → fase del alumno (solo si no hubo mención explícita de nivel).
+     *
+     * @param list<int> $espIds
+     * @param array<string, mixed>|null $ctxUsuario
+     * @return array{id_fase:?int, ids_nivel:list<int>, nivel:?string, explicita:bool}
+     */
+    private function resolverFasePregunta(string $pregunta, array $espIds, ?array $ctxUsuario): array
     {
+        $out = ['id_fase' => null, 'ids_nivel' => [], 'nivel' => null, 'explicita' => false];
 
-        $t = mb_strtoupper($pregunta);
-
-        if (preg_match('/\bF\s*(\d{1,2})\b/', $t, $m)) {
-
-            $id = $this->idFasePorClave($espIds, 'F' . $m[1]);
-
+        $clave = $this->extraerClaveFaseCefr($pregunta);
+        if ($clave !== null) {
+            $id = $this->idFasePorClaveFlexible($espIds, $clave);
             if ($id > 0) {
+                $out['id_fase'] = $id;
+                $out['explicita'] = true;
+                $out['nivel'] = $this->nivelDesdeClaveFase($clave);
 
-                return $id;
-
+                return $out;
             }
-
         }
 
-        if (preg_match('/\b(?:parcial|fase)\s+(\d{1,2})\b/ui', $pregunta, $m)) {
-
-            $id = $this->idFasePorOrden($espIds, (int) $m[1]);
-
-            if ($id > 0) {
-
-                return $id;
-
+        $nivel = $this->extraerNivelCefr($pregunta);
+        if ($nivel !== null) {
+            $ids = $this->idFasesPorNivelCefr($espIds, $nivel);
+            $out['nivel'] = $nivel;
+            $out['ids_nivel'] = $ids;
+            $out['explicita'] = true;
+            if ($ids !== []) {
+                $out['id_fase'] = (int) $ids[0];
             }
 
+            return $out;
+        }
+
+        $t = mb_strtoupper($pregunta);
+        if (preg_match('/\bF\s*(\d{1,2})\b/', $t, $m)) {
+            $id = $this->idFasePorClave($espIds, 'F' . $m[1]);
+            if ($id > 0) {
+                $out['id_fase'] = $id;
+                $out['explicita'] = true;
+
+                return $out;
+            }
+        }
+        if (preg_match('/\b(?:parcial|fase)\s+(\d{1,2})\b/ui', $pregunta, $m)) {
+            $id = $this->idFasePorOrden($espIds, (int) $m[1]);
+            if ($id > 0) {
+                $out['id_fase'] = $id;
+                $out['explicita'] = true;
+
+                return $out;
+            }
         }
 
         if ($ctxUsuario !== null && !empty($ctxUsuario['id_fase'])) {
-
-            return (int) $ctxUsuario['id_fase'];
-
+            $out['id_fase'] = (int) $ctxUsuario['id_fase'];
         }
 
-
-
-        return null;
-
+        return $out;
     }
 
+
+    /**
+     * @param list<array<string,mixed>> $filas
+     * @return list<array<string,mixed>>
+     */
+    private function filtrarFilasPorNivelCefr(array $filas, string $nivel): array
+    {
+        $nivel = strtoupper(trim($nivel));
+        if ($nivel === '' || $filas === []) {
+            return $filas;
+        }
+        $out = [];
+        foreach ($filas as $f) {
+            $nc = strtoupper(trim((string) ($f['nivel_cefr'] ?? '')));
+            $clave = strtoupper(trim((string) ($f['clave_fase'] ?? '')));
+            $ok = false;
+            if ($nc !== '') {
+                $ok = $nc === $nivel;
+            } elseif (str_ends_with($nivel, '+')) {
+                $ok = str_starts_with($clave, $nivel) || str_starts_with($clave, substr($nivel, 0, -1) . '+-');
+            } else {
+                $ok = (str_starts_with($clave, $nivel . '-') || $clave === $nivel)
+                    && !str_starts_with($clave, $nivel . '+');
+            }
+            if ($ok) {
+                $out[] = $f;
+            }
+        }
+
+        return $out;
+    }
+
+    /** Extrae clave tipo A1-1, A1+1, A1+-1, B2+3. */
+    private function extraerClaveFaseCefr(string $pregunta): ?string
+    {
+        $t = mb_strtoupper($pregunta);
+        if (preg_match('/\b([ABC][12])\+-(\d{1,2})\b/u', $t, $m)) {
+            return $m[1] . '+-' . $m[2];
+        }
+        if (preg_match('/\b([ABC][12])\+(\d{1,2})\b/u', $t, $m)) {
+            return $m[1] . '+' . $m[2];
+        }
+        if (preg_match('/\b([ABC][12])-(\d{1,2})\b/u', $t, $m)) {
+            return $m[1] . '-' . $m[2];
+        }
+
+        return null;
+    }
+
+    /** Extrae nivel CEFR: A1+, A1, B2+, … */
+    private function extraerNivelCefr(string $pregunta): ?string
+    {
+        $t = mb_strtoupper($pregunta);
+        if (preg_match('/\b([ABC][12])\s*\+/u', $t, $m)) {
+            return $m[1] . '+';
+        }
+        if (preg_match('/\b([ABC][12])\b/u', $t, $m)) {
+            return $m[1];
+        }
+
+        return null;
+    }
+
+    private function nivelDesdeClaveFase(string $clave): ?string
+    {
+        $c = mb_strtoupper(trim($clave));
+        if (preg_match('/^([ABC][12])\+/u', $c, $m)) {
+            return $m[1] . '+';
+        }
+        if (preg_match('/^([ABC][12])/u', $c, $m)) {
+            return $m[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<int> $espIds
+     */
+    private function idFasePorClaveFlexible(array $espIds, string $clave): int
+    {
+        $clave = strtoupper(trim($clave));
+        $candidatos = [$clave];
+        if (preg_match('/^([ABC][12])\+(\d+)$/u', $clave, $m)) {
+            $candidatos[] = $m[1] . '+-' . $m[2];
+        } elseif (preg_match('/^([ABC][12])\+-(\d+)$/u', $clave, $m)) {
+            $candidatos[] = $m[1] . '+' . $m[2];
+        }
+        foreach ($candidatos as $c) {
+            $id = $this->idFasePorClave($espIds, $c);
+            if ($id > 0) {
+                return $id;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param list<int> $espIds
+     * @return list<int>
+     */
+    private function idFasesPorNivelCefr(array $espIds, string $nivel): array
+    {
+        if ($espIds === [] || $nivel === '') {
+            return [];
+        }
+        $nivel = strtoupper(trim($nivel));
+        $in = implode(',', array_fill(0, count($espIds), '?'));
+        $params = array_merge($espIds, [$nivel]);
+        if (str_ends_with($nivel, '+')) {
+            $base = substr($nivel, 0, -1);
+            $params[] = $nivel . '%';
+            $params[] = $base . '+-%';
+            $sqlExtra = 'OR UPPER(f.clave_fase) LIKE ? OR UPPER(f.clave_fase) LIKE ?';
+        } else {
+            $params[] = $nivel . '-%';
+            $params[] = $nivel . '+%';
+            $sqlExtra = 'OR (UPPER(f.clave_fase) LIKE ? AND UPPER(f.clave_fase) NOT LIKE ?)';
+        }
+        $st = $this->pdo->prepare(
+            "SELECT f.id_fase FROM especialidad_fases f
+             WHERE f.id_especialidad IN ($in) AND f.activo = 1
+               AND (
+                    UPPER(TRIM(COALESCE(f.nivel_cefr, ''))) = ?
+                    $sqlExtra
+               )
+             ORDER BY f.orden ASC, f.id_fase ASC"
+        );
+        $st->execute($params);
+        $ids = [];
+        foreach ($st->fetchAll(\PDO::FETCH_COLUMN) ?: [] as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /** @deprecated Usar resolverFasePregunta */
+    private function extraerIdFase(string $pregunta, array $espIds, ?array $ctxUsuario): ?int
+    {
+        return $this->resolverFasePregunta($pregunta, $espIds, $ctxUsuario)['id_fase'];
+    }
 
 
     /** @param list<int> $espIds */
@@ -620,82 +786,63 @@ final class AcademicContextRetriever
 
 
 
-    /** @param list<int> $espIds @param array<string, mixed>|null $ctxUsuario @return list<array> */
 
-    private function obtenerSemanasPorNumero(array $espIds, int $numSemana, ?int $idFase, ?array $ctxUsuario, int $limite): array
-
-    {
-
+    /**
+     * @param list<int> $espIds
+     * @param array<string, mixed>|null $ctxUsuario
+     * @param list<int> $idsFaseNivel
+     * @return list<array>
+     */
+    private function obtenerSemanasPorNumero(
+        array $espIds,
+        int $numSemana,
+        ?int $idFase,
+        ?array $ctxUsuario,
+        int $limite,
+        array $idsFaseNivel = []
+    ): array {
         if ($espIds === []) {
-
             return [];
-
         }
-
-
 
         $in = implode(',', array_fill(0, count($espIds), '?'));
-
         $params = $espIds;
-
         $params[] = $numSemana;
 
-
-
         $sql = "SELECT s.id_semana, s.id_fase, s.semana, s.titulo_leccion, s.objetivo,
-
                        s.vocabulario, s.gramatica, s.listening, s.reading, s.writing, s.speaking, s.notas,
-
                        f.clave_fase, f.nombre_fase, f.objetivo_parcial, f.temas AS fase_temas,
-
                        e.clave AS esp_clave, e.nombre AS esp_nombre
-
                 FROM fase_temario_semana s
-
                 INNER JOIN especialidad_fases f ON f.id_fase = s.id_fase AND f.activo = 1
-
                 INNER JOIN especialidades e ON e.id_especialidad = f.id_especialidad AND e.activo = 1
-
                 WHERE f.id_especialidad IN ($in) AND s.semana = ?";
 
-
-
-        if ($idFase !== null && $idFase > 0) {
-
+        if ($idFase !== null && $idFase > 0 && $idsFaseNivel === []) {
             $sql .= ' AND f.id_fase = ?';
-
             $params[] = $idFase;
-
+        } elseif ($idsFaseNivel !== []) {
+            $ids = array_values(array_filter(array_map('intval', $idsFaseNivel), static fn ($v) => $v > 0));
+            if ($ids !== []) {
+                $inF = implode(',', array_fill(0, count($ids), '?'));
+                $sql .= " AND f.id_fase IN ($inF)";
+                $params = array_merge($params, $ids);
+            }
         }
-
-
 
         $idFasePreferida = (int) ($ctxUsuario['id_fase'] ?? 0);
-
-        if ($idFasePreferida > 0) {
-
+        if ($idFasePreferida > 0 && $idsFaseNivel === []) {
             $sql .= ' ORDER BY (e.clave = \'ING\') DESC, (f.id_fase = ' . (int) $idFasePreferida . ') DESC, f.orden ASC, s.semana ASC';
-
         } else {
-
             $sql .= ' ORDER BY (e.clave = \'ING\') DESC, f.orden ASC, s.semana ASC';
-
         }
-
         $sql .= ' LIMIT ' . max(1, min(10, $limite));
 
-
-
         $st = $this->pdo->prepare($sql);
-
         $st->execute($params);
 
-
-
         return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
     }
-
 
 
   /** @return array<string, mixed>|null */
@@ -986,14 +1133,11 @@ final class AcademicContextRetriever
 
         foreach (array_slice($tokens, 0, 6) as $t) {
 
-            $likeParts[] = '(f.nombre_fase LIKE ? OR f.clave_fase LIKE ? OR f.objetivo_parcial LIKE ? OR f.temas LIKE ? OR f.descripcion LIKE ?)';
+            $likeParts[] = '(f.nombre_fase LIKE ? OR f.clave_fase LIKE ? OR f.nivel_cefr LIKE ? OR f.objetivo_parcial LIKE ? OR f.temas LIKE ? OR f.descripcion LIKE ?)';
 
             $p = '%' . $t . '%';
-
-            for ($i = 0; $i < 5; $i++) {
-
+            for ($i = 0; $i < 6; $i++) {
                 $params[] = $p;
-
             }
 
         }
