@@ -20,12 +20,18 @@ function fase_ensure_moodle_columns(PDO $pdo): void
             id_fase INT UNSIGNED NULL,
             moodle_course_id INT UNSIGNED NOT NULL,
             moodle_user_id INT UNSIGNED NULL,
+            activo TINYINT(1) NOT NULL DEFAULT 1,
+            desactivado_en DATETIME NULL,
+            desactivado_por INT UNSIGNED NULL,
             creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY uq_amc_alumno_esp_curso (id_alumno, id_especialidad, moodle_course_id),
             KEY idx_amc_alumno (id_alumno)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
+    plantel_ensure_column($pdo, 'alumno_moodle_curso', 'activo', 'TINYINT(1) NOT NULL DEFAULT 1', 'moodle_user_id');
+    plantel_ensure_column($pdo, 'alumno_moodle_curso', 'desactivado_en', 'DATETIME NULL', 'activo');
+    plantel_ensure_column($pdo, 'alumno_moodle_curso', 'desactivado_por', 'INT UNSIGNED NULL', 'desactivado_en');
 }
 
 /** @return array{ok:bool,message:string,id?:int,orden?:int} */

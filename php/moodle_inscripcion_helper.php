@@ -17,16 +17,35 @@ function moodle_inscripcion_puede_gestionar(): bool
     return in_array($rol, ['coordinador', 'coordinacion', 'admin', 'supervisor', 'director'], true);
 }
 
-/** @return list<array<string, mixed>> */
-function moodle_inscripcion_cursos_opciones(?int $idEspecialidad = null): array
+/**
+ * Lista todos los cursos Moodle disponibles (independiente de inscripción HAY).
+ * Si se pasa especialidad, anota fases vinculadas (no filtra el catálogo).
+ *
+ * @return array{cursos:list<array<string,mixed>>, moodle_enabled:bool, message:string, total:int}
+ */
+function moodle_inscripcion_cursos_opciones_info(?int $idEspecialidad = null): array
 {
-    if (!function_exists('moodle_list_courses')) {
-        return [];
+    if (!function_exists('moodle_enabled') || !moodle_enabled()) {
+        return [
+            'cursos' => [],
+            'moodle_enabled' => false,
+            'message' => 'Moodle no está configurado (MOODLE_URL / token).',
+            'total' => 0,
+        ];
     }
+    if (!function_exists('moodle_list_courses')) {
+        return [
+            'cursos' => [],
+            'moodle_enabled' => true,
+            'message' => 'Función de listado Moodle no disponible',
+            'total' => 0,
+        ];
+    }
+
     $items = moodle_list_courses();
     $out = [];
     $faseCursos = [];
-    if ($idEspecialidad > 0 && function_exists('fase_ensure_moodle_columns')) {
+    if ($idEspecialidad !== null && $idEspecialidad > 0 && function_exists('fase_ensure_moodle_columns')) {
         global $pdo;
         if (isset($pdo) && $pdo instanceof PDO) {
             fase_ensure_moodle_columns($pdo);
@@ -52,13 +71,18 @@ function moodle_inscripcion_cursos_opciones(?int $idEspecialidad = null): array
         if ($id <= 1) {
             continue;
         }
+        // Incluir también cursos ocultos en Moodle: el staff puede activarlos a propósito.
         $fase = $faseCursos[$id] ?? null;
+        $fullname = trim((string) ($c['fullname'] ?? ''));
+        $short = trim((string) ($c['shortname'] ?? ''));
         $out[] = [
             'id' => $id,
-            'shortname' => (string) ($c['shortname'] ?? ''),
-            'fullname' => (string) ($c['fullname'] ?? ''),
+            'shortname' => $short,
+            'fullname' => $fullname !== '' ? $fullname : ($short !== '' ? $short : ('Curso #' . $id)),
             'idnumber' => (string) ($c['idnumber'] ?? ''),
-            'fase' => $fase ? ($fase['clave_fase'] ?? $fase['nombre_fase'] ?? '') : '',
+            'visible' => (int) ($c['visible'] ?? 1),
+            'fuente' => (string) ($c['fuente'] ?? 'moodle'),
+            'fase' => $fase ? (string) ($fase['clave_fase'] ?? $fase['nombre_fase'] ?? '') : '',
         ];
     }
 
@@ -66,7 +90,22 @@ function moodle_inscripcion_cursos_opciones(?int $idEspecialidad = null): array
         return strcasecmp((string) ($a['fullname'] ?? ''), (string) ($b['fullname'] ?? ''));
     });
 
-    return $out;
+    $msg = $out === []
+        ? 'Moodle no devolvió cursos para este token. Revise permisos del webservice o MOODLE_COURSE_BY_SHORTNAME en config.local.php.'
+        : '';
+
+    return [
+        'cursos' => $out,
+        'moodle_enabled' => true,
+        'message' => $msg,
+        'total' => count($out),
+    ];
+}
+
+/** @return list<array<string, mixed>> */
+function moodle_inscripcion_cursos_opciones(?int $idEspecialidad = null): array
+{
+    return moodle_inscripcion_cursos_opciones_info($idEspecialidad)['cursos'];
 }
 
 /** Cursos Moodle sugeridos para un grupo (fase actual + bloques anteriores). */
@@ -116,25 +155,267 @@ function moodle_inscripcion_alumno_curso(
     }
     $idPlantel = $idPlantel ?? plantel_scope_id($pdo);
 
-    if (function_exists('cuenta_alumno_enrol_curso')) {
-        $res = cuenta_alumno_enrol_curso($pdo, $idAlumno, $idPlantel, $courseId);
-        if (!empty($res['ok']) && $idEspecialidad > 0 && function_exists('fase_ensure_moodle_columns')) {
-            fase_ensure_moodle_columns($pdo);
-            $idMoodle = (int) ($res['id_moodle'] ?? 0);
-            $pdo->prepare(
-                'INSERT INTO alumno_moodle_curso (id_alumno, id_especialidad, id_fase, moodle_course_id, moodle_user_id)
-                 VALUES (?,?,NULL,?,?)
-                 ON DUPLICATE KEY UPDATE moodle_user_id = VALUES(moodle_user_id)'
-            )->execute([$idAlumno, $idEspecialidad, $courseId, $idMoodle > 0 ? $idMoodle : null]);
-        }
-
+    // Enrol directo (no pasar por cuenta_alumno_enrol_curso: su permiso es más estrecho).
+    if (!function_exists('moodle_user_ensure_alumno') || !function_exists('moodle_enrol_user_in_course')) {
+        return ['ok' => false, 'message' => 'Módulo Moodle no disponible'];
+    }
+    $mEnsure = moodle_user_ensure_alumno($pdo, $idAlumno, $idPlantel);
+    if (empty($mEnsure['ok'])) {
         return [
-            'ok' => !empty($res['ok']),
-            'message' => (string) ($res['message'] ?? 'Listo'),
+            'ok' => false,
+            'message' => 'No se pudo asegurar usuario Moodle: ' . ($mEnsure['message'] ?? ''),
+        ];
+    }
+    $idMoodle = (int) ($mEnsure['id_moodle'] ?? 0);
+    if ($idMoodle <= 0) {
+        return ['ok' => false, 'message' => 'No se obtuvo id Moodle del alumno'];
+    }
+    $enrol = moodle_enrol_user_in_course($idMoodle, $courseId);
+    if (empty($enrol['ok'])) {
+        return [
+            'ok' => false,
+            'message' => (string) ($enrol['message'] ?? 'No se pudo inscribir en Moodle'),
         ];
     }
 
-    return ['ok' => false, 'message' => 'Módulo de cuentas no disponible'];
+    if (function_exists('fase_ensure_moodle_columns')) {
+        fase_ensure_moodle_columns($pdo);
+        $idEspStore = $idEspecialidad !== null && $idEspecialidad > 0 ? $idEspecialidad : 0;
+        $pdo->prepare(
+            'INSERT INTO alumno_moodle_curso
+                (id_alumno, id_especialidad, id_fase, moodle_course_id, moodle_user_id, activo, desactivado_en, desactivado_por)
+             VALUES (?,?,NULL,?,?,1,NULL,NULL)
+             ON DUPLICATE KEY UPDATE
+                moodle_user_id = VALUES(moodle_user_id),
+                activo = 1,
+                desactivado_en = NULL,
+                desactivado_por = NULL'
+        )->execute([$idAlumno, $idEspStore, $courseId, $idMoodle]);
+    }
+
+    return [
+        'ok' => true,
+        'message' => (string) ($enrol['message'] ?? 'Inscrito en curso Moodle'),
+        'id_moodle' => $idMoodle,
+        'course_id' => $courseId,
+    ];
+}
+
+/**
+ * Estado Moodle del alumno: cursos activos (con progreso), desactivados y cuenta.
+ *
+ * @return array<string, mixed>
+ */
+function moodle_inscripcion_alumno_estado(PDO $pdo, int $idAlumno, ?int $idPlantel = null): array
+{
+    if ($idAlumno <= 0) {
+        return ['ok' => false, 'message' => 'Alumno inválido', 'activos' => [], 'desactivados' => []];
+    }
+    $idPlantel = $idPlantel ?? plantel_scope_id($pdo);
+    if (function_exists('fase_ensure_moodle_columns')) {
+        fase_ensure_moodle_columns($pdo);
+    }
+
+    $stAl = $pdo->prepare(
+        'SELECT id_alumno, moodle_user_id, numero_control, nombres, apellido_paterno
+         FROM alumnos WHERE id_alumno = ? AND id_plantel = ? LIMIT 1'
+    );
+    $stAl->execute([$idAlumno, $idPlantel]);
+    $al = $stAl->fetch(PDO::FETCH_ASSOC);
+    if (!$al) {
+        return ['ok' => false, 'message' => 'Alumno no encontrado', 'activos' => [], 'desactivados' => []];
+    }
+
+    $moodleId = (int) ($al['moodle_user_id'] ?? 0);
+    if ($moodleId <= 0 && function_exists('moodle_user_get_by_field') && !empty($al['numero_control'])) {
+        $found = moodle_user_get_by_field('username', (string) $al['numero_control']);
+        if (!empty($found['id'])) {
+            $moodleId = (int) $found['id'];
+        }
+    }
+
+    $liveById = [];
+    if ($moodleId > 0 && function_exists('moodle_user_courses_with_progress')) {
+        foreach (moodle_user_courses_with_progress($moodleId) as $c) {
+            $liveById[(int) $c['id']] = $c;
+            // Sincroniza registro local como activo
+            try {
+                $pdo->prepare(
+                    'INSERT INTO alumno_moodle_curso
+                        (id_alumno, id_especialidad, id_fase, moodle_course_id, moodle_user_id, activo)
+                     VALUES (?,0,NULL,?,?,1)
+                     ON DUPLICATE KEY UPDATE
+                        moodle_user_id = VALUES(moodle_user_id),
+                        activo = 1,
+                        desactivado_en = NULL,
+                        desactivado_por = NULL'
+                )->execute([$idAlumno, (int) $c['id'], $moodleId]);
+            } catch (Throwable $e) {
+                // ignore sync errors
+            }
+        }
+    }
+
+    $st = $pdo->prepare(
+        'SELECT amc.*, e.nombre AS especialidad_nombre
+         FROM alumno_moodle_curso amc
+         LEFT JOIN especialidades e ON e.id_especialidad = amc.id_especialidad
+         WHERE amc.id_alumno = ?
+         ORDER BY amc.activo DESC, amc.creado_en DESC'
+    );
+    $st->execute([$idAlumno]);
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $activos = [];
+    $desactivados = [];
+    $seenCourse = [];
+
+    foreach ($rows as $row) {
+        $cid = (int) ($row['moodle_course_id'] ?? 0);
+        if ($cid <= 1) {
+            continue;
+        }
+        $live = $liveById[$cid] ?? null;
+        $activoLocal = (int) ($row['activo'] ?? 1) === 1;
+        $enMoodle = $live !== null;
+        $nombreLocal = 'Curso #' . $cid;
+        $item = [
+            'id_registro' => (int) ($row['id'] ?? 0),
+            'moodle_course_id' => $cid,
+            'nombre' => $live['nombre'] ?? $nombreLocal,
+            'corto' => $live['corto'] ?? '',
+            'url' => $live['url'] ?? '',
+            'progreso' => $live['progreso'] ?? null,
+            'completado' => !empty($live['completado']),
+            'ultimo_acceso' => $live['ultimo_acceso'] ?? null,
+            'id_especialidad' => (int) ($row['id_especialidad'] ?? 0),
+            'especialidad' => (string) ($row['especialidad_nombre'] ?? ''),
+            'activo' => $enMoodle ? 1 : 0,
+            'en_moodle' => $enMoodle,
+            'creado_en' => $row['creado_en'] ?? null,
+            'desactivado_en' => $row['desactivado_en'] ?? null,
+        ];
+        if (isset($seenCourse[$cid])) {
+            continue;
+        }
+        if ($enMoodle) {
+            // Si Moodle aún lo tiene, cuenta como activo (aunque el flag local diga lo contrario).
+            if (!$activoLocal) {
+                try {
+                    $pdo->prepare(
+                        'UPDATE alumno_moodle_curso SET activo = 1, desactivado_en = NULL, desactivado_por = NULL
+                         WHERE id_alumno = ? AND moodle_course_id = ?'
+                    )->execute([$idAlumno, $cid]);
+                } catch (Throwable $e) {
+                    // ignore
+                }
+            }
+            $activos[] = $item;
+            $seenCourse[$cid] = true;
+        } else {
+            $desactivados[] = $item;
+            $seenCourse[$cid] = true;
+        }
+    }
+
+    // Cursos en Moodle sin fila local (por si el INSERT falló)
+    foreach ($liveById as $cid => $live) {
+        if (isset($seenCourse[$cid])) {
+            continue;
+        }
+        $activos[] = [
+            'id_registro' => 0,
+            'moodle_course_id' => $cid,
+            'nombre' => $live['nombre'],
+            'corto' => $live['corto'],
+            'url' => $live['url'],
+            'progreso' => $live['progreso'],
+            'completado' => !empty($live['completado']),
+            'ultimo_acceso' => $live['ultimo_acceso'],
+            'id_especialidad' => 0,
+            'especialidad' => '',
+            'activo' => 1,
+            'en_moodle' => true,
+            'creado_en' => null,
+            'desactivado_en' => null,
+        ];
+        $seenCourse[$cid] = true;
+    }
+
+    return [
+        'ok' => true,
+        'message' => $moodleId > 0 ? 'OK' : 'Sin cuenta Moodle vinculada (se creará al inscribir).',
+        'moodle_enabled' => function_exists('moodle_enabled') && moodle_enabled(),
+        'moodle_user_id' => $moodleId,
+        'moodle_url' => defined('MOODLE_URL') ? (string) MOODLE_URL : '',
+        'puede_gestionar' => moodle_inscripcion_puede_gestionar(),
+        'activos' => $activos,
+        'desactivados' => $desactivados,
+    ];
+}
+
+/**
+ * Desactiva (desinscribe) un curso Moodle del alumno y lo deja en historial.
+ *
+ * @return array{ok:bool,message:string}
+ */
+function moodle_inscripcion_alumno_desactivar(
+    PDO $pdo,
+    int $idAlumno,
+    int $courseId,
+    ?int $idPlantel = null
+): array {
+    if (!moodle_inscripcion_puede_gestionar()) {
+        return ['ok' => false, 'message' => 'Sin permiso'];
+    }
+    if ($idAlumno <= 0 || $courseId <= 1) {
+        return ['ok' => false, 'message' => 'Alumno y curso son obligatorios'];
+    }
+    $idPlantel = $idPlantel ?? plantel_scope_id($pdo);
+    if (function_exists('fase_ensure_moodle_columns')) {
+        fase_ensure_moodle_columns($pdo);
+    }
+
+    $stAl = $pdo->prepare('SELECT moodle_user_id, numero_control FROM alumnos WHERE id_alumno = ? AND id_plantel = ? LIMIT 1');
+    $stAl->execute([$idAlumno, $idPlantel]);
+    $al = $stAl->fetch(PDO::FETCH_ASSOC);
+    if (!$al) {
+        return ['ok' => false, 'message' => 'Alumno no encontrado'];
+    }
+    $moodleId = (int) ($al['moodle_user_id'] ?? 0);
+    if ($moodleId <= 0 && function_exists('moodle_user_get_by_field') && !empty($al['numero_control'])) {
+        $found = moodle_user_get_by_field('username', (string) $al['numero_control']);
+        $moodleId = (int) ($found['id'] ?? 0);
+    }
+
+    $unenrolMsg = '';
+    if ($moodleId > 0 && function_exists('moodle_unenrol_user_from_course')) {
+        $un = moodle_unenrol_user_from_course($moodleId, $courseId);
+        if (empty($un['ok'])) {
+            // Aun así marcamos historial local; Moodle puede fallar si el enrol no era manual.
+            $unenrolMsg = ' (' . ($un['message'] ?? 'aviso Moodle') . ')';
+        }
+    }
+
+    $idUsuario = (int) ($_SESSION['user_id'] ?? 0);
+    $upd = $pdo->prepare(
+        'UPDATE alumno_moodle_curso
+         SET activo = 0, desactivado_en = NOW(), desactivado_por = ?
+         WHERE id_alumno = ? AND moodle_course_id = ?'
+    );
+    $upd->execute([$idUsuario > 0 ? $idUsuario : null, $idAlumno, $courseId]);
+    if ($upd->rowCount() === 0) {
+        $pdo->prepare(
+            'INSERT INTO alumno_moodle_curso
+                (id_alumno, id_especialidad, moodle_course_id, moodle_user_id, activo, desactivado_en, desactivado_por)
+             VALUES (?,0,?,?,0,NOW(),?)'
+        )->execute([$idAlumno, $courseId, $moodleId > 0 ? $moodleId : null, $idUsuario > 0 ? $idUsuario : null]);
+    }
+
+    return [
+        'ok' => true,
+        'message' => 'Curso desactivado para el alumno' . $unenrolMsg,
+    ];
 }
 
 /**

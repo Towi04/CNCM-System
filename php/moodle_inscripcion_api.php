@@ -18,9 +18,33 @@ $idPlantel = plantel_scope_id($pdo);
 
 if ($action === 'cursos') {
     $idEsp = (int) ($_GET['id_especialidad'] ?? $_POST['id_especialidad'] ?? 0);
+    $info = moodle_inscripcion_cursos_opciones_info($idEsp > 0 ? $idEsp : null);
     hay_json_response([
         'status' => 'ok',
-        'cursos' => moodle_inscripcion_cursos_opciones($idEsp > 0 ? $idEsp : null),
+        'cursos' => $info['cursos'],
+        'moodle_enabled' => !empty($info['moodle_enabled']),
+        'message' => $info['message'] ?? '',
+        'total' => (int) ($info['total'] ?? 0),
+    ]);
+    exit;
+}
+
+if ($action === 'alumno_cursos') {
+    $idAlumno = (int) ($_GET['id_alumno'] ?? $_POST['id_alumno'] ?? 0);
+    $res = moodle_inscripcion_alumno_estado($pdo, $idAlumno, $idPlantel);
+    hay_json_response(array_merge([
+        'status' => !empty($res['ok']) ? 'ok' : 'error',
+    ], $res));
+    exit;
+}
+
+if ($action === 'desactivar_alumno') {
+    $idAlumno = (int) ($_POST['id_alumno'] ?? 0);
+    $courseId = (int) ($_POST['course_id'] ?? 0);
+    $res = moodle_inscripcion_alumno_desactivar($pdo, $idAlumno, $courseId, $idPlantel);
+    hay_json_response([
+        'status' => !empty($res['ok']) ? 'ok' : 'error',
+        'message' => $res['message'] ?? '',
     ]);
     exit;
 }
