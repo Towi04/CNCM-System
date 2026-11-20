@@ -57,6 +57,63 @@
     background: rgba(255, 255, 255, 0.04);
 }
 
+.sidebar-role-switch {
+    flex-shrink: 0;
+    padding: 10px 14px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-role-switch__label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sidebar-role-switch__hint {
+    margin: 0 0 8px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.sidebar-role-switch__hint strong {
+    color: #ffe082;
+    font-weight: 600;
+}
+
+.sidebar-role-switch__select {
+    width: 100%;
+    padding: 7px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #243049;
+    color: #fff;
+    font-size: 12px;
+}
+
+.sidebar-role-switch__btn {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid #c9a227;
+    background: #fff8e1;
+    color: #5c4a00;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.sidebar-role-switch__btn:hover {
+    background: #fff3cd;
+}
+
 .sidebar-user-avatar {
     position: relative;
     width: 44px;

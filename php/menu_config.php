@@ -828,305 +828,84 @@ function menu_cncm_secciones_compactas(): array
 
 
 
-/** Vista del supervisor: menú agrupado por rol (sin simular otro rol). */
 
+/** Supervisor/acceso total: menú propio reducido (sin catálogo de todos los roles). */
 function menu_cncm_vista_por_rol(): bool
-
 {
-
     if (function_exists('rbac_esta_simulando_rol') && rbac_esta_simulando_rol()) {
-
         return false;
-
     }
-
     if (function_exists('rbac_tiene_acceso_total') && rbac_tiene_acceso_total()) {
-
         return true;
-
     }
 
     return function_exists('rbac_es_supervisor') && rbac_es_supervisor();
-
 }
 
-
-
-/** Menú lateral para supervisora: secciones por rol del sistema. */
-
+/**
+ * Menú del supervisor: solo lo de supervisión + gobierno.
+ * Para cubrir recepción/caja/etc. use «Cubrir un puesto» (simular rol).
+ */
 function menu_cncm_secciones_por_rol(): array
-
 {
-
     return [
-
         [
-
-            'id' => 'general',
-
-            'titulo' => 'General',
-
+            'id' => 'supervision',
+            'titulo' => 'Mi supervisión',
             'items' => [
-
                 ['staff' => true, 'seccion' => 'inicio_panel', 'icon' => 'fa-home', 'text' => 'Inicio', 'title' => 'Inicio', 'breadcrumb' => 'INICIO'],
-
                 ['seccion' => 'tareas', 'icon' => 'fa-clipboard-check', 'text' => 'Tareas', 'title' => 'Tareas del personal', 'breadcrumb' => 'TAREAS'],
-
+                ['callback' => 'bandeja_aprobaciones_puede_ver', 'seccion' => 'bandeja_aprobaciones', 'icon' => 'fa-inbox', 'text' => 'Bandeja de aprobaciones', 'title' => 'Bandeja de aprobaciones', 'breadcrumb' => 'BANDEJA APROBACIONES'],
                 ['seccion' => 'mi_evaluacion', 'icon' => 'fa-user-check', 'text' => 'Mi evaluación', 'title' => 'Mi evaluación', 'breadcrumb' => 'MI EVALUACIÓN'],
-
                 ['seccion' => 'matriz_entrenamiento', 'icon' => 'fa-graduation-cap', 'text' => 'Matriz de entrenamiento', 'title' => 'Matriz de entrenamiento', 'breadcrumb' => 'MATRIZ'],
-
                 ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
-
-                ['seccion' => 'reporte_pagos_anulados', 'icon' => 'fa-ban', 'text' => 'Pagos anulados', 'title' => 'Reporte de pagos anulados', 'breadcrumb' => 'PAGOS ANULADOS'],
-
-                ['cap' => 'menu_transferencias_confirmar', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Confirmar transferencias', 'title' => 'Confirmar transferencias', 'breadcrumb' => 'CONFIRMAR TRANSFERENCIAS'],
-
-                ['seccion' => 'supervisor_acuerdo_escolar', 'icon' => 'fa-file-signature', 'text' => 'Acuerdo escolar', 'title' => 'Acuerdo escolar', 'breadcrumb' => 'ACUERDO ESCOLAR'],
-
-                ['seccion' => 'supervisor_grupos_historico', 'icon' => 'fa-history', 'text' => 'Carga histórica grupos', 'title' => 'Carga histórica de grupos', 'breadcrumb' => 'CARGA HISTÓRICA'],
-
+                ['cap' => 'menu_calendario_consulta', 'seccion' => 'calendario_consulta', 'icon' => 'fa-calendar', 'text' => 'Calendario institucional', 'title' => 'Calendario institucional', 'breadcrumb' => 'CALENDARIO INSTITUCIONAL'],
+            ],
+        ],
+        [
+            'id' => 'gobierno',
+            'titulo' => 'Gobierno del plantel',
+            'items' => [
+                ['callback' => 'grupo_apertura_puede_gestionar', 'seccion' => 'grupo_apertura', 'icon' => 'fa-door-open', 'text' => 'Apertura de grupos', 'title' => 'Autorizar apertura de grupos', 'breadcrumb' => 'APERTURA GRUPOS'],
+                ['callback' => 'planeacion_puede_revisar', 'seccion' => 'planeaciones_revision', 'icon' => 'fa-check-double', 'text' => 'Revisar planeaciones', 'title' => 'Revisar planeaciones', 'breadcrumb' => 'REVISAR PLANEACIONES'],
+                ['callback' => 'nomina_puede_gestionar', 'seccion' => 'director_nomina', 'icon' => 'fa-money-check-alt', 'text' => 'Nómina personal', 'title' => 'Nómina del personal', 'breadcrumb' => 'NÓMINA'],
+                ['cap' => 'menu_alumnos', 'seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
+                ['cap' => 'menu_grupos', 'flyout' => 'flyout-grupos', 'icon' => 'fa-users-cog', 'text' => 'Grupos y planeación', 'title' => 'Grupos', 'breadcrumb' => 'GRUPOS'],
+                ['cap' => 'menu_asistencia', 'flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
+                ['cap' => 'menu_especialidades', 'flyout' => 'flyout-especialidades', 'icon' => 'fa-book', 'text' => 'Especialidades / fases', 'title' => 'Especialidades', 'breadcrumb' => 'ESPECIALIDADES'],
+                ['cap' => 'admin_usuarios', 'seccion' => 'ver_usuarios', 'icon' => 'fa-users-cog', 'text' => 'Usuarios', 'title' => 'Ver usuarios', 'breadcrumb' => 'USUARIOS'],
+                ['cap' => 'menu_calendario', 'seccion' => 'admin_calendario', 'icon' => 'fa-calendar-week', 'text' => 'Calendarios escolares', 'title' => 'Calendarios escolares', 'breadcrumb' => 'CALENDARIOS ESCOLARES'],
+                ['cap' => 'menu_calendario_admin', 'seccion' => 'admin_calendario_admin', 'icon' => 'fa-calendar-check', 'text' => 'Calendario administrativo', 'title' => 'Calendario administrativo', 'breadcrumb' => 'CALENDARIO ADMIN'],
+                ['callback' => 'acuerdo_escolar_puede_publicar', 'seccion' => 'supervisor_acuerdo_escolar', 'icon' => 'fa-file-signature', 'text' => 'Acuerdo escolar', 'title' => 'Acuerdo escolar versionado', 'breadcrumb' => 'ACUERDO ESCOLAR'],
+                ['cap' => 'expediente_requisitos_admin', 'seccion' => 'expediente_requisitos', 'icon' => 'fa-clipboard-list', 'text' => 'Requisitos documentales', 'title' => 'Requisitos documentales', 'breadcrumb' => 'REQ. DOCUMENTALES'],
+                ['callback' => 'documento_puede_configurar_plantillas', 'seccion' => 'admin_documento_plantillas', 'icon' => 'fa-file-image', 'text' => 'Plantillas documentos', 'title' => 'Plantillas constancias y diplomas', 'breadcrumb' => 'PLANTILLAS DOC'],
+                ['callback' => 'credencial_puede_diseñar', 'seccion' => 'admin_credencial_plantilla', 'icon' => 'fa-address-card', 'text' => 'Diseño credenciales', 'title' => 'Plantillas de credencial', 'breadcrumb' => 'DISEÑO CREDENCIALES'],
+                ['cap' => 'menu_admin', 'flyout' => 'flyout-admin', 'icon' => 'fa-ellipsis-h', 'text' => 'Más administración', 'title' => 'Catálogo, productos y configuración', 'breadcrumb' => 'ADMINISTRACIÓN'],
+            ],
+        ],
+        [
+            'id' => 'herramientas',
+            'titulo' => 'Herramientas',
+            'items' => [
                 ['callback' => 'migracion_csv_puede', 'seccion' => 'migracion_csv', 'icon' => 'fa-file-csv', 'text' => 'Migración CSV', 'title' => 'Migración selectiva legado por CSV', 'breadcrumb' => 'MIGRACIÓN CSV'],
-
+                ['callback' => 'supervisor_grupos_historico_puede_ver', 'seccion' => 'supervisor_grupos_historico', 'icon' => 'fa-history', 'text' => 'Carga histórica grupos', 'title' => 'Carga histórica de grupos', 'breadcrumb' => 'CARGA HISTÓRICA'],
+                ['cap' => 'menu_reporte_pagos_anulados', 'seccion' => 'reporte_pagos_anulados', 'icon' => 'fa-ban', 'text' => 'Pagos anulados', 'title' => 'Reporte de pagos anulados', 'breadcrumb' => 'PAGOS ANULADOS'],
+                ['cap' => 'menu_transferencias_ver', 'seccion' => 'pagos_transferencias', 'icon' => 'fa-university', 'text' => 'Confirmar transferencias', 'title' => 'Transferencias y comprobantes', 'breadcrumb' => 'TRANSFERENCIAS'],
+                ['cap' => 'menu_reporte_bajas', 'seccion' => 'reporte_bajas', 'icon' => 'fa-user-slash', 'text' => 'Reporte de bajas', 'title' => 'Reporte de bajas', 'breadcrumb' => 'REPORTE BAJAS'],
+                ['cap' => 'menu_reportes', 'flyout' => 'flyout-reportes', 'icon' => 'fa-chart-bar', 'text' => 'Reportes financieros', 'title' => 'Reportes financieros', 'breadcrumb' => 'REPORTES'],
+                ['cap' => 'menu_manuales_stock', 'seccion' => 'manuales_stock', 'icon' => 'fa-boxes', 'text' => 'Stock manuales', 'title' => 'Stock de manuales', 'breadcrumb' => 'STOCK MANUALES'],
+                ['cap' => 'menu_manuales_envios', 'seccion' => 'manuales_envios', 'icon' => 'fa-shipping-fast', 'text' => 'Envíos manuales', 'title' => 'Envíos de manuales a planteles', 'breadcrumb' => 'ENVÍOS MANUALES'],
                 ['callback' => 'supervisor_deploy_puede', 'seccion' => 'supervisor_deploy', 'icon' => 'fa-rocket', 'text' => 'Mantenimiento / promote', 'title' => 'Modo mantenimiento y promote develop→main', 'breadcrumb' => 'MANTENIMIENTO / PROMOTE'],
-
-                ['seccion' => 'reporte_bajas', 'icon' => 'fa-user-slash', 'text' => 'Reporte de bajas', 'title' => 'Reporte de bajas', 'breadcrumb' => 'REPORTE BAJAS'],
-
-
-                ['seccion' => 'manuales_stock', 'icon' => 'fa-boxes', 'text' => 'Stock manuales', 'title' => 'Stock de manuales', 'breadcrumb' => 'STOCK MANUALES'],
-
-                ['seccion' => 'manuales_envios', 'icon' => 'fa-shipping-fast', 'text' => 'Envíos manuales', 'title' => 'Envíos de manuales a planteles', 'breadcrumb' => 'ENVÍOS MANUALES'],
-
             ],
-
         ],
-
         [
-
-            'id' => 'asesor',
-
-            'titulo' => 'Asesor',
-
-            'rol' => true,
-
-            'items' => [
-
-                ['seccion' => 'pre_registro_alumnos', 'icon' => 'fa-bookmark', 'text' => 'Pre-registro alumnos', 'title' => 'Pre-Registro Alumnos', 'breadcrumb' => 'PRE-REGISTRO ALUMNOS'],
-
-                ['seccion' => 'asesor_entrevistas', 'icon' => 'fa-handshake', 'text' => 'Entrevistas', 'title' => 'Entrevistas', 'breadcrumb' => 'ENTREVISTAS'],
-
-                ['seccion' => 'asesor_ubicacion', 'icon' => 'fa-map-signs', 'text' => 'Examen de ubicación', 'title' => 'Examen de ubicación', 'breadcrumb' => 'UBICACIÓN'],
-
-                ['seccion' => 'cert_preregistro_asesor', 'icon' => 'fa-award', 'text' => 'Cert. pre-registro', 'title' => 'Pre-registro certificaciones', 'breadcrumb' => 'CERTIFICACIONES PRE-REGISTRO'],
-
-                ['seccion' => 'asesor_grupos_fases', 'icon' => 'fa-search-location', 'text' => 'Grupos por fase', 'title' => 'Grupos por fase', 'breadcrumb' => 'GRUPOS POR FASE'],
-
-                ['seccion' => 'asesor_preinicio_grupos', 'icon' => 'fa-phone-volume', 'text' => 'Contacto pre-inicio', 'title' => 'Contacto pre-inicio', 'breadcrumb' => 'CONTACTO PRE-INICIO'],
-
-                ['seccion' => 'gerente_podio', 'icon' => 'fa-trophy', 'text' => 'Podio de asesores', 'title' => 'Podio de asesores', 'breadcrumb' => 'PODIO ASESORES'],
-
-                ['seccion' => 'reporte_inscritos', 'icon' => 'fa-user-check', 'text' => 'Reporte de inscritos', 'title' => 'Reporte de inscritos', 'breadcrumb' => 'REPORTE INSCRITOS'],
-
-                ['seccion' => 'ventas_comisiones_consulta', 'icon' => 'fa-coins', 'text' => 'Mis comisiones', 'title' => 'Mis comisiones', 'breadcrumb' => 'COMISIONES'],
-
-                ['seccion' => 'calendario_consulta', 'icon' => 'fa-calendar', 'text' => 'Calendario institucional', 'title' => 'Vista combinada calendario', 'breadcrumb' => 'CALENDARIO INSTITUCIONAL'],
-
-                ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
-
-            ],
-
-        ],
-
-        [
-
-            'id' => 'gerente',
-
-            'titulo' => 'Gerente de ventas',
-
-            'rol' => true,
-
-            'items' => [
-
-                ['seccion' => 'gerente_dashboard', 'icon' => 'fa-chart-line', 'text' => 'Panel gerente', 'title' => 'Panel gerente', 'breadcrumb' => 'PANEL GERENTE'],
-
-                ['seccion' => 'gerente_reportes_captacion', 'icon' => 'fa-chart-pie', 'text' => 'Reportes captación', 'title' => 'Reportes de captación', 'breadcrumb' => 'REPORTES CAPTACIÓN'],
-
-                ['seccion' => 'gerente_reporte_geografico', 'icon' => 'fa-map-marked-alt', 'text' => 'Reporte geográfico', 'title' => 'Reporte geográfico', 'breadcrumb' => 'REPORTE GEOGRÁFICO'],
-
-                ['seccion' => 'gerente_reporte_pendientes', 'icon' => 'fa-tasks', 'text' => 'Pendientes del plantel', 'title' => 'Pendientes del plantel', 'breadcrumb' => 'PENDIENTES PLANTEL'],
-
-                ['seccion' => 'gerente_reporte_pendientes', 'query' => 'tab=perdidos', 'icon' => 'fa-user-times', 'text' => 'No inscritos', 'title' => 'Motivos de no inscripción', 'breadcrumb' => 'NO INSCRITOS'],
-
-                ['seccion' => 'gerente_hay_portal', 'icon' => 'fa-layer-group', 'text' => 'Evaluación HAY (equipo)', 'title' => 'Evaluación HAY — gerente', 'breadcrumb' => 'EVALUACIÓN HAY'],
-
-                ['seccion' => 'gerente_matriz_entrenamiento', 'icon' => 'fa-graduation-cap', 'text' => 'Matriz del equipo', 'title' => 'Matriz de entrenamiento del equipo', 'breadcrumb' => 'MATRIZ EQUIPO'],
-
-                ['seccion' => 'gerente_escuelas', 'icon' => 'fa-school', 'text' => 'Escuelas y visitas', 'title' => 'Escuelas externas y visitas (cartas)', 'breadcrumb' => 'ESCUELAS'],
-
-                ['seccion' => 'reporte_escuelas', 'icon' => 'fa-chart-bar', 'text' => 'Reporte escuelas', 'title' => 'Reporte de escuelas', 'breadcrumb' => 'REPORTE ESCUELAS'],
-
-                ['seccion' => 'reporte_presentados', 'icon' => 'fa-user-graduate', 'text' => 'Presentados', 'title' => 'Reporte de presentados', 'breadcrumb' => 'REPORTE PRESENTADOS'],
-
-                ['seccion' => 'ventas_comisiones_admin', 'icon' => 'fa-sliders-h', 'text' => 'Comisiones y tabuladores', 'title' => 'Comisiones y tabuladores', 'breadcrumb' => 'COMISIONES VENTAS'],
-
-            ],
-
-        ],
-
-        [
-
-            'id' => 'recepcion',
-
-            'titulo' => 'Recepción / Caja',
-
-            'rol' => true,
-
-            'items' => [
-
-                ['seccion' => 'grupos', 'icon' => 'fa-users', 'text' => 'Grupos', 'title' => 'Ver grupos e imprimir listas', 'breadcrumb' => 'GRUPOS'],
-
-                ['callback' => 'operativo_piso_puede_ver', 'seccion' => 'piso_operativo', 'icon' => 'fa-concierge-bell', 'text' => 'Piso operativo', 'title' => 'Entrega documentos y cobranza', 'breadcrumb' => 'PISO OPERATIVO'],
-
-                ['callback' => 'cola_facturacion_puede_ver', 'seccion' => 'cola_facturacion', 'icon' => 'fa-file-invoice', 'text' => 'Cola de facturación', 'title' => 'Cola de facturación', 'breadcrumb' => 'COLA FACTURACIÓN'],
-
-                ['seccion' => 'consulta_adeudo', 'icon' => 'fa-calculator', 'text' => 'Consulta de adeudo', 'title' => 'Consulta de adeudo', 'breadcrumb' => 'CONSULTA ADEUDO'],
-
-                ['seccion' => 'punto_venta', 'icon' => 'fa-cash-register', 'text' => 'Punto de venta', 'title' => 'Punto de venta', 'breadcrumb' => 'PUNTO DE VENTA'],
-
-                ['cap' => 'menu_audifonos', 'seccion' => 'audifonos_control', 'icon' => 'fa-headphones', 'text' => 'Control audífonos', 'title' => 'Préstamo y devolución de audífonos', 'breadcrumb' => 'AUDÍFONOS'],
-
-                ['seccion' => 'venta_productos', 'icon' => 'fa-shopping-cart', 'text' => 'Venta de productos', 'title' => 'Venta de productos', 'breadcrumb' => 'VENTA DE PRODUCTOS'],
-
-                ['seccion' => 'admin_productos', 'icon' => 'fa-boxes', 'text' => 'Productos e inventario', 'title' => 'Productos e inventario', 'breadcrumb' => 'PRODUCTOS E INVENTARIO'],
-
-                ['callback' => 'documento_puede_marcar_pagada', 'seccion' => 'constancia_recepcion', 'icon' => 'fa-file-certificate', 'text' => 'Constancias pendientes', 'title' => 'Constancias pendientes de pago', 'breadcrumb' => 'CONSTANCIAS'],
-
-                ['callback' => 'documento_puede_mostrador', 'seccion' => 'documento_mostrador', 'icon' => 'fa-id-card', 'text' => 'Mostrador documentos', 'title' => 'Mostrador de constancias y diplomas', 'breadcrumb' => 'MOSTRADOR DOC'],
-
-                ['seccion' => 'corte_caja', 'icon' => 'fa-coins', 'text' => 'Corte de caja', 'title' => 'Corte de caja diario', 'breadcrumb' => 'CORTE DE CAJA'],
-
-                ['seccion' => 'certificaciones', 'icon' => 'fa-certificate', 'text' => 'Certificaciones', 'title' => 'Certificaciones', 'breadcrumb' => 'CERTIFICACIONES'],
-
-                ['flyout' => 'flyout-reportes', 'icon' => 'fa-chart-bar', 'text' => 'Reportes financieros', 'title' => 'Reportes', 'breadcrumb' => 'REPORTES'],
-
-                ['callback' => 'rol_aula_puede_ver', 'seccion' => 'rol_aulas_consulta', 'icon' => 'fa-door-closed', 'text' => 'Rol de aulas', 'title' => 'Consulta rol de aulas', 'breadcrumb' => 'ROL DE AULAS'],
-
-                ['flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
-
-                ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico Institucional', 'breadcrumb' => 'TUTOR IA'],
-
-                ['seccion' => 'calendario_consulta', 'icon' => 'fa-calendar', 'text' => 'Calendario institucional', 'title' => 'Calendario institucional', 'breadcrumb' => 'CALENDARIO INSTITUCIONAL'],
-
-                ['callback' => 'curso_personalizado_puede_gestionar', 'seccion' => 'curso_personalizado_admin', 'icon' => 'fa-file-contract', 'text' => 'Cursos personalizados', 'title' => 'Cursos personalizados', 'breadcrumb' => 'CURSOS PERSONALIZADOS'],
-
-            ],
-
-        ],
-
-        [
-
-            'id' => 'profesor',
-
-            'titulo' => 'Profesor',
-
-            'rol' => true,
-
-            'items' => [
-
-                ['flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
-
-                ['flyout' => 'flyout-grupos-profesor', 'icon' => 'fa-users', 'text' => 'Grupos', 'title' => 'Grupos', 'breadcrumb' => 'GRUPOS'],
-
-                ['seccion' => 'profesor_portal', 'icon' => 'fa-chalkboard-teacher', 'text' => 'Mi portal docente', 'title' => 'Mi portal docente', 'breadcrumb' => 'PORTAL DOCENTE'],
-
-                ['seccion' => 'asesorias', 'icon' => 'fa-calendar-alt', 'text' => 'Disponibilidad asesorías', 'title' => 'Disponibilidad semanal', 'breadcrumb' => 'DISPONIBILIDAD ASESORÍAS'],
-
-                ['cap' => 'asesoria_calendario', 'seccion' => 'asesoria_calendario', 'icon' => 'fa-calendar-check', 'text' => 'Mis asesorías', 'title' => 'Mis asesorías agendadas', 'breadcrumb' => 'MIS ASESORÍAS'],
-
-                ['seccion' => 'planeaciones', 'icon' => 'fa-file-alt', 'text' => 'Planeaciones', 'title' => 'Planeaciones', 'breadcrumb' => 'PLANEACIONES'],
-
-                ['seccion' => 'asistencia_checada', 'icon' => 'fa-fingerprint', 'text' => 'Registrar asistencia', 'title' => 'Registrar asistencia', 'breadcrumb' => 'REGISTRAR ASISTENCIA'],
-
-            ],
-
-        ],
-
-        [
-
-            'id' => 'coordinador',
-
-            'titulo' => 'Coordinador',
-
-            'rol' => true,
-
-            'items' => [
-
-                ['seccion' => 'alumnos', 'icon' => 'fa-user-graduate', 'text' => 'Alumnos', 'title' => 'Alumnos', 'breadcrumb' => 'ALUMNOS'],
-
-                ['flyout' => 'flyout-grupos', 'icon' => 'fa-users-cog', 'text' => 'Grupos y planeación', 'title' => 'Grupos', 'breadcrumb' => 'GRUPOS'],
-
-                ['flyout' => 'flyout-especialidades', 'icon' => 'fa-cogs', 'text' => 'Especialidades', 'title' => 'Especialidades', 'breadcrumb' => 'ESPECIALIDADES'],
-
-                ['flyout' => 'flyout-asistencia', 'icon' => 'fa-clipboard-check', 'text' => 'Asistencias', 'title' => 'Asistencias', 'breadcrumb' => 'ASISTENCIAS'],
-
-                ['flyout' => 'flyout-coordinador-academico', 'icon' => 'fa-file-signature', 'text' => 'Exámenes y evaluación', 'title' => 'Exámenes y evaluación', 'breadcrumb' => 'EXÁMENES Y EVALUACIÓN'],
-
-                ['seccion' => 'planeaciones_revision', 'icon' => 'fa-check-double', 'text' => 'Revisar planeaciones', 'title' => 'Revisar planeaciones', 'breadcrumb' => 'REVISAR PLANEACIONES'],
-
-                ['seccion' => 'cronologia_grupos', 'icon' => 'fa-table', 'text' => 'Cronología de fases', 'title' => 'Cronología de fases', 'breadcrumb' => 'CRONOLOGÍA GRUPOS'],
-
-                ['callback' => 'aula_puede_gestionar', 'seccion' => 'admin_mapa_plantel', 'icon' => 'fa-door-open', 'text' => 'Catálogo de aulas', 'title' => 'Catálogo de aulas', 'breadcrumb' => 'CATÁLOGO AULAS'],
-
-                ['callback' => 'rol_aula_puede_gestionar', 'seccion' => 'rol_aulas_coordinador', 'icon' => 'fa-th-large', 'text' => 'Rol de aulas', 'title' => 'Rol de aulas', 'breadcrumb' => 'ROL DE AULAS'],
-
-                ['seccion' => 'grupo_fusion_plan', 'icon' => 'fa-object-group', 'text' => 'Planificación de fusiones', 'title' => 'Planificación de fusiones', 'breadcrumb' => 'FUSIONES GRUPOS'],
-
-                ['seccion' => 'grupo_division', 'icon' => 'fa-code-branch', 'text' => 'División por edad', 'title' => 'División de grupos por edad', 'breadcrumb' => 'DIVISIÓN GRUPOS'],
-
-                ['callback' => 'tutor_puede_usar', 'seccion' => 'tutor_chat', 'icon' => 'fa-robot', 'text' => 'Tutor IA', 'title' => 'Tutor Académico', 'breadcrumb' => 'TUTOR IA'],
-
-                ['seccion' => 'moodle_nivel_admin', 'icon' => 'fa-graduation-cap', 'text' => 'Moodle por nivel', 'title' => 'Moodle por nivel', 'breadcrumb' => 'MOODLE NIVEL'],
-
-                ['seccion' => 'reporte_resumen_academico', 'icon' => 'fa-chart-line', 'text' => 'Reporte académico', 'title' => 'Resumen académico', 'breadcrumb' => 'RESUMEN ACADÉMICO'],
-
-                ['seccion' => 'reporte_riesgo_academico', 'icon' => 'fa-exclamation-triangle', 'text' => 'Reporte riesgo', 'title' => 'Reporte de riesgo académico', 'breadcrumb' => 'RIESGO ACADÉMICO'],
-
-                ['callback' => 'documento_puede_gestionar_diplomas', 'seccion' => 'coordinador_diplomas', 'icon' => 'fa-award', 'text' => 'Diplomas por grupo', 'title' => 'Diplomas por grupo', 'breadcrumb' => 'DIPLOMAS'],
-
-                ['seccion' => 'academico_portal_alumno', 'icon' => 'fa-bullhorn', 'text' => 'Avisos y chat alumno', 'title' => 'Avisos y mensajes alumnos', 'breadcrumb' => 'AVISOS ALUMNO'],
-
-            ],
-
-        ],
-
-        [
-
-            'id' => 'director',
-
-            'titulo' => 'Director / Supervisión',
-
-            'rol' => true,
-
-            'items' => menu_cncm_director_items(),
-
-        ],
-
-        [
-
             'id' => 'soporte',
-
             'titulo' => 'Soporte',
-
             'items' => [
-
                 ['staff' => true, 'seccion' => 'soporte_tecnico', 'icon' => 'fa-headset', 'text' => 'Soporte técnico', 'title' => 'Soporte Técnico', 'breadcrumb' => 'SOPORTE TÉCNICO'],
-
             ],
-
         ],
-
     ];
-
 }
 
 
