@@ -128,6 +128,43 @@ if ($kidsIds['computacion'] > 0) {
         $gruposKidsComp = [];
     }
 }
+
+/** Especialidades infantiles (ING-K / COMP-K). */
+$kidsEspIdSet = [];
+foreach (['ingles', 'computacion'] as $kKey) {
+    if ((int) ($kidsIds[$kKey] ?? 0) > 0) {
+        $kidsEspIdSet[(int) $kidsIds[$kKey]] = true;
+    }
+}
+$alumnoEnKidsActivo = false;
+$alumnoEnAdultoActivo = false;
+foreach ($gruposActivos as $gActKids) {
+    $idEspG = (int) ($gActKids['id_especialidad'] ?? 0);
+    $claveEspG = strtoupper(trim((string) ($gActKids['especialidad_clave'] ?? '')));
+    $esKidsG = isset($kidsEspIdSet[$idEspG])
+        || in_array($claveEspG, ['ING-K', 'ING-K-EXT', 'COMP-K'], true)
+        || preg_match('/^(IK|CK)\d+/i', (string) ($gActKids['clave'] ?? ''));
+    if ($esKidsG) {
+        $alumnoEnKidsActivo = true;
+    } else {
+        $alumnoEnAdultoActivo = true;
+    }
+}
+$modoKidsActual = trim((string) ($a['inscripcion_kids_modo'] ?? ''));
+if ($modoKidsActual !== '') {
+    $alumnoEnKidsActivo = true;
+}
+$hayGruposKidsPlantel = $gruposKidsIng !== [] || $gruposKidsComp !== [];
+$puedeGestionarAlumnosBtn = function_exists('usuario_puede_gestionar_alumnos') && usuario_puede_gestionar_alumnos();
+// Mostrar solo si el plantel tiene grupos kids y el alumno no es solo de adultos.
+// Si ya está en infantil, el botón sirve para completar (p. ej. agregar la otra materia) o cambiar grupo.
+$mostrarInscripcionKids = $puedeGestionarAlumnosBtn
+    && $hayGruposKidsPlantel
+    && (!$alumnoEnAdultoActivo || $alumnoEnKidsActivo);
+$labelInscripcionKids = $alumnoEnKidsActivo
+    ? 'Cambiar inscripción infantil'
+    : 'Inscripción infantil';
+
 $todasEsp = [];
 try {
     $todasEsp = $pdo->query('SELECT id_especialidad, clave, nombre FROM especialidades WHERE activo = 1 ORDER BY nombre')->fetchAll(PDO::FETCH_ASSOC);
@@ -297,7 +334,12 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
         </button>
       <?php endif; ?>
       <button type="button" style="margin-top:8px; width:100%;" id="btn-inscribir-esp-alumno">+ Especialidad / grupo</button>
-      <button type="button" style="margin-top:8px; width:100%;" id="btn-inscribir-kids-alumno">Inscripción infantil</button>
+      <?php if (!empty($mostrarInscripcionKids)): ?>
+        <button type="button" style="margin-top:8px; width:100%;" id="btn-inscribir-kids-alumno"
+          title="Inscribe al alumno en grupos infantiles (ING-K / COMP-K: inglés y/o computación kids). No es una constancia.">
+          <?php echo htmlspecialchars($labelInscripcionKids); ?>
+        </button>
+      <?php endif; ?>
       <?php if (function_exists('moodle_inscripcion_puede_gestionar') && moodle_inscripcion_puede_gestionar()): ?>
         <button type="button" class="secondary" style="margin-top:8px; width:100%;" id="btn-moodle-inscribir-alumno">
           <i class="fas fa-chalkboard"></i> Inscribir a curso Moodle
@@ -968,8 +1010,14 @@ $suspApiAlumno = hay_asset_url('php/usuario_suspension_api.php');
 
 <div class="catalog-modal" id="modal-inscribir-kids">
   <div class="catalog-modal__dialog">
-    <h3>Inscripción infantil</h3>
-    <p style="color:#666; font-size:0.9rem;">Puede inscribirse a <strong>ambas</strong> materias o solo una. Cada materia tiene calificación por fase.</p>
+    <h3><?php echo htmlspecialchars($labelInscripcionKids ?? 'Inscripción infantil'); ?></h3>
+    <p style="color:#666; font-size:0.9rem;">
+      Para el programa <strong>infantil</strong> (especialidades ING-K / COMP-K).
+      Puede ir a <strong>ambas</strong> materias o solo una. Cada materia tiene calificación por fase.
+      <?php if (!empty($alumnoEnKidsActivo)): ?>
+        <br>Si ya está inscrito, use esto para <strong>cambiar de grupo</strong> o completar la otra materia.
+      <?php endif; ?>
+    </p>
     <label>Grupo inglés kids (opcional)</label>
     <select id="kids-grupo-ing" style="width:100%; padding:8px; margin-bottom:8px;">
       <option value="">— No inscribir inglés —</option>
