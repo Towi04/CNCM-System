@@ -593,7 +593,8 @@ function alumno_grupos_historial(PDO $pdo, int $idAlumno): array
     alumno_ensure_schema($pdo);
     try {
         $stmt = $pdo->prepare(
-            'SELECT ag.*, g.clave, g.fecha_inicio, e.nombre AS especialidad_nombre
+            'SELECT ag.*, g.clave, g.fecha_inicio, g.id_especialidad,
+                    e.nombre AS especialidad_nombre, e.clave AS especialidad_clave
              FROM alumno_grupos ag
              INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
              LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad
@@ -604,7 +605,8 @@ function alumno_grupos_historial(PDO $pdo, int $idAlumno): array
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         $stmt = $pdo->prepare(
-            'SELECT ag.*, g.clave, g.fecha_inicio, e.nombre AS especialidad_nombre
+            'SELECT ag.*, g.clave, g.fecha_inicio, g.id_especialidad,
+                    e.nombre AS especialidad_nombre, e.clave AS especialidad_clave
              FROM alumno_grupos ag
              INNER JOIN grupos g ON g.id_grupo = ag.id_grupo
              LEFT JOIN especialidades e ON e.id_especialidad = g.id_especialidad
